@@ -123,3 +123,22 @@ Move StudioFlow from functional alpha to pilot-ready operational SaaS.
 - [x] React Query caching refinement
 - [x] Mobile responsive QA pass (responsive Tailwind, sticky tabs, compact cards)
 - [x] Performance audit (lazy routes, code splitting via dynamic imports)
+
+---
+
+# StudioFlow — Demo Accounts & Tenants ✅
+
+Seeded demo environments for evaluation and sales demos.
+
+---
+
+## Demo Tenants
+
+- [x] Aurora Dance Academy (dance studio) — admin + parent demo
+- [x] Northside CrossFit (crossfit box) — admin demo with terminology engine
+- [x] Demo login page at `/demo` with quick-select cards
+- [x] Demo auth via edge function (email/password validation)
+- [x] `is_demo` flag in JWT claims and UI badges
+- [x] "Demo account" banner in AppShell and ParentShell
+- [x] Reset demo data admin action via seed edge function
+- [x] Seed edge function creates all tenants, profiles, teachers, classes, students, families, caregivers, announcements, invoices, recitals, activity logs

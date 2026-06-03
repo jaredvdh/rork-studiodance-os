@@ -7,6 +7,20 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
+/** Returns true if the current session is a demo session (is_demo claim in JWT). */
+export function isDemoSession(): boolean {
+  try {
+    const token = localStorage.getItem("rork:access_token");
+    if (!token) return false;
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload?.is_demo === true;
+  } catch {
+    return false;
+  }
+}
+
 export function ProtectedRoute({ children, redirectTo }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
@@ -37,7 +51,10 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
+          <p className="text-sm text-muted-foreground">Loading session…</p>
+        </div>
       </div>
     );
   }

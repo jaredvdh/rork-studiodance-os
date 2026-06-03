@@ -24,6 +24,8 @@ import {
   X,
 } from "lucide-react";
 
+import { DemoBadge, isDemoSession } from "@/components/DemoBadge";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -314,6 +316,7 @@ function UserMenu() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const demo = isDemoSession();
   const location = useLocation();
   const term = useTerminology();
   const current = navItems.find((n) => location.pathname.startsWith(n.to))
@@ -356,6 +359,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="font-display text-lg font-semibold tracking-tight">{current}</h1>
+            {demo && <DemoBadge />}
 
             <div className="ml-auto flex items-center gap-2">
               <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground sm:flex">
@@ -374,7 +378,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="bg-grain px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="bg-grain px-4 py-6 sm:px-6 lg:px-8">
+          {demo && <DemoBadge variant="banner" className="-mx-4 -mt-6 mb-4 sm:-mx-6 lg:-mx-8" />}
+          {children}
+        </main>
       </div>
     </div>
   );

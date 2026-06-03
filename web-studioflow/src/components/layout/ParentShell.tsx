@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useStudio } from "@/data/store";
+import { DemoBadge, isDemoSession } from "@/components/DemoBadge";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -61,6 +62,7 @@ interface ParentShellProps {
 
 export default function ParentShell({ children }: ParentShellProps) {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const demo = isDemoSession();
   const location = useLocation();
 
   const isActive = (to: string, exact?: boolean) => {
@@ -82,6 +84,7 @@ export default function ParentShell({ children }: ParentShellProps) {
           </button>
 
           <StudioLogo />
+          {demo && <DemoBadge />}
 
           {/* Desktop nav */}
           <nav className="ml-8 hidden items-center gap-1 lg:flex">
@@ -182,7 +185,10 @@ export default function ParentShell({ children }: ParentShellProps) {
       )}
 
       {/* Main content */}
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {demo && <DemoBadge variant="banner" className="-mx-4 -mt-6 mb-4 sm:-mx-6 lg:-mx-8" />}
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-amber-200/60 bg-cream/90 backdrop-blur-xl lg:hidden">

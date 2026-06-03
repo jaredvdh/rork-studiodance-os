@@ -40,6 +40,7 @@ export interface User {
   picture?: string;
   role?: string;
   studioId?: string;
+  isDemo?: boolean;
 }
 
 function userFromToken(token: string): User | null {
@@ -61,6 +62,7 @@ function userFromToken(token: string): User | null {
       picture: payload.picture,
       role: payload.role,
       studioId: payload.studio_id,
+      isDemo: payload.is_demo === true,
     };
   } catch {
     return null;

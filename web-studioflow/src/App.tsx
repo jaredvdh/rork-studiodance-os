@@ -18,6 +18,7 @@ import Instructors from "./pages/Instructors";
 import Landing from "./pages/Landing";
 import MigrationWizard from "./pages/MigrationWizard";
 import MigrationHistory from "./pages/MigrationHistory";
+import DemoLogin from "./pages/DemoLogin";
 import NotFound from "./pages/NotFound";
 import Payments from "./pages/Payments";
 import Recitals from "./pages/Recitals";
@@ -82,6 +83,7 @@ const App = () => (
         <Routes>
           {/* Public routes */}
           <Route path="/" element={withStudio(Landing)} />
+          <Route path="/demo" element={<DemoLogin />} />
           <Route path="/auth/callback" element={withStudio(AuthCallback)} />
           <Route path="/login" element={withStudio(AdminLogin)} />
 
