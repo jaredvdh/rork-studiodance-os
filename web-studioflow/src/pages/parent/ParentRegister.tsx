@@ -21,6 +21,7 @@ import type { FormEvent } from "react";
 
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudio } from "@/data/store";
 import { cn } from "@/lib/utils";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
