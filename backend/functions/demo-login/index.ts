@@ -4,9 +4,10 @@ const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
   "Access-Control-Allow-Credentials": "true",
+  "Vary": "Origin",
 };
 
 /* ── Demo credentials ─────────────────────────────────────────────── */
@@ -83,15 +84,22 @@ interface LoginBody {
   password: string;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request): Promise<Response> => {
+  // OPTIONS preflight — handle BEFORE any JSON parsing, auth, or credential checks
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   }
 
@@ -101,7 +109,10 @@ Deno.serve(async (req) => {
     if (!email || !password) {
       return new Response(JSON.stringify({ error: "Email and password are required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
 
@@ -112,7 +123,10 @@ Deno.serve(async (req) => {
     if (!account || account.password !== password) {
       return new Response(JSON.stringify({ error: "Invalid demo credentials" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
 
@@ -125,6 +139,7 @@ Deno.serve(async (req) => {
       name: account.name,
       role: account.role,
       studio_id: account.studioId,
+      is_demo: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: "id" });
@@ -140,6 +155,7 @@ Deno.serve(async (req) => {
         initials: "AD",
         vertical: "dance",
         owner_id: "demo_user_admin_dance",
+        is_demo: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: "id" });
@@ -153,6 +169,7 @@ Deno.serve(async (req) => {
         initials: "NC",
         vertical: "crossfit",
         owner_id: "demo_user_admin_crossfit",
+        is_demo: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: "id" });
@@ -184,13 +201,19 @@ Deno.serve(async (req) => {
       },
     }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   } catch (err) {
     console.error("demo-login error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   }
 });

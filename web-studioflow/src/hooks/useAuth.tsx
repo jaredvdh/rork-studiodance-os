@@ -13,6 +13,7 @@ import type { AuthError } from "@supabase/supabase-js";
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
 const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
+const SUPABASE_FUNCTIONS_URL = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string}/functions/v1`;
 
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
@@ -287,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSigningIn(true);
     setError(null);
     try {
-      const res = await fetch(`${FUNCTIONS_URL}/demo-login`, {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),

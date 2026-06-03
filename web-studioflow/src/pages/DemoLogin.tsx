@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { cn } from "@/lib/utils";
 
 const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
+const SUPABASE_FUNCTIONS_URL = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string}/functions/v1`;
 
 interface DemoAccount {
   email: string;
@@ -47,7 +48,7 @@ export default function DemoLogin() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${FUNCTIONS_URL}/demo-login`, {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),

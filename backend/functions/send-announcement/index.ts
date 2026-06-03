@@ -4,9 +4,10 @@ const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
   "Access-Control-Allow-Credentials": "true",
+  "Vary": "Origin",
 };
 
 interface SendPayload {
@@ -70,7 +71,6 @@ function buildEmailHtml(
   studioName: string,
   isEmergency: boolean,
 ): string {
-  const accent = isEmergency ? "#e11d48" : "#e11d48";
   const urgencyBanner = isEmergency
     ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
          <strong style="color:#dc2626;">⚠️ URGENT — ${scope}</strong>
@@ -97,9 +97,23 @@ function buildEmailHtml(
 </html>`;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request): Promise<Response> => {
+  // OPTIONS preflight — handle BEFORE any JSON parsing, auth, or credential checks
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   }
 
   try {
@@ -109,7 +123,10 @@ Deno.serve(async (req) => {
     if (!announcementId) {
       return new Response(JSON.stringify({ error: "announcementId is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
 
@@ -125,7 +142,10 @@ Deno.serve(async (req) => {
     if (annError || !announcement) {
       return new Response(JSON.stringify({ error: "Announcement not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
 
@@ -147,7 +167,10 @@ Deno.serve(async (req) => {
     if (parentError) {
       return new Response(JSON.stringify({ error: "Failed to fetch parents" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
 
@@ -158,8 +181,6 @@ Deno.serve(async (req) => {
     const isEmergency = announcement.scope === "Emergency";
 
     for (const parent of parents ?? []) {
-      // For now, use parent email directly
-      // In production, this would check caregiver permissions from the caregivers table
       recipients.add(parent.email);
     }
 
@@ -207,20 +228,29 @@ Deno.serve(async (req) => {
         message: `Announcement delivered to ${delivered} of ${recipientList.length} recipients.`,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       },
     );
   } catch (err) {
     if (err instanceof AuthError) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
     console.error("send-announcement error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   }
 });

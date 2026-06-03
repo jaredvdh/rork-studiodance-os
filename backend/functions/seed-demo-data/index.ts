@@ -4,9 +4,10 @@ const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
   "Access-Control-Allow-Credentials": "true",
+  "Vary": "Origin",
 };
 
 const NOW = new Date().toISOString();
@@ -30,41 +31,42 @@ const STUDIO_AURORA = {
   initials: "AD",
   vertical: "dance",
   owner_id: "demo_user_admin_dance",
+  is_demo: true,
   created_at: NOW,
   updated_at: NOW,
 };
 
 const PROFILES_AURORA = [
-  { id: "demo_user_admin_dance", email: "demo.admin@studioflow.app", name: "Aurora Admin", role: "studio_admin", studio_id: "demo_studio_aurora", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_parent_dance", email: "demo.parent@studioflow.app", name: "Diane Walsh", role: "parent", studio_id: "demo_studio_aurora", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_coach_1", email: "mara@aurora.dance", name: "Mara Delgado", role: "instructor", studio_id: "demo_studio_aurora", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_coach_2", email: "theo@aurora.dance", name: "Theo Nakamura", role: "instructor", studio_id: "demo_studio_aurora", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_coach_3", email: "priya@aurora.dance", name: "Priya Anand", role: "instructor", studio_id: "demo_studio_aurora", created_at: NOW, updated_at: NOW },
+  { id: "demo_user_admin_dance", email: "demo.admin@studioflow.app", name: "Aurora Admin", role: "studio_admin", studio_id: "demo_studio_aurora", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_parent_dance", email: "demo.parent@studioflow.app", name: "Diane Walsh", role: "parent", studio_id: "demo_studio_aurora", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_coach_1", email: "mara@aurora.dance", name: "Mara Delgado", role: "instructor", studio_id: "demo_studio_aurora", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_coach_2", email: "theo@aurora.dance", name: "Theo Nakamura", role: "instructor", studio_id: "demo_studio_aurora", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_coach_3", email: "priya@aurora.dance", name: "Priya Anand", role: "instructor", studio_id: "demo_studio_aurora", is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const TEACHERS_AURORA = [
-  { id: did("t", 1), studio_id: STUDIO_AURORA.id, name: "Mara Delgado", styles: ["Ballet", "Lyrical"], email: "mara@aurora.dance", hourly_rate_cents: 4500, pay_type: "employee", created_at: NOW, updated_at: NOW },
-  { id: did("t", 2), studio_id: STUDIO_AURORA.id, name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], email: "theo@aurora.dance", hourly_rate_cents: 5000, pay_type: "1099", created_at: NOW, updated_at: NOW },
-  { id: did("t", 3), studio_id: STUDIO_AURORA.id, name: "Priya Anand", styles: ["Contemporary", "Lyrical"], email: "priya@aurora.dance", hourly_rate_cents: 4000, pay_type: "employee", created_at: NOW, updated_at: NOW },
+  { id: did("t", 1), studio_id: STUDIO_AURORA.id, name: "Mara Delgado", styles: ["Ballet", "Lyrical"], email: "mara@aurora.dance", hourly_rate_cents: 4500, pay_type: "employee", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("t", 2), studio_id: STUDIO_AURORA.id, name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], email: "theo@aurora.dance", hourly_rate_cents: 5000, pay_type: "1099", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("t", 3), studio_id: STUDIO_AURORA.id, name: "Priya Anand", styles: ["Contemporary", "Lyrical"], email: "priya@aurora.dance", hourly_rate_cents: 4000, pay_type: "employee", is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const CLASSES_AURORA = [
-  { id: did("c", 1), studio_id: STUDIO_AURORA.id, name: "Tiny Tots Ballet", style: "Ballet", age_group: "Tiny Tots", day: "Mon", start_time: "16:00", duration_mins: 45, room: "Studio A", teacher_id: did("t", 1), capacity: 12, enrolled: 11, waitlist: 3, in_recital: true, price_cents: 8500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 2), studio_id: STUDIO_AURORA.id, name: "Junior Hip Hop", style: "Hip Hop", age_group: "Junior", day: "Mon", start_time: "17:00", duration_mins: 60, room: "Studio B", teacher_id: did("t", 2), capacity: 18, enrolled: 18, waitlist: 5, in_recital: true, price_cents: 9500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 3), studio_id: STUDIO_AURORA.id, name: "Senior Contemporary", style: "Contemporary", age_group: "Senior", day: "Tue", start_time: "18:30", duration_mins: 75, room: "Studio A", teacher_id: did("t", 3), capacity: 16, enrolled: 13, waitlist: 0, in_recital: true, price_cents: 11000, created_at: NOW, updated_at: NOW },
-  { id: did("c", 4), studio_id: STUDIO_AURORA.id, name: "Intermediate Jazz", style: "Jazz", age_group: "Intermediate", day: "Tue", start_time: "17:00", duration_mins: 60, room: "Studio B", teacher_id: did("t", 2), capacity: 16, enrolled: 14, waitlist: 1, in_recital: true, price_cents: 9500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 5), studio_id: STUDIO_AURORA.id, name: "Adult Tap Social", style: "Tap", age_group: "Adult", day: "Wed", start_time: "19:30", duration_mins: 60, room: "Studio C", teacher_id: did("t", 2), capacity: 20, enrolled: 9, waitlist: 0, in_recital: false, price_cents: 7500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 6), studio_id: STUDIO_AURORA.id, name: "Junior Lyrical", style: "Lyrical", age_group: "Junior", day: "Wed", start_time: "16:30", duration_mins: 60, room: "Studio A", teacher_id: did("t", 1), capacity: 16, enrolled: 15, waitlist: 2, in_recital: true, price_cents: 9500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 7), studio_id: STUDIO_AURORA.id, name: "Senior Hip Hop Crew", style: "Hip Hop", age_group: "Senior", day: "Thu", start_time: "18:00", duration_mins: 90, room: "Studio B", teacher_id: did("t", 2), capacity: 20, enrolled: 19, waitlist: 6, in_recital: true, price_cents: 12500, created_at: NOW, updated_at: NOW },
-  { id: did("c", 8), studio_id: STUDIO_AURORA.id, name: "Acro Foundations", style: "Acro", age_group: "Intermediate", day: "Thu", start_time: "16:30", duration_mins: 60, room: "Studio C", teacher_id: did("t", 3), capacity: 12, enrolled: 8, waitlist: 0, in_recital: false, price_cents: 10000, created_at: NOW, updated_at: NOW },
+  { id: did("c", 1), studio_id: STUDIO_AURORA.id, name: "Tiny Tots Ballet", style: "Ballet", age_group: "Tiny Tots", day: "Mon", start_time: "16:00", duration_mins: 45, room: "Studio A", teacher_id: did("t", 1), capacity: 12, enrolled: 11, waitlist: 3, in_recital: true, price_cents: 8500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 2), studio_id: STUDIO_AURORA.id, name: "Junior Hip Hop", style: "Hip Hop", age_group: "Junior", day: "Mon", start_time: "17:00", duration_mins: 60, room: "Studio B", teacher_id: did("t", 2), capacity: 18, enrolled: 18, waitlist: 5, in_recital: true, price_cents: 9500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 3), studio_id: STUDIO_AURORA.id, name: "Senior Contemporary", style: "Contemporary", age_group: "Senior", day: "Tue", start_time: "18:30", duration_mins: 75, room: "Studio A", teacher_id: did("t", 3), capacity: 16, enrolled: 13, waitlist: 0, in_recital: true, price_cents: 11000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 4), studio_id: STUDIO_AURORA.id, name: "Intermediate Jazz", style: "Jazz", age_group: "Intermediate", day: "Tue", start_time: "17:00", duration_mins: 60, room: "Studio B", teacher_id: did("t", 2), capacity: 16, enrolled: 14, waitlist: 1, in_recital: true, price_cents: 9500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 5), studio_id: STUDIO_AURORA.id, name: "Adult Tap Social", style: "Tap", age_group: "Adult", day: "Wed", start_time: "19:30", duration_mins: 60, room: "Studio C", teacher_id: did("t", 2), capacity: 20, enrolled: 9, waitlist: 0, in_recital: false, price_cents: 7500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 6), studio_id: STUDIO_AURORA.id, name: "Junior Lyrical", style: "Lyrical", age_group: "Junior", day: "Wed", start_time: "16:30", duration_mins: 60, room: "Studio A", teacher_id: did("t", 1), capacity: 16, enrolled: 15, waitlist: 2, in_recital: true, price_cents: 9500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 7), studio_id: STUDIO_AURORA.id, name: "Senior Hip Hop Crew", style: "Hip Hop", age_group: "Senior", day: "Thu", start_time: "18:00", duration_mins: 90, room: "Studio B", teacher_id: did("t", 2), capacity: 20, enrolled: 19, waitlist: 6, in_recital: true, price_cents: 12500, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("c", 8), studio_id: STUDIO_AURORA.id, name: "Acro Foundations", style: "Acro", age_group: "Intermediate", day: "Thu", start_time: "16:30", duration_mins: 60, room: "Studio C", teacher_id: did("t", 3), capacity: 12, enrolled: 8, waitlist: 0, in_recital: false, price_cents: 10000, is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 /* ── Parents / Families (3 families) ─────────────────────────────── */
 
 const PARENTS_AURORA = [
-  { id: did("parent", 1), studio_id: STUDIO_AURORA.id, name: "Diane Walsh", email: "diane.walsh@email.com", phone: "(555) 123-4567", address: "1428 NW Lovejoy St", city: "Portland", state: "OR", zip: "97209", child_ids: [did("s", 1), did("s", 5)], created_at: NOW, updated_at: NOW },
-  { id: did("parent", 2), studio_id: STUDIO_AURORA.id, name: "Marcus Carter", email: "marcus.carter@email.com", phone: "(555) 234-5678", address: "3821 SE Hawthorne Blvd", city: "Portland", state: "OR", zip: "97214", child_ids: [did("s", 2)], created_at: NOW, updated_at: NOW },
-  { id: did("parent", 3), studio_id: STUDIO_AURORA.id, name: "Anita Patel", email: "anita.patel@email.com", phone: "(555) 345-6789", address: "720 SW Broadway Dr", city: "Portland", state: "OR", zip: "97205", child_ids: [did("s", 3)], created_at: NOW, updated_at: NOW },
+  { id: did("parent", 1), studio_id: STUDIO_AURORA.id, name: "Diane Walsh", email: "diane.walsh@email.com", phone: "(555) 123-4567", address: "1428 NW Lovejoy St", city: "Portland", state: "OR", zip: "97209", child_ids: [did("s", 1), did("s", 5)], is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("parent", 2), studio_id: STUDIO_AURORA.id, name: "Marcus Carter", email: "marcus.carter@email.com", phone: "(555) 234-5678", address: "3821 SE Hawthorne Blvd", city: "Portland", state: "OR", zip: "97214", child_ids: [did("s", 2)], is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("parent", 3), studio_id: STUDIO_AURORA.id, name: "Anita Patel", email: "anita.patel@email.com", phone: "(555) 345-6789", address: "720 SW Broadway Dr", city: "Portland", state: "OR", zip: "97205", child_ids: [did("s", 3)], is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 /* ── Students ─────────────────────────────────────────────────────── */
@@ -97,6 +99,7 @@ function makeStudent(i: number) {
     balance_cents: payRoll < 7 ? 0 : payRoll < 9 ? 9500 : 19000,
     medical_notes: i % 6 === 0 ? "Mild asthma — inhaler in bag" : null,
     allergies: [null, null, null, "Peanuts", "Dairy", "Gluten", "Bee stings", "Latex"][i % 8] as string | null,
+    is_demo: true,
     created_at: NOW,
     updated_at: NOW,
   };
@@ -111,6 +114,7 @@ const ENROLMENTS_AURORA = STUDENTS_AURORA.flatMap((s) =>
     studio_id: STUDIO_AURORA.id,
     student_id: s.id,
     class_id: cid,
+    is_demo: true,
     created_at: NOW,
   }))
 );
@@ -123,10 +127,10 @@ const daysAgo = (n: number) => {
 };
 
 const ANNOUNCEMENTS_AURORA = [
-  { id: did("ann", 1), studio_id: STUDIO_AURORA.id, title: "Spring Recital rehearsal — May 25th", body: "All recital classes have a mandatory dress rehearsal at the Benson Theatre. Arrive 30 minutes early with full costume and hair done.", scope: "Recital", sent_at: daysAgo(1), audience: "8 recital classes", reach: 121, created_at: NOW, updated_at: NOW },
-  { id: did("ann", 2), studio_id: STUDIO_AURORA.id, title: "Jazz Class cancelled tonight", body: "Due to a facilities issue, tonight's Intermediate Jazz is cancelled. A make-up class will be scheduled next week.", scope: "Emergency", sent_at: daysAgo(2), audience: "Intermediate Jazz", reach: 14, created_at: NOW, updated_at: NOW },
-  { id: did("ann", 3), studio_id: STUDIO_AURORA.id, title: "Costumes due next week", body: "Final costume payments are due Friday. Please complete your balance in the parent portal to secure your dancer's costume.", scope: "Studio-wide", sent_at: daysAgo(4), audience: "All families", reach: 42, created_at: NOW, updated_at: NOW },
-  { id: did("ann", 4), studio_id: STUDIO_AURORA.id, title: "New Acro Foundations spots open", body: "We've opened 4 additional spots in Acro Foundations on Thursdays. Enroll now through the portal.", scope: "Studio-wide", sent_at: daysAgo(8), audience: "All families", reach: 42, created_at: NOW, updated_at: NOW },
+  { id: did("ann", 1), studio_id: STUDIO_AURORA.id, title: "Spring Recital rehearsal — May 25th", body: "All recital classes have a mandatory dress rehearsal at the Benson Theatre. Arrive 30 minutes early with full costume and hair done.", scope: "Recital", sent_at: daysAgo(1), audience: "8 recital classes", reach: 121, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("ann", 2), studio_id: STUDIO_AURORA.id, title: "Jazz Class cancelled tonight", body: "Due to a facilities issue, tonight's Intermediate Jazz is cancelled. A make-up class will be scheduled next week.", scope: "Emergency", sent_at: daysAgo(2), audience: "Intermediate Jazz", reach: 14, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("ann", 3), studio_id: STUDIO_AURORA.id, title: "Costumes due next week", body: "Final costume payments are due Friday. Please complete your balance in the parent portal to secure your dancer's costume.", scope: "Studio-wide", sent_at: daysAgo(4), audience: "All families", reach: 42, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("ann", 4), studio_id: STUDIO_AURORA.id, title: "New Acro Foundations spots open", body: "We've opened 4 additional spots in Acro Foundations on Thursdays. Enroll now through the portal.", scope: "Studio-wide", sent_at: daysAgo(8), audience: "All families", reach: 42, is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 /* ── Invoices ─────────────────────────────────────────────────────── */
@@ -142,6 +146,7 @@ const INVOICES_AURORA = STUDENTS_AURORA
     amount_cents: s.balance_cents || 9500,
     status: s.payment as string,
     due_date: s.payment === "overdue" ? daysAgo(6) : new Date(Date.now() + (5 + i) * 86400000).toISOString(),
+    is_demo: true,
     created_at: NOW,
     updated_at: NOW,
   }));
@@ -154,6 +159,7 @@ const RECITAL_AURORA = [{
   date: "2026-06-15T19:00:00Z",
   venue: "Benson Theatre",
   costume_deadline: "2026-05-30T00:00:00Z",
+  is_demo: true,
   created_at: NOW,
   updated_at: NOW,
 }];
@@ -178,37 +184,38 @@ const STUDIO_CROSSFIT = {
   initials: "NC",
   vertical: "crossfit",
   owner_id: "demo_user_admin_crossfit",
+  is_demo: true,
   created_at: NOW,
   updated_at: NOW,
 };
 
 const PROFILES_CROSSFIT = [
-  { id: "demo_user_admin_crossfit", email: "demo.crossfit@studioflow.app", name: "Northside Admin", role: "studio_admin", studio_id: "demo_studio_crossfit", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_coach_cf1", email: "jake@northsidecrossfit.com", name: "Jake Morrison", role: "instructor", studio_id: "demo_studio_crossfit", created_at: NOW, updated_at: NOW },
-  { id: "demo_user_coach_cf2", email: "alex@northsidecrossfit.com", name: "Alex Rivera", role: "instructor", studio_id: "demo_studio_crossfit", created_at: NOW, updated_at: NOW },
+  { id: "demo_user_admin_crossfit", email: "demo.crossfit@studioflow.app", name: "Northside Admin", role: "studio_admin", studio_id: "demo_studio_crossfit", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_coach_cf1", email: "jake@northsidecrossfit.com", name: "Jake Morrison", role: "instructor", studio_id: "demo_studio_crossfit", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: "demo_user_coach_cf2", email: "alex@northsidecrossfit.com", name: "Alex Rivera", role: "instructor", studio_id: "demo_studio_crossfit", is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const TEACHERS_CROSSFIT = [
-  { id: did("cf_t", 1), studio_id: STUDIO_CROSSFIT.id, name: "Jake Morrison", styles: ["CrossFit", "Olympic Lifting"], email: "jake@northsidecrossfit.com", hourly_rate_cents: 5500, pay_type: "employee", created_at: NOW, updated_at: NOW },
-  { id: did("cf_t", 2), studio_id: STUDIO_CROSSFIT.id, name: "Alex Rivera", styles: ["CrossFit", "Gymnastics"], email: "alex@northsidecrossfit.com", hourly_rate_cents: 5000, pay_type: "1099", created_at: NOW, updated_at: NOW },
+  { id: did("cf_t", 1), studio_id: STUDIO_CROSSFIT.id, name: "Jake Morrison", styles: ["CrossFit", "Olympic Lifting"], email: "jake@northsidecrossfit.com", hourly_rate_cents: 5500, pay_type: "employee", is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_t", 2), studio_id: STUDIO_CROSSFIT.id, name: "Alex Rivera", styles: ["CrossFit", "Gymnastics"], email: "alex@northsidecrossfit.com", hourly_rate_cents: 5000, pay_type: "1099", is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const CLASSES_CROSSFIT = [
-  { id: did("cf_c", 1), studio_id: STUDIO_CROSSFIT.id, name: "Morning WOD", style: "WOD", age_group: "Adult", day: "Mon", start_time: "06:00", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 20, enrolled: 18, waitlist: 3, in_recital: false, price_cents: 15000, created_at: NOW, updated_at: NOW },
-  { id: did("cf_c", 2), studio_id: STUDIO_CROSSFIT.id, name: "Olympic Lifting", style: "Olympic Lifting", age_group: "Adult", day: "Tue", start_time: "07:00", duration_mins: 90, room: "Platform", teacher_id: did("cf_t", 1), capacity: 12, enrolled: 10, waitlist: 1, in_recital: false, price_cents: 18000, created_at: NOW, updated_at: NOW },
-  { id: did("cf_c", 3), studio_id: STUDIO_CROSSFIT.id, name: "Gymnastics Skills", style: "Gymnastics", age_group: "Adult", day: "Wed", start_time: "17:30", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 2), capacity: 16, enrolled: 12, waitlist: 0, in_recital: false, price_cents: 15000, created_at: NOW, updated_at: NOW },
-  { id: did("cf_c", 4), studio_id: STUDIO_CROSSFIT.id, name: "Evening WOD", style: "WOD", age_group: "Adult", day: "Thu", start_time: "18:00", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 2), capacity: 20, enrolled: 19, waitlist: 4, in_recital: false, price_cents: 15000, created_at: NOW, updated_at: NOW },
-  { id: did("cf_c", 5), studio_id: STUDIO_CROSSFIT.id, name: "Foundations", style: "Foundations", age_group: "Adult", day: "Sat", start_time: "09:00", duration_mins: 75, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 10, enrolled: 7, waitlist: 0, in_recital: false, price_cents: 12000, created_at: NOW, updated_at: NOW },
-  { id: did("cf_c", 6), studio_id: STUDIO_CROSSFIT.id, name: "Competition Prep", style: "WOD", age_group: "Adult", day: "Fri", start_time: "17:00", duration_mins: 90, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 12, enrolled: 12, waitlist: 5, in_recital: false, price_cents: 20000, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 1), studio_id: STUDIO_CROSSFIT.id, name: "Morning WOD", style: "WOD", age_group: "Adult", day: "Mon", start_time: "06:00", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 20, enrolled: 18, waitlist: 3, in_recital: false, price_cents: 15000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 2), studio_id: STUDIO_CROSSFIT.id, name: "Olympic Lifting", style: "Olympic Lifting", age_group: "Adult", day: "Tue", start_time: "07:00", duration_mins: 90, room: "Platform", teacher_id: did("cf_t", 1), capacity: 12, enrolled: 10, waitlist: 1, in_recital: false, price_cents: 18000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 3), studio_id: STUDIO_CROSSFIT.id, name: "Gymnastics Skills", style: "Gymnastics", age_group: "Adult", day: "Wed", start_time: "17:30", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 2), capacity: 16, enrolled: 12, waitlist: 0, in_recital: false, price_cents: 15000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 4), studio_id: STUDIO_CROSSFIT.id, name: "Evening WOD", style: "WOD", age_group: "Adult", day: "Thu", start_time: "18:00", duration_mins: 60, room: "Main Floor", teacher_id: did("cf_t", 2), capacity: 20, enrolled: 19, waitlist: 4, in_recital: false, price_cents: 15000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 5), studio_id: STUDIO_CROSSFIT.id, name: "Foundations", style: "Foundations", age_group: "Adult", day: "Sat", start_time: "09:00", duration_mins: 75, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 10, enrolled: 7, waitlist: 0, in_recital: false, price_cents: 12000, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_c", 6), studio_id: STUDIO_CROSSFIT.id, name: "Competition Prep", style: "WOD", age_group: "Adult", day: "Fri", start_time: "17:00", duration_mins: 90, room: "Main Floor", teacher_id: did("cf_t", 1), capacity: 12, enrolled: 12, waitlist: 5, in_recital: false, price_cents: 20000, is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const cfFirstNames = ["Jake", "Sarah", "Mike", "Emma", "Chris", "Lisa", "David", "Maria", "Tom", "Rachel", "Ben", "Anna", "Sam", "Kelly", "Dan"];
 const cfLastNames = ["Thompson", "Garcia", "Miller", "Davis", "Wilson", "Anderson", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Harris"];
 
 const PARENTS_CROSSFIT = [
-  { id: did("cf_parent", 1), studio_id: STUDIO_CROSSFIT.id, name: "James Thompson", email: "james.t@email.com", phone: "(555) 456-7890", address: "1200 N Williams Ave", city: "Portland", state: "OR", zip: "97227", child_ids: [did("cf_s", 1), did("cf_s", 2)], created_at: NOW, updated_at: NOW },
-  { id: did("cf_parent", 2), studio_id: STUDIO_CROSSFIT.id, name: "Lisa Garcia", email: "lisa.g@email.com", phone: "(555) 567-8901", address: "850 NE Alberta St", city: "Portland", state: "OR", zip: "97211", child_ids: [did("cf_s", 3)], created_at: NOW, updated_at: NOW },
-  { id: did("cf_parent", 3), studio_id: STUDIO_CROSSFIT.id, name: "Tom Miller", email: "tom.m@email.com", phone: "(555) 678-9012", address: "2100 SE Division St", city: "Portland", state: "OR", zip: "97202", child_ids: [did("cf_s", 4)], created_at: NOW, updated_at: NOW },
+  { id: did("cf_parent", 1), studio_id: STUDIO_CROSSFIT.id, name: "James Thompson", email: "james.t@email.com", phone: "(555) 456-7890", address: "1200 N Williams Ave", city: "Portland", state: "OR", zip: "97227", child_ids: [did("cf_s", 1), did("cf_s", 2)], is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_parent", 2), studio_id: STUDIO_CROSSFIT.id, name: "Lisa Garcia", email: "lisa.g@email.com", phone: "(555) 567-8901", address: "850 NE Alberta St", city: "Portland", state: "OR", zip: "97211", child_ids: [did("cf_s", 3)], is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_parent", 3), studio_id: STUDIO_CROSSFIT.id, name: "Tom Miller", email: "tom.m@email.com", phone: "(555) 678-9012", address: "2100 SE Division St", city: "Portland", state: "OR", zip: "97202", child_ids: [did("cf_s", 4)], is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const STUDENTS_CROSSFIT = Array.from({ length: 12 }, (_, i) => ({
@@ -226,6 +233,7 @@ const STUDENTS_CROSSFIT = Array.from({ length: 12 }, (_, i) => ({
   balance_cents: i % 4 === 0 ? 15000 : 0,
   medical_notes: null as string | null,
   allergies: null as string | null,
+  is_demo: true,
   created_at: NOW,
   updated_at: NOW,
 }));
@@ -235,13 +243,14 @@ const ENROLMENTS_CROSSFIT = STUDENTS_CROSSFIT.map((s) => ({
   studio_id: STUDIO_CROSSFIT.id,
   student_id: s.id,
   class_id: (s.class_ids as string[])[0],
+  is_demo: true,
   created_at: NOW,
 }));
 
 const ANNOUNCEMENTS_CROSSFIT = [
-  { id: did("cf_ann", 1), studio_id: STUDIO_CROSSFIT.id, title: "Box closed July 4th", body: "Northside will be closed for Independence Day. Saturday classes resume as normal.", scope: "Studio-wide", sent_at: daysAgo(3), audience: "All athletes", reach: 56, created_at: NOW, updated_at: NOW },
-  { id: did("cf_ann", 2), studio_id: STUDIO_CROSSFIT.id, title: "Murph Challenge this Saturday", body: "Join us for the annual Murph Challenge! Heats start at 8 AM. Sign up on the whiteboard.", scope: "Event", sent_at: daysAgo(1), audience: "All athletes", reach: 56, created_at: NOW, updated_at: NOW },
-  { id: did("cf_ann", 3), studio_id: STUDIO_CROSSFIT.id, title: "New Foundations cycle starts June 15", body: "Perfect for newcomers or anyone wanting to refine their technique. 6-week cycle, 2x/week.", scope: "Studio-wide", sent_at: daysAgo(5), audience: "All athletes", reach: 56, created_at: NOW, updated_at: NOW },
+  { id: did("cf_ann", 1), studio_id: STUDIO_CROSSFIT.id, title: "Box closed July 4th", body: "Northside will be closed for Independence Day. Saturday classes resume as normal.", scope: "Studio-wide", sent_at: daysAgo(3), audience: "All athletes", reach: 56, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_ann", 2), studio_id: STUDIO_CROSSFIT.id, title: "Murph Challenge this Saturday", body: "Join us for the annual Murph Challenge! Heats start at 8 AM. Sign up on the whiteboard.", scope: "Event", sent_at: daysAgo(1), audience: "All athletes", reach: 56, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("cf_ann", 3), studio_id: STUDIO_CROSSFIT.id, title: "New Foundations cycle starts June 15", body: "Perfect for newcomers or anyone wanting to refine their technique. 6-week cycle, 2x/week.", scope: "Studio-wide", sent_at: daysAgo(5), audience: "All athletes", reach: 56, is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 const INVOICES_CROSSFIT = STUDENTS_CROSSFIT
@@ -256,6 +265,7 @@ const INVOICES_CROSSFIT = STUDENTS_CROSSFIT
     amount_cents: s.balance_cents || 15000,
     status: s.payment as string,
     due_date: s.payment === "overdue" ? daysAgo(3) : new Date(Date.now() + (5 + i) * 86400000).toISOString(),
+    is_demo: true,
     created_at: NOW,
     updated_at: NOW,
   }));
@@ -267,23 +277,30 @@ const ACTIVITY_CROSSFIT = [
 
 /* ── Studio settings ──────────────────────────────────────────────── */
 const STUDIO_SETTINGS = [
-  { id: did("sett", 1), studio_id: STUDIO_AURORA.id, settings: { vertical: "dance", autoPayEnabled: false, notificationsEnabled: true }, created_at: NOW, updated_at: NOW },
-  { id: did("sett", 2), studio_id: STUDIO_CROSSFIT.id, settings: { vertical: "crossfit", autoPayEnabled: false, notificationsEnabled: true }, created_at: NOW, updated_at: NOW },
+  { id: did("sett", 1), studio_id: STUDIO_AURORA.id, settings: { vertical: "dance", autoPayEnabled: false, notificationsEnabled: true }, is_demo: true, created_at: NOW, updated_at: NOW },
+  { id: did("sett", 2), studio_id: STUDIO_CROSSFIT.id, settings: { vertical: "crossfit", autoPayEnabled: false, notificationsEnabled: true }, is_demo: true, created_at: NOW, updated_at: NOW },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════
    Handler
    ══════════════════════════════════════════════════════════════════════ */
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request): Promise<Response> => {
+  // OPTIONS preflight — handle BEFORE any JSON parsing, auth, or credential checks
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   }
 
@@ -360,6 +377,7 @@ Deno.serve(async (req) => {
       skipped_rows: 2,
       error_count: 2,
       completed_at: daysAgo(60),
+      is_demo: true,
       created_at: NOW,
     }], "Aurora import history");
 
@@ -373,13 +391,19 @@ Deno.serve(async (req) => {
       message: `Seeded ${results.length} tables across 2 demo tenants. ${errors.length > 0 ? ` ${errors.length} errors.` : "All clear."}`,
     }), {
       status: statusCode,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   } catch (err) {
     console.error("seed-demo-data error:", err);
     return new Response(JSON.stringify({ error: "Internal server error", detail: err instanceof Error ? err.message : String(err) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   }
 });
