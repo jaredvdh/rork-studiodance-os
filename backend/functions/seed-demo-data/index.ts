@@ -1,9 +1,12 @@
 import { createAdminClient } from "../_shared/auth.ts";
 
+const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": CORS_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
 const NOW = new Date().toISOString();
