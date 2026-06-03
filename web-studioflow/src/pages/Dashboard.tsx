@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -12,11 +13,31 @@ import {
 
 import RevenueChart from "@/components/charts/RevenueChart";
 import StatCard from "@/components/StatCard";
+import { SetupWizard } from "@/components/SetupWizard";
 import { styleStyles, teacherName, useStudio, useStudioData, useTeachers, useTerminology } from "@/data/store";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+const SETUP_COMPLETE_KEY = "studioflow_setup_complete";
+function hasCompletedSetup(): boolean {
+  return localStorage.getItem(SETUP_COMPLETE_KEY) === "true";
+}
+function markSetupComplete(): void {
+  localStorage.setItem(SETUP_COMPLETE_KEY, "true");
+}
+
 export default function Dashboard() {
+  const [showSetup, setShowSetup] = useState(false);
+
+  useEffect(() => {
+    if (!hasCompletedSetup()) {
+      setShowSetup(true);
+    }
+  }, []);
+
+  if (showSetup) {
+    return <SetupWizard onComplete={() => { markSetupComplete(); setShowSetup(false); }} />;
+  }
   const { studio } = useStudio();
   const term = useTerminology();
   const { classes, students, announcements, invoices, revenueSeries } = useStudioData();

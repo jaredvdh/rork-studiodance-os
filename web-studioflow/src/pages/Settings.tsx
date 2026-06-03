@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
-import { Camera, Check, Save, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Building2, Camera, Check, ExternalLink, Loader2, RefreshCw, Save, ShieldAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
 import type { Vertical } from "@/data/types";
 import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
+import { getStripeConnectState, startStripeConnect } from "@/lib/stripe";
+import { uploadStudioLogo, removeStudioLogo } from "@/lib/storage";
 
 function initialsFrom(name: string): string {
   return name
@@ -33,20 +36,39 @@ export default function Settings() {
   const [tagline, setTagline] = useState(studio.tagline);
   const [city, setCity] = useState(studio.city);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = reader.result as string;
+    setLogoUploading(true);
+    try {
+      const url = await uploadStudioLogo(file, studio.id);
       updateStudio({ logoUrl: url });
-    };
-    reader.readAsDataURL(file);
-    // Reset so same file can be re-uploaded
+      toast.success("Logo uploaded to cloud storage");
+    } catch {
+      // Fallback to base64 for development
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = reader.result as string;
+        updateStudio({ logoUrl: url });
+      };
+      reader.readAsDataURL(file);
+      toast("Logo saved locally (cloud storage unavailable)");
+    } finally {
+      setLogoUploading(false);
+    }
     e.target.value = "";
   };
 
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = async () => {
+    try {
+      // Try to remove from storage if it's a Supabase URL
+      if (studio.logoUrl?.includes("supabase")) {
+        const path = studio.logoUrl.split("/").slice(-2).join("/");
+        await removeStudioLogo(path);
+      }
+    } catch { /* ignore */ }
     updateStudio({ logoUrl: undefined });
     toast("Logo removed");
   };
@@ -118,10 +140,11 @@ export default function Settings() {
             />
             <button
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary"
+              disabled={logoUploading}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
             >
-              <Camera className="h-4 w-4" />
-              {studio.logoUrl ? "Change logo" : "Upload logo"}
+              {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              {logoUploading ? "Uploading…" : studio.logoUrl ? "Change logo" : "Upload logo"}
             </button>
             {studio.logoUrl && (
               <button
@@ -214,6 +237,9 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* Stripe Connect */}
+      <StripeConnectSection />
+
       {/* Brand color */}
       <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
         <div>
@@ -262,5 +288,111 @@ export default function Settings() {
         )}
       </div>
     </div>
+  );
+}
+
+/* ── Stripe Connect section ───────────────────────────────────────── */
+
+function StripeConnectSection() {
+  const { studio } = useStudio();
+  const { data: state, isLoading, refetch } = useQuery({
+    queryKey: ["stripe-connect", studio.id],
+    queryFn: () => getStripeConnectState(studio.id),
+    refetchInterval: state?.status === "pending" ? 5000 : false,
+  });
+
+  const handleConnect = async () => {
+    try {
+      const { url } = await startStripeConnect(studio.id, studio.name);
+      if (url !== "#") window.open(url, "_blank");
+      else toast.info("Stripe Connect onboarding — simulated mode");
+    } catch {
+      toast.error("Failed to start Stripe onboarding");
+    }
+  };
+
+  const statusConfig = {
+    not_connected: {
+      icon: Building2,
+      label: "Not connected",
+      desc: "Connect your Stripe account to accept payments from families.",
+      chip: "bg-muted text-muted-foreground",
+      action: { label: "Connect Stripe", onClick: handleConnect },
+    },
+    pending: {
+      icon: Loader2,
+      label: "Onboarding in progress",
+      desc: "Complete your Stripe account setup. This usually takes 1-2 business days for verification.",
+      chip: "bg-amber-100 text-amber-700",
+      action: { label: "Resume onboarding", onClick: handleConnect },
+    },
+    connected: {
+      icon: Check,
+      label: "Connected",
+      desc: `Payments are live. Payouts ${state?.payoutsEnabled ? "enabled" : "pending"}.`,
+      chip: "bg-success/10 text-success",
+      action: undefined,
+    },
+    restricted: {
+      icon: ShieldAlert,
+      label: "Restricted",
+      desc: "Your Stripe account has restrictions. Visit the Stripe dashboard to resolve them.",
+      chip: "bg-destructive/10 text-destructive",
+      action: { label: "View in Stripe", onClick: () => window.open("https://dashboard.stripe.com", "_blank") },
+    },
+  };
+
+  const config = statusConfig[state?.status ?? "not_connected"];
+  const StatusIcon = config.icon;
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", config.chip)}>
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <StatusIcon className={cn("h-5 w-5", state?.status === "pending" && "animate-spin")} />}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Stripe Connect</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground max-w-md">{config.desc}</p>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", config.chip)}>
+                {config.label}
+              </span>
+              {state?.status === "connected" && (
+                <>
+                  {state?.chargesEnabled && (
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">Charges enabled</span>
+                  )}
+                  {state?.payoutsEnabled && (
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">Payouts enabled</span>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {config.action && (
+            <button
+              onClick={config.action.onClick}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition hover:bg-secondary"
+            >
+              {config.action.label}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {state?.status === "connected" && (
+            <button
+              onClick={() => refetch()}
+              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary"
+              title="Refresh status"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
