@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   CalendarDays,
   Check,
   CreditCard,
-  Database,
   DollarSign,
   GraduationCap,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Megaphone,
   Menu,
@@ -173,11 +174,36 @@ const BRAND_COLORS = [
   { label: "Slate", value: "220 12% 40%", swatch: "hsl(220 12% 40%)" },
 ];
 
+function getInitials(user: { name?: string; email: string } | null): string {
+  if (!user) return "??";
+  if (user.name) {
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return user.name.slice(0, 2).toUpperCase();
+  }
+  return user.email.slice(0, 2).toUpperCase();
+}
+
 function UserMenu() {
+  const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const { studio, updateStudio } = useStudio();
   const term = useTerminology();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      navigate("/login", { replace: true });
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -186,15 +212,18 @@ function UserMenu() {
           className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground transition hover:opacity-85"
           aria-label="User menu"
         >
-          ME
+          {getInitials(user)}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuPortal>
         <DropdownMenuContent className="w-64" align="end" sideOffset={8}>
           {/* User info */}
           <div className="px-2 py-2">
-            <p className="text-sm font-semibold">Studio Director</p>
-            <p className="text-xs text-muted-foreground">admin@{studio.name.toLowerCase().replace(/\s+/g, "")}.com</p>
+            <p className="text-sm font-semibold">{user?.name ?? "Studio Admin"}</p>
+            <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
+            {studio.name && (
+              <p className="mt-1 text-[11px] text-muted-foreground/70">{studio.name}</p>
+            )}
           </div>
           <DropdownMenuSeparator />
 
@@ -302,11 +331,16 @@ function UserMenu() {
 
           {/* Sign out */}
           <DropdownMenuItem
-            onClick={() => { navigate("/"); setOpen(false); }}
+            onClick={handleSignOut}
+            disabled={isSigningOut}
             className="gap-2.5 text-muted-foreground"
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            {isSigningOut ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+            {isSigningOut ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenuPortal>

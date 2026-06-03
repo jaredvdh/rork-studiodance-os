@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   CalendarDays,
@@ -7,17 +8,29 @@ import {
   FileSignature,
   Heart,
   Home,
+  Loader2,
+  LogOut,
   Megaphone,
   Menu,
   Search,
-  Shield,
+  Settings,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
 
 import { useStudio } from "@/data/store";
+import { useAuth } from "@/hooks/useAuth";
 import { DemoBadge, isDemoSession } from "@/components/DemoBadge";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const nav = [
   { to: "/parent", label: "Dashboard", icon: Home, exact: true },
@@ -42,6 +55,16 @@ function StudioName() {
   return <>{studio.name}</>;
 }
 
+function getInitials(user: { name?: string; email: string } | null): string {
+  if (!user) return "??";
+  if (user.name) {
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return user.name.slice(0, 2).toUpperCase();
+  }
+  return user.email.slice(0, 2).toUpperCase();
+}
+
 function StudioLogo() {
   const { studio } = useStudio();
   return (
@@ -53,6 +76,102 @@ function StudioLogo() {
         <StudioName />
       </span>
     </NavLink>
+  );
+}
+
+function ParentUserMenu() {
+  const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      navigate("/parent/login", { replace: true });
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="grid h-9 w-9 place-items-center rounded-full bg-amber-400 text-sm font-semibold text-amber-900 transition hover:opacity-85"
+          aria-label="Account menu"
+        >
+          {getInitials(user)}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
+          <div className="px-2 py-2">
+            <p className="text-sm font-semibold">{user?.name ?? "Parent"}</p>
+            <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => { navigate("/parent/family"); setOpen(false); }}
+            className="gap-2.5"
+          >
+            <UserRound className="h-4 w-4 text-muted-foreground" />
+            Family settings
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="gap-2.5 text-muted-foreground"
+          >
+            {isSigningOut ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+            {isSigningOut ? "Signing out…" : "Sign out"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
+  );
+}
+
+function MobileSignOut() {
+  const { signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      navigate("/parent/login", { replace: true });
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleSignOut}
+      disabled={isSigningOut}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-rose-50 hover:text-rose-600"
+    >
+      {isSigningOut ? (
+        <Loader2 className="h-[18px] w-[18px] animate-spin" />
+      ) : (
+        <LogOut className="h-[18px] w-[18px]" />
+      )}
+      {isSigningOut ? "Signing out…" : "Sign out"}
+    </button>
   );
 }
 
@@ -122,9 +241,7 @@ export default function ParentShell({ children }: ParentShellProps) {
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose ring-2 ring-white" />
             </button>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-amber-400 text-sm font-semibold text-amber-900">
-              DW
-            </div>
+            <ParentUserMenu />
           </div>
         </div>
       </header>
@@ -179,6 +296,10 @@ export default function ParentShell({ children }: ParentShellProps) {
                   {label}
                 </NavLink>
               ))}
+              {/* Mobile sign-out */}
+              <div className="mt-2 border-t border-amber-200 pt-2">
+                <MobileSignOut />
+              </div>
             </div>
           </div>
         </div>
