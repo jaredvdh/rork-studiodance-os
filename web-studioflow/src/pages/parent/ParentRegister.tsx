@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -64,11 +64,11 @@ const totalSteps = 3;
 
 export default function ParentRegister() {
   const { studio } = useStudio();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, signUpWithEmail, isSigningIn } = useAuth();
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   const [form, setForm] = useState<RegistrationForm>({
     parentName: "",
@@ -126,13 +126,23 @@ export default function ParentRegister() {
       setStep(step + 1);
     } else {
       setIsPersisting(true);
+      setRegisterError(null);
       try {
-        const nameParts = form.parentName.trim().split(" ");
-        const firstName = nameParts[0] ?? "";
-        const lastName = nameParts.slice(1).join(" ") ?? "";
+        // 1. Create Supabase Auth account
+        await signUpWithEmail(form.email.trim(), form.password, {
+          name: form.parentName.trim(),
+          role: "parent",
+          studio_id: studio.id,
+        });
+
+        // signUpWithEmail doesn't throw on email-confirmation-required;
+        // it sets the user only if a session was returned. If the user
+        // is still null after signUp, email confirmation is needed.
+        // We check below via the `user` from useAuth which updates reactively.
+
+        // 2. Persist parent + children to Supabase (runs regardless of confirmation)
         const address = `${form.address.street}, ${form.address.city}, ${form.address.state} ${form.address.zip}`;
         const parentId = `p_${Date.now()}`;
-        // Persist parent to Supabase
         await supabase.from("parents").insert({
           id: parentId,
           studio_id: studio.id,
@@ -145,7 +155,7 @@ export default function ParentRegister() {
           zip: form.address.zip,
           child_ids: [],
         });
-        // Persist children
+
         const childIds: string[] = [];
         for (const child of form.children) {
           if (!child.name.trim()) continue;
@@ -168,15 +178,14 @@ export default function ParentRegister() {
             allergies: child.allergies || null,
           });
         }
-        // Update parent's child_ids
         if (childIds.length > 0) {
           await supabase.from("parents").update({ child_ids: childIds }).eq("id", parentId);
         }
+
         setSubmitted(true);
       } catch (err) {
         console.error("Registration failed:", err);
-        // Still show success for now — graceful degradation
-        setSubmitted(true);
+        setRegisterError(err instanceof Error ? err.message : "Registration failed. Please try again.");
       } finally {
         setIsPersisting(false);
       }
@@ -185,18 +194,28 @@ export default function ParentRegister() {
 
   /* ── Confirmation ─────────────────────────────────────────────── */
   if (submitted) {
+    const isLoggedIn = !!user;
     return (
       <div className="min-h-screen bg-parent flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
           <div className="rounded-3xl border border-amber-200/70 bg-white p-10 shadow-lift text-center animate-float-up">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-success shadow-glow">
-              <Check className="h-8 w-8 text-white" />
+            <div className={cn(
+              "mx-auto grid h-16 w-16 place-items-center rounded-full",
+              isLoggedIn ? "bg-success shadow-glow" : "bg-amber-100",
+            )}>
+              {isLoggedIn ? (
+                <Check className="h-8 w-8 text-white" />
+              ) : (
+                <Mail className="h-8 w-8 text-amber-600" />
+              )}
             </div>
-            <h1 className="mt-6 font-display text-2xl font-semibold">Welcome to {studio.name}!</h1>
+            <h1 className="mt-6 font-display text-2xl font-semibold">
+              {isLoggedIn ? `Welcome to ${studio.name}!` : "Check your email"}
+            </h1>
             <p className="mt-2 text-muted-foreground">
-              Your account has been created. You can now manage your{" "}
-              {form.children.length} child{form.children.length !== 1 ? "ren" : ""}'s
-              classes, waivers, and payments.
+              {isLoggedIn
+                ? `Your account has been created. You can now manage your ${form.children.length} child${form.children.length !== 1 ? "ren" : ""}'s classes, waivers, and payments.`
+                : `We've sent a confirmation link to ${form.email.trim()}. Please verify your email to complete registration.`}
             </p>
 
             <div className="mt-6 space-y-2 rounded-xl bg-amber-50/60 p-4 text-left">
@@ -209,16 +228,30 @@ export default function ParentRegister() {
               ))}
             </div>
 
-            <p className="mt-4 text-xs text-muted-foreground">
-              {user ? "Signed in as " + (user.email ?? user.name) : "Sign in to complete setup"}
-            </p>
-            <Link
-              to="/parent"
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-amber-900 shadow-soft transition hover:opacity-90"
-            >
-              Go to dashboard
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {isLoggedIn && (
+              <>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Signed in as {user?.email ?? user?.name}
+                </p>
+                <Link
+                  to="/parent"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-amber-900 shadow-soft transition hover:opacity-90"
+                >
+                  Go to dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </>
+            )}
+
+            {!isLoggedIn && (
+              <Link
+                to="/parent/login"
+                className="mt-4 inline-flex items-center gap-2 rounded-full border-2 border-amber-200 bg-white px-6 py-3 text-sm font-semibold text-amber-700 shadow-soft transition hover:bg-amber-50 hover:border-amber-300"
+              >
+                Go to sign in
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -463,17 +496,23 @@ export default function ParentRegister() {
                 <div />
               )}
 
+              {registerError && (
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+                  <p className="text-sm text-red-700">{registerError}</p>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={!canAdvance() || isPersisting}
+                disabled={!canAdvance() || isPersisting || isSigningIn}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold shadow-soft transition-all",
-                  canAdvance() && !isPersisting
+                  canAdvance() && !isPersisting && !isSigningIn
                     ? "bg-amber-400 text-amber-900 hover:opacity-90"
                     : "bg-amber-100 text-amber-400 cursor-not-allowed",
                 )}
               >
-                {isPersisting ? (
+                {isPersisting || isSigningIn ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Saving…

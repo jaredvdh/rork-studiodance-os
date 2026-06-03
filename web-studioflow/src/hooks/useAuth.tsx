@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { supabase } from "@/lib/supabase";
+import type { AuthError } from "@supabase/supabase-js";
 
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
@@ -14,6 +16,7 @@ const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
 const CODE_VERIFIER_KEY = "rork:pkce_verifier";
+const USER_META_KEY = "rork:user_meta";
 
 function generateCodeVerifier(): string {
   const bytes = new Uint8Array(32);
@@ -55,15 +58,20 @@ function userFromToken(token: string): User | null {
       return null;
     }
 
-    return {
-      id: payload.sub,
-      email: payload.email ?? "",
-      name: payload.name,
-      picture: payload.picture,
-      role: payload.role,
-      studioId: payload.studio_id,
-      isDemo: payload.is_demo === true,
-    };
+    // Rork Auth JWT format
+    if (payload.sub && payload.email) {
+      return {
+        id: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture,
+        role: payload.role,
+        studioId: payload.studio_id,
+        isDemo: payload.is_demo === true,
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -74,8 +82,13 @@ interface AuthContextType {
   isLoading: boolean;
   isSigningIn: boolean;
   error: string | null;
+  /** OAuth sign-in (Google / Apple) via Rork Auth */
   signIn: (provider: "google" | "apple") => Promise<void>;
-  signOut: () => void;
+  /** Email/password sign-in via Supabase Auth */
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  /** Email/password sign-up via Supabase Auth */
+  signUpWithEmail: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<void>;
+  signOut: () => Promise<void>;
   clearError: () => void;
   exchangeCode: (code: string) => Promise<void>;
   getAccessToken: () => string | null;
@@ -92,6 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Persist user metadata alongside token so we can restore on refresh
+  const persistUserMeta = useCallback((u: User) => {
+    localStorage.setItem(USER_META_KEY, JSON.stringify({
+      id: u.id, email: u.email, name: u.name, picture: u.picture,
+      role: u.role, studioId: u.studioId, isDemo: u.isDemo,
+    }));
+  }, []);
+
+  // Restore session on mount
   useEffect(() => {
     void checkAuth();
   }, []);
@@ -107,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkAuth() {
     try {
+      // 1. Try Rork Auth JWT from localStorage
       const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       if (accessToken) {
         const decoded = userFromToken(accessToken);
@@ -116,6 +139,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       }
+
+      // 2. Try Supabase session (for email/password users)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const su = session.user;
+        const u: User = {
+          id: su.id,
+          email: su.email ?? "",
+          name: su.user_metadata?.name as string,
+          role: su.user_metadata?.role as string,
+          studioId: su.user_metadata?.studio_id as string,
+          isDemo: su.user_metadata?.is_demo as boolean | undefined,
+        };
+        localStorage.setItem(ACCESS_TOKEN_KEY, session.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, session.refresh_token);
+        persistUserMeta(u);
+        setUser(u);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Try Rork refresh token
       if (localStorage.getItem(REFRESH_TOKEN_KEY)) {
         await refreshToken();
       }
@@ -147,9 +192,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { access_token, refresh_token, user: userData } = await response.json();
     localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
     localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
-    setUser(userData ?? userFromToken(access_token));
+    const resolved = userData ?? userFromToken(access_token);
+    if (resolved) {
+      persistUserMeta(resolved);
+      setUser(resolved);
+    }
   }
 
+  // ───── OAuth (Google / Apple) via Rork Auth ─────
   async function signIn(provider: "google" | "apple") {
     setIsSigningIn(true);
     setError(null);
@@ -228,13 +278,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // ───── Email/password via Supabase Auth ─────
+  async function signInWithEmail(email: string, password: string) {
+    setIsSigningIn(true);
+    setError(null);
+    try {
+      const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (authErr) {
+        setError(formatSupabaseError(authErr));
+        return;
+      }
+      if (data.session) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, data.session.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.session.refresh_token);
+        const su = data.session.user;
+        const u: User = {
+          id: su.id,
+          email: su.email ?? email,
+          name: su.user_metadata?.name as string,
+          role: su.user_metadata?.role as string,
+          studioId: su.user_metadata?.studio_id as string,
+          isDemo: su.user_metadata?.is_demo as boolean | undefined,
+        };
+        persistUserMeta(u);
+        setUser(u);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed");
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
+
+  async function signUpWithEmail(email: string, password: string, metadata?: Record<string, unknown>) {
+    setIsSigningIn(true);
+    setError(null);
+    try {
+      const { data, error: authErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata },
+      });
+      if (authErr) {
+        setError(formatSupabaseError(authErr));
+        return;
+      }
+      // If the session is immediately available (no email confirmation required)
+      if (data.session) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, data.session.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.session.refresh_token);
+        const su = data.session.user;
+        const u: User = {
+          id: su.id,
+          email: su.email ?? email,
+          name: metadata?.name as string,
+          role: metadata?.role as string,
+          studioId: metadata?.studio_id as string,
+        };
+        persistUserMeta(u);
+        setUser(u);
+      }
+      // If email confirmation is required, data.session will be null
+      // and the user needs to verify their email first
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign up failed");
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
+
   async function refreshToken() {
     const stored = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!stored) {
-      signOut();
+      await signOut();
       return;
     }
 
+    // Try Supabase session refresh first (it handles its own refresh)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, session.access_token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, session.refresh_token);
+      const su = session.user;
+      setUser({
+        id: su.id,
+        email: su.email ?? "",
+        name: su.user_metadata?.name as string,
+        role: su.user_metadata?.role as string,
+        studioId: su.user_metadata?.studio_id as string,
+      });
+      return;
+    }
+
+    // Fall back to Rork Auth refresh
     const response = await fetch(`${AUTH_URL}/oauth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -242,19 +378,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      signOut();
+      await signOut();
       return;
     }
 
     const { access_token } = await response.json();
     localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
-    setUser(userFromToken(access_token));
+    const decoded = userFromToken(access_token);
+    if (decoded) {
+      persistUserMeta(decoded);
+      setUser(decoded);
+    }
   }
 
-  function signOut() {
+  async function signOut() {
+    // Sign out of Supabase Auth if there's a Supabase session
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Supabase signOut may fail if no session — ignore
+    }
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(CODE_VERIFIER_KEY);
+    localStorage.removeItem(USER_META_KEY);
     setUser(null);
   }
 
@@ -264,7 +411,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isSigningIn, error, signIn, signOut, clearError, exchangeCode, getAccessToken }}
+      value={{
+        user, isLoading, isSigningIn, error,
+        signIn, signInWithEmail, signUpWithEmail,
+        signOut, clearError, exchangeCode, getAccessToken,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -277,4 +428,18 @@ export function useAuth() {
     throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
+}
+
+/** Turn Supabase AuthError into a user-friendly string. */
+function formatSupabaseError(err: AuthError): string {
+  switch (err.message) {
+    case "Invalid login credentials":
+      return "Invalid email or password. Please try again.";
+    case "Email not confirmed":
+      return "Please verify your email address before signing in.";
+    case "User already registered":
+      return "An account with this email already exists.";
+    default:
+      return err.message;
+  }
 }
