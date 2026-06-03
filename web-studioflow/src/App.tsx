@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { ProtectedRoute, GuestRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AdminLogin from "@/pages/AdminLogin";
 import AuthCallback from "@/pages/AuthCallback";
 import AppShell from "./components/layout/AppShell";
@@ -87,34 +88,34 @@ const App = () => (
           <Route path="/auth/callback" element={withStudio(AuthCallback)} />
           <Route path="/login" element={withStudio(AdminLogin)} />
 
-          {/* Protected admin routes */}
-          <Route path="/dashboard" element={<ProtectedRoute>{withShell(Dashboard)}</ProtectedRoute>} />
-          <Route path="/classes" element={<ProtectedRoute>{withShell(Classes)}</ProtectedRoute>} />
-          <Route path="/students" element={<ProtectedRoute>{withShell(Students)}</ProtectedRoute>} />
-          <Route path="/schedule" element={<ProtectedRoute>{withShell(Schedule)}</ProtectedRoute>} />
-          <Route path="/announcements" element={<ProtectedRoute>{withShell(Announcements)}</ProtectedRoute>} />
-          <Route path="/payments" element={<ProtectedRoute>{withShell(Payments)}</ProtectedRoute>} />
-          <Route path="/recitals" element={<ProtectedRoute>{withShell(Recitals)}</ProtectedRoute>} />
-          <Route path="/instructors" element={<ProtectedRoute>{withShell(Instructors)}</ProtectedRoute>} />
-          <Route path="/instructor-pay" element={<ProtectedRoute>{withShell(InstructorPay)}</ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute>{withShell(Settings)}</ProtectedRoute>} />
-          <Route path="/migration" element={<ProtectedRoute>{withShell(MigrationWizard)}</ProtectedRoute>} />
-          <Route path="/migration-history" element={<ProtectedRoute>{withShell(MigrationHistory)}</ProtectedRoute>} />
+          {/* Protected admin routes — wrapped in ErrorBoundary for crash resilience */}
+          <Route path="/dashboard" element={<ProtectedRoute><ErrorBoundary>{withShell(Dashboard)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/classes" element={<ProtectedRoute><ErrorBoundary>{withShell(Classes)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/students" element={<ProtectedRoute><ErrorBoundary>{withShell(Students)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/schedule" element={<ProtectedRoute><ErrorBoundary>{withShell(Schedule)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/announcements" element={<ProtectedRoute><ErrorBoundary>{withShell(Announcements)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/payments" element={<ProtectedRoute><ErrorBoundary>{withShell(Payments)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/recitals" element={<ProtectedRoute><ErrorBoundary>{withShell(Recitals)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/instructors" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(InstructorPay)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><ErrorBoundary>{withShell(Settings)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/migration" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationWizard)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/migration-history" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationHistory)}</ErrorBoundary></ProtectedRoute>} />
 
           {/* Parent/Student Portal — public auth pages */}
           <Route path="/parent/login" element={<GuestRoute>{withStudio(ParentLogin)}</GuestRoute>} />
           <Route path="/parent/register" element={<GuestRoute>{withStudio(ParentRegister)}</GuestRoute>} />
 
           {/* Parent/Student Portal — protected routes */}
-          <Route path="/parent" element={<ProtectedRoute>{withParentShell(ParentDashboard)}</ProtectedRoute>} />
-          <Route path="/parent/family" element={<ProtectedRoute>{withParentShell(ParentFamily)}</ProtectedRoute>} />
-          <Route path="/parent/classes" element={<ProtectedRoute>{withParentShell(ParentClasses)}</ProtectedRoute>} />
-          <Route path="/parent/schedule" element={<ProtectedRoute>{withParentShell(ParentSchedule)}</ProtectedRoute>} />
-          <Route path="/parent/children" element={<ProtectedRoute>{withParentShell(ParentFamily)}</ProtectedRoute>} />
-          <Route path="/parent/caregivers" element={<ProtectedRoute>{withParentShell(ParentFamily)}</ProtectedRoute>} />
-          <Route path="/parent/payments" element={<ProtectedRoute>{withParentShell(ParentPayments)}</ProtectedRoute>} />
-          <Route path="/parent/announcements" element={<ProtectedRoute>{withParentShell(ParentAnnouncements)}</ProtectedRoute>} />
-          <Route path="/parent/waivers" element={<ProtectedRoute>{withParentShell(ParentWaivers)}</ProtectedRoute>} />
+          <Route path="/parent" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentDashboard)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/family" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/classes" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentClasses)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/schedule" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentSchedule)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/children" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/caregivers" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/payments" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentPayments)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/announcements" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentAnnouncements)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/waivers" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentWaivers)}</ErrorBoundary></ProtectedRoute>} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

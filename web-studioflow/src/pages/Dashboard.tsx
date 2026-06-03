@@ -29,6 +29,12 @@ function markSetupComplete(): void {
 export default function Dashboard() {
   const [showSetup, setShowSetup] = useState(false);
 
+  // All hooks MUST be called before any conditional return (React rule of hooks)
+  const { studio } = useStudio();
+  const term = useTerminology();
+  const { classes, students, announcements, invoices, revenueSeries } = useStudioData();
+  const { teachers } = useTeachers();
+
   useEffect(() => {
     if (!hasCompletedSetup()) {
       setShowSetup(true);
@@ -38,10 +44,6 @@ export default function Dashboard() {
   if (showSetup) {
     return <SetupWizard onComplete={() => { markSetupComplete(); setShowSetup(false); }} />;
   }
-  const { studio } = useStudio();
-  const term = useTerminology();
-  const { classes, students, announcements, invoices, revenueSeries } = useStudioData();
-  const { teachers } = useTeachers();
 
   const activeStudents = students.length;
   const totalCapacity = classes.reduce((a, c) => a + c.capacity, 0);
