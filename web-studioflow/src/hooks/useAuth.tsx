@@ -12,6 +12,7 @@ import type { AuthError } from "@supabase/supabase-js";
 
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
+const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
 
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
@@ -67,7 +68,7 @@ function userFromToken(token: string): User | null {
         picture: payload.picture,
         role: payload.role,
         studioId: payload.studio_id,
-        isDemo: payload.is_demo === true,
+        isDemo: payload.is_demo === true || payload.is_demo === "true",
       };
     }
 
@@ -86,6 +87,8 @@ interface AuthContextType {
   signIn: (provider: "google" | "apple") => Promise<void>;
   /** Email/password sign-in via Supabase Auth */
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  /** Demo account sign-in via edge function — returns the User for routing */
+  signInDemo: (email: string, password: string) => Promise<User>;
   /** Email/password sign-up via Supabase Auth */
   signUpWithEmail: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<void>;
   signOut: () => Promise<void>;
@@ -134,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (accessToken) {
         const decoded = userFromToken(accessToken);
         if (decoded) {
+          persistUserMeta(decoded);
           setUser(decoded);
           setIsLoading(false);
           return;
@@ -278,6 +282,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // ───── Demo account sign-in via edge function ─────
+  async function signInDemo(email: string, password: string): Promise<User> {
+    setIsSigningIn(true);
+    setError(null);
+    try {
+      const res = await fetch(`${FUNCTIONS_URL}/demo-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Invalid demo credentials");
+      }
+
+      // Store tokens identically to production auth flow
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+
+      // Decode user from token or response body
+      const resolved = data.user ?? userFromToken(data.access_token);
+      if (!resolved) {
+        throw new Error("Failed to decode demo session");
+      }
+      persistUserMeta(resolved);
+      setUser(resolved);
+      return resolved;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Demo sign-in failed";
+      setError(msg);
+      throw err;
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
+
   // ───── Email/password via Supabase Auth ─────
   async function signInWithEmail(email: string, password: string) {
     setIsSigningIn(true);
@@ -413,7 +455,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user, isLoading, isSigningIn, error,
-        signIn, signInWithEmail, signUpWithEmail,
+        signIn, signInWithEmail, signInDemo, signUpWithEmail,
         signOut, clearError, exchangeCode, getAccessToken,
       }}
     >

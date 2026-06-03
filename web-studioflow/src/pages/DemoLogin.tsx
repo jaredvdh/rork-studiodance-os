@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowRight, Beaker, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,9 @@ export default function DemoLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  const handleLogin = useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email.trim() || !password) return;
     setError(null);
     setIsLoading(true);
 
@@ -72,11 +73,15 @@ export default function DemoLogin() {
       setError("Network error — please try again.");
       setIsLoading(false);
     }
-  }
+  }, [email, password]);
 
-  function fillDemo(accountEmail: string) {
+  function quickLogin(accountEmail: string) {
     setEmail(accountEmail);
     setPassword("StudioFlowDemo123!");
+    // Auto-submit after a tick so React state updates
+    setTimeout(() => {
+      void handleLogin();
+    }, 50);
   }
 
   return (
@@ -109,7 +114,7 @@ export default function DemoLogin() {
           {DEMO_ACCOUNTS.map((account) => (
             <button
               key={account.email}
-              onClick={() => fillDemo(account.email)}
+              onClick={() => quickLogin(account.email)}
               className={cn(
                 "w-full rounded-xl border border-amber-200/60 bg-white/70 p-3 text-left transition-all hover:bg-amber-50 hover:shadow-sm",
                 email === account.email && "border-amber-400 bg-amber-50 ring-1 ring-amber-200",
@@ -141,7 +146,7 @@ export default function DemoLogin() {
               Use <code className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">StudioFlowDemo123!</code> for all accounts
             </CardDescription>
           </CardHeader>
-          <form onSubmit={(e) => void handleLogin(e)}>
+          <form onSubmit={(e) => void handleLogin(e as unknown as React.FormEvent)}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">

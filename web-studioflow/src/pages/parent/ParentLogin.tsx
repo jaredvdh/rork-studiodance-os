@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { useStudio } from "@/data/store";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,16 +12,30 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 import { EmailLoginForm } from "@/components/auth/EmailLoginForm";
 
 export default function ParentLogin() {
+  const navigate = useNavigate();
   const { studio } = useStudio();
   const {
     isSigningIn,
     error,
     signIn,
     signInWithEmail,
+    signInDemo,
     clearError,
   } = useAuth();
 
   const handleEmailSignIn = async (email: string, password: string) => {
+    // Detect demo accounts — route through demo-login edge function
+    if (email.toLowerCase().endsWith("@studioflow.app")) {
+      try {
+        const user = await signInDemo(email, password);
+        window.location.href = user.role === "parent" || user.role === "caregiver"
+          ? "/parent"
+          : "/dashboard";
+      } catch {
+        // Error already set by signInDemo
+      }
+      return;
+    }
     await signInWithEmail(email, password);
   };
 
