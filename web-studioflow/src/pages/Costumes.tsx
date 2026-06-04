@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Camera,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   Clock,
@@ -22,6 +23,7 @@ import {
   FileText,
   FileUp,
   Hash,
+  History,
   MoreHorizontal,
   Package,
   Palette,
@@ -37,6 +39,7 @@ import {
   Ticket,
   Trash2,
   TrendingUp,
+  TrendingDown,
   Truck,
   Upload,
   Users,
@@ -67,6 +70,7 @@ import type {
   VendorOrder,
 } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
+import { getMeasurementFreshness, getFreshnessConfig, getMeasurementHistory, formatLastUpdated, formatDateFull } from "@/lib/measurements";
 import { cn } from "@/lib/utils";
 
 type Tab = "dashboard" | "library" | "measurements" | "orders" | "alterations" | "distribution" | "inventory" | "quickchange";
@@ -651,6 +655,15 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
   recommendations: SizeRecommendation[];
   costumes: Costume[];
 }) {
+  const { preferredUnits: units } = useUnitPreference();
+  const ctx = useCostumes();
+
+  // Group measurements by student
+  const studentIds = useMemo(() => {
+    const ids = new Set(measurements.map((m) => m.studentId));
+    return [...ids];
+  }, [measurements]);
+
   return (
     <div className="space-y-6">
       {/* Summary bar */}
@@ -660,39 +673,130 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
         <StatPill label="Draft" value={measurements.filter((m) => m.status === "draft").length} tone="bg-secondary" />
       </div>
 
-      {/* Student measurement cards */}
+      {/* Per-student measurement cards (grouped, latest first) */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {measurements.map((m) => {
-          const student = students.find((s) => s.id === m.studentId);
-          const recs = recommendations.filter((r) => r.studentId === m.studentId);
+        {studentIds.map((sid) => {
+          const student = students.find((s) => s.id === sid);
+          const history = ctx.measurementHistory(sid);
+          const latest = history[0];
+          const recs = recommendations.filter((r) => r.studentId === sid);
+
+          if (!latest) return null;
+
+          const freshness = getMeasurementFreshness(latest.measuredAt);
+          const fConfig = FRESHNESS_CONFIG[freshness];
+
           return (
-            <div key={m.id} className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft">
+            <div key={sid} className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-sm font-semibold">{student?.name ?? "Unknown Student"}</p>
-                  <p className="text-xs text-muted-foreground">Last updated: {new Date(m.createdAt).toLocaleDateString()}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-xs text-muted-foreground">
+                      {formatLastUpdated(latest.measuredAt)}
+                    </p>
+                    <span className={cn("h-1.5 w-1.5 rounded-full", fConfig.dot)} title={fConfig.label} />
+                  </div>
                 </div>
                 <span className={cn(
                   "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-                  m.status === "approved" ? "bg-teal/10 text-teal" :
-                  m.status === "pending" ? "bg-gold/10 text-gold" :
-                  "bg-secondary text-muted-foreground",
+                  fConfig.bg, fConfig.color,
                 )}>
-                  {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
+                  {fConfig.label}
                 </span>
               </div>
 
-              {/* Measurements grid */}
+              {/* Latest measurements grid */}
               <div className="grid grid-cols-3 gap-2 text-xs">
-                {m.heightCm != null && <MeasField label="Height" value={formatHeight(m.heightCm, units)} />}
-                {m.weightKg != null && <MeasField label="Weight" value={formatWeight(m.weightKg, units)} />}
-                {m.chestCm != null && <MeasField label="Chest" value={formatCm(m.chestCm, units)} />}
-                {m.waistCm != null && <MeasField label="Waist" value={formatCm(m.waistCm, units)} />}
-                {m.hipsCm != null && <MeasField label="Hips" value={formatCm(m.hipsCm, units)} />}
-                {m.girthCm != null && <MeasField label="Girth" value={formatCm(m.girthCm, units)} />}
-                {m.inseamCm != null && <MeasField label="Inseam" value={formatCm(m.inseamCm, units)} />}
-                {m.shoeSize && <MeasField label="Shoe" value={m.shoeSize} />}
+                {latest.heightCm != null && <MeasField label="Height" value={formatHeight(latest.heightCm, units)} />}
+                {latest.weightKg != null && <MeasField label="Weight" value={formatWeight(latest.weightKg, units)} />}
+                {latest.chestCm != null && <MeasField label="Chest" value={formatCm(latest.chestCm, units)} />}
+                {latest.waistCm != null && <MeasField label="Waist" value={formatCm(latest.waistCm, units)} />}
+                {latest.hipsCm != null && <MeasField label="Hips" value={formatCm(latest.hipsCm, units)} />}
+                {latest.girthCm != null && <MeasField label="Girth" value={formatCm(latest.girthCm, units)} />}
+                {latest.inseamCm != null && <MeasField label="Inseam" value={formatCm(latest.inseamCm, units)} />}
+                {latest.shoeSize && <MeasField label="Shoe" value={latest.shoeSize} />}
               </div>
+
+              {/* Status badge for current measurement */}
+              <div className="mt-3 flex items-center gap-2">
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  latest.status === "approved" ? "bg-teal/10 text-teal" :
+                  latest.status === "pending" ? "bg-gold/10 text-gold" :
+                  latest.status === "rejected" ? "bg-rose/10 text-rose" :
+                  "bg-secondary text-muted-foreground",
+                )}>
+                  {latest.status.charAt(0).toUpperCase() + latest.status.slice(1)}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {formatDateFull(latest.measuredAt)}
+                </span>
+              </div>
+
+              {/* Measurement history (expandable) */}
+              {history.length > 1 && (
+                <details className="mt-3 group">
+                  <summary className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition">
+                    <History className="h-3 w-3" />
+                    {history.length - 1} previous measurement{history.length - 1 !== 1 ? "s" : ""}
+                    <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="mt-2 space-y-2 pl-1">
+                    {history.slice(1).map((prev, i) => {
+                      const prevFreshness = getFreshnessConfig(prev.measuredAt);
+                      return (
+                        <div key={prev.id} className="rounded-lg border border-border/40 bg-secondary/20 p-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "rounded-full px-1.5 py-0.5 text-[9px] font-semibold",
+                                prev.status === "approved" ? "bg-teal/10 text-teal" :
+                                prev.status === "pending" ? "bg-gold/10 text-gold" :
+                                prev.status === "rejected" ? "bg-rose/10 text-rose" :
+                                "bg-secondary text-muted-foreground",
+                              )}>
+                                {prev.status.charAt(0).toUpperCase() + prev.status.slice(1)}
+                              </span>
+                              <span className={cn("h-1.5 w-1.5 rounded-full", prevFreshness.dot)} />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">{formatDateFull(prev.measuredAt)}</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+                            {prev.heightCm != null && (
+                              <span className="text-muted-foreground">
+                                H: {formatHeight(prev.heightCm, units)}
+                                {latest.heightCm != null && prev.heightCm !== latest.heightCm && (
+                                  <GrowthArrow current={prev.heightCm} previous={latest.heightCm} isMetric={units === "metric"} isHeight />
+                                )}
+                              </span>
+                            )}
+                            {prev.weightKg != null && (
+                              <span className="text-muted-foreground">
+                                W: {formatWeight(prev.weightKg, units)}
+                              </span>
+                            )}
+                            {prev.chestCm != null && <span className="text-muted-foreground">C: {formatCm(prev.chestCm, units)}</span>}
+                            {prev.girthCm != null && <span className="text-muted-foreground">G: {formatCm(prev.girthCm, units)}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              )}
+
+              {/* Growth trend summary from earliest to latest */}
+              {history.length >= 2 && latest.heightCm != null && history[history.length - 1].heightCm != null && (
+                <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <TrendingUp className={cn("h-3 w-3", latest.heightCm > history[history.length - 1].heightCm! ? "text-teal" : "text-rose")} />
+                  <span>
+                    {latest.heightCm > history[history.length - 1].heightCm!
+                      ? `Grown ${Math.round(latest.heightCm - history[history.length - 1].heightCm!)} cm since first record`
+                      : `No change since first record`}
+                  </span>
+                </div>
+              )}
 
               {/* Size recommendations */}
               {recs.length > 0 && (
@@ -724,6 +828,16 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
           );
         })}
       </div>
+
+      {studentIds.length === 0 && (
+        <div className="rounded-2xl border border-border/70 bg-card p-12 text-center">
+          <Ruler className="mx-auto h-10 w-10 text-muted-foreground/50" />
+          <p className="mt-4 text-lg font-semibold">No measurements yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Student measurements will appear here once parents submit them through the portal.
+          </p>
+        </div>
+      )}
 
       {/* Sizing Charts */}
       {sizingCharts.length > 0 && (
@@ -1312,5 +1426,37 @@ function MeasField({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-xs font-semibold">{value}</p>
     </div>
+  );
+}
+
+/** Growth arrow — shows percentage change between two measurements. */
+function GrowthArrow({
+  current,
+  previous,
+  isMetric,
+  isHeight,
+  isWeight,
+}: {
+  current: number;
+  previous: number;
+  isMetric: boolean;
+  isHeight?: boolean;
+  isWeight?: boolean;
+}) {
+  if (previous === 0 || current === 0) return null;
+  const pctChange = ((current - previous) / previous) * 100;
+  if (Math.abs(pctChange) < 1) return null;
+
+  const up = pctChange > 0;
+  return (
+    <span
+      className={cn(
+        "text-[10px] font-medium ml-1",
+        up ? "text-teal" : "text-rose",
+      )}
+      title={`${up ? "+" : ""}${Math.round(pctChange)}% since last`}
+    >
+      {up ? "↑" : "↓"}{Math.abs(Math.round(pctChange))}%
+    </span>
   );
 }

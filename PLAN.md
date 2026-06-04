@@ -528,13 +528,13 @@ Guided 5-step measurement collection flow replacing the current single-form appr
 
 Measurement freshness tracking with visibility into growth over time.
 
-- [ ] Status colour coding: Green (≤6 months), Yellow (6–12 months), Red (>12 months)
-- [ ] "Last Updated" date displayed prominently on all measurement views
-- [ ] Historical measurement list per student (all prior submissions)
-- [ ] Growth trend indicators: arrow up/down with delta since last measurement
-- [ ] Dashboard alert: "N students require updated measurements" with count
-- [ ] Bulk reminder action: send measurement-update notification to all families with stale data
-- [ ] Measurement approval workflow retained (draft → pending → approved → rejected)
+- [x] Status colour coding: Green (≤6 months), Yellow (6–12 months), Red (>12 months)
+- [x] "Last Updated" date displayed prominently on all measurement views
+- [x] Historical measurement list per student (all prior submissions)
+- [x] Growth trend indicators: arrow up/down with delta since last measurement
+- [x] Dashboard alert: "N students require updated measurements" with count
+- [x] Bulk reminder action: send measurement-update notification to all families with stale data
+- [x] Measurement approval workflow retained (draft → pending → approved → rejected)
 
 ---
 

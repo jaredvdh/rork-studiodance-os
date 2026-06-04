@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
   Clock,
   CreditCard,
   DollarSign,
   Eye,
+  History,
   MessageSquare,
   Ruler,
   Shirt,
+  TrendingUp,
   Truck,
 } from "lucide-react";
 
@@ -18,6 +21,7 @@ import { formatCurrency } from "@/lib/format";
 import { formatHeight, formatWeight, formatCm } from "@/lib/units";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { cn } from "@/lib/utils";
+import { getMeasurementFreshness, getFreshnessConfig, formatLastUpdated, formatDateFull, FRESHNESS_CONFIG } from "@/lib/measurements";
 import MeasurementWizard from "@/components/MeasurementWizard";
 import type { MeasurementSubmission } from "@/components/MeasurementWizard";
 
@@ -233,6 +237,7 @@ export default function ParentCostumes() {
           ) : (
             parentStudents.map((student) => {
               const measurement = ctx.measurementForStudent(student.id);
+              const history = ctx.measurementHistory(student.id);
               const draft = ctx.measurements.find(
                 (m) => m.studentId === student.id && m.status === "draft",
               );
@@ -240,10 +245,24 @@ export default function ParentCostumes() {
                 (m) => m.studentId === student.id && m.status === "pending",
               );
               const recs = ctx.sizeRecommendations.filter((r) => r.studentId === student.id);
+              const freshness = measurement ? getMeasurementFreshness(measurement.measuredAt) : null;
+              const fConfig = freshness ? FRESHNESS_CONFIG[freshness] : null;
               return (
                 <div key={student.id} className="rounded-2xl border border-amber-200/60 bg-cream/80 p-6 shadow-soft">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-lg font-semibold">{student.name}</h3>
+                    <div>
+                      <h3 className="font-display text-lg font-semibold">{student.name}</h3>
+                      {measurement && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <p className="text-xs text-muted-foreground">
+                            {formatLastUpdated(measurement.measuredAt)}
+                          </p>
+                          {fConfig && (
+                            <span className={cn("h-1.5 w-1.5 rounded-full", fConfig.dot)} title={fConfig.label} />
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       {draft && (
                         <button
@@ -261,6 +280,16 @@ export default function ParentCostumes() {
                       </button>
                     </div>
                   </div>
+
+                  {measurement && fConfig && (
+                    <div className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium mb-4",
+                      fConfig.bg, fConfig.color,
+                    )}>
+                      <Clock className="h-3.5 w-3.5" />
+                      {fConfig.label} — {formatDateFull(measurement.measuredAt)}
+                    </div>
+                  )}
 
                   {pending && (
                     <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 mb-4">
@@ -296,6 +325,59 @@ export default function ParentCostumes() {
                       >
                         Submit Measurements
                       </button>
+                    </div>
+                  )}
+
+                  {/* Measurement history (expandable) */}
+                  {history.length > 1 && (
+                    <details className="mt-3 group border-t border-amber-200 pt-3">
+                      <summary className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition">
+                        <History className="h-3 w-3" />
+                        {history.length - 1} previous measurement{history.length - 1 !== 1 ? "s" : ""}
+                        <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        {history.slice(1).map((prev) => {
+                          const prevFreshness = getFreshnessConfig(prev.measuredAt);
+                          return (
+                            <div key={prev.id} className="rounded-lg border border-amber-200/50 bg-white/60 p-3">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className={cn(
+                                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                                  prev.status === "approved" ? "bg-teal/10 text-teal" :
+                                  prev.status === "pending" ? "bg-gold/10 text-gold" :
+                                  prev.status === "rejected" ? "bg-rose/10 text-rose" :
+                                  "bg-secondary text-muted-foreground",
+                                )}>
+                                  {prev.status.charAt(0).toUpperCase() + prev.status.slice(1)}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", prevFreshness.dot)} />
+                                  <span className="text-[10px] text-muted-foreground">{formatDateFull(prev.measuredAt)}</span>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-4 gap-1.5 text-[10px] text-muted-foreground">
+                                {prev.heightCm != null && <span>H: {formatHeight(prev.heightCm, units)}</span>}
+                                {prev.weightKg != null && <span>W: {formatWeight(prev.weightKg, units)}</span>}
+                                {prev.chestCm != null && <span>C: {formatCm(prev.chestCm, units)}</span>}
+                                {prev.girthCm != null && <span>G: {formatCm(prev.girthCm, units)}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Growth trend (earliest vs latest) */}
+                  {history.length >= 2 && measurement?.heightCm != null && history[history.length - 1].heightCm != null && measurement.heightCm !== history[history.length - 1].heightCm && (
+                    <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground border-t border-amber-200 pt-3">
+                      <TrendingUp className={cn("h-3 w-3", measurement.heightCm > history[history.length - 1].heightCm! ? "text-teal" : "text-rose")} />
+                      <span>
+                        {measurement.heightCm > history[history.length - 1].heightCm!
+                          ? `Grown ${Math.round(measurement.heightCm - history[history.length - 1].heightCm!)} cm since first record`
+                          : `No change since first record`}
+                      </span>
                     </div>
                   )}
 

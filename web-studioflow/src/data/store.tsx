@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "./studioStore";
 import { classes as demoClasses } from "./demo";
 import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount, Enrolment, Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict } from "./types";
+import { getMeasurementHistory, getStudentsWithStaleMeasurements } from "@/lib/measurements";
 import { useOptionalMigration } from "./migrationStore";
 import {
   useSupabaseTeachers,
@@ -808,12 +809,16 @@ interface CostumesCtx {
   sizeRecForStudentCostume: (studentId: string, costumeId: string) => SizeRecommendation | undefined;
   /** Get measurement for a student. */
   measurementForStudent: (studentId: string) => StudentMeasurement | undefined;
+  /** Get all measurements for a student (history), newest first. */
+  measurementHistory: (studentId: string) => StudentMeasurement[];
+  /** Get students missing measurements (no approved record). */
+  studentsMissingMeasurements: (allStudentIds: string[]) => string[];
+  /** Get students with stale (>12 months) approved measurements. */
+  studentsWithStaleMeasurements: (allStudentIds: string[]) => string[];
   /** Get fees for a student. */
   feesForStudent: (studentId: string) => CostumeFee[];
   /** Get alteration count by status. */
   alterationCountByStatus: (status: Alteration["status"]) => number;
-  /** Get students missing measurements. */
-  studentsMissingMeasurements: (allStudentIds: string[]) => string[];
   /** Get outstanding costume fee totals by status. */
   outstandingFeeTotal: () => number;
   /** Get number of costumes with quick-change conflicts. */
@@ -956,6 +961,10 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     measurements.find((m) => m.studentId === studentId && m.status === "approved"),
   [measurements]);
 
+  const measurementHistory = useCallback((studentId: string) =>
+    getMeasurementHistory(studentId, measurements),
+  [measurements]);
+
   const feesForStudent = useCallback((studentId: string) =>
     costumeFees.filter((f) => f.studentId === studentId),
   [costumeFees]);
@@ -968,6 +977,10 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     const measured = new Set(measurements.filter((m) => m.status === "approved").map((m) => m.studentId));
     return allStudentIds.filter((id) => !measured.has(id));
   }, [measurements]);
+
+  const studentsWithStaleMeasurements = useCallback((allStudentIds: string[]) =>
+    getStudentsWithStaleMeasurements(allStudentIds, measurements),
+  [measurements]);
 
   const outstandingFeeTotal = useCallback(() =>
     costumeFees.filter((f) => f.status !== "paid" && f.status !== "waived")
@@ -987,16 +1000,20 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     costumeFees, vendorOrders, alterations, distributions, reusableInventory,
     rentals, quickChangeConflicts,
     costumesForClass, costumesForStudent, sizeRecForStudentCostume,
-    measurementForStudent, feesForStudent, alterationCountByStatus,
-    studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
+    measurementForStudent, measurementHistory,
+    studentsMissingMeasurements, studentsWithStaleMeasurements,
+    feesForStudent, alterationCountByStatus,
+    outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
     addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement,
   }), [costumes, assignments, measurements, sizingCharts, sizeRecommendations,
     costumeFees, vendorOrders, alterations, distributions, reusableInventory,
     rentals, quickChangeConflicts,
     costumesForClass, costumesForStudent, sizeRecForStudentCostume,
-    measurementForStudent, feesForStudent, alterationCountByStatus,
-    studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
+    measurementForStudent, measurementHistory,
+    studentsMissingMeasurements, studentsWithStaleMeasurements,
+    feesForStudent, alterationCountByStatus,
+    outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
     addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement]);
 

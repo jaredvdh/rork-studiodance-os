@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowUpRight,
+  Bell,
   CalendarClock,
   CreditCard,
   DollarSign,
@@ -43,7 +44,7 @@ export default function Dashboard() {
   const { teachers } = useTeachers();
   const { invoices } = useInvoices();
   const { templates: waiverTemplates, signatures: waiverSignatures, hasOutstandingWaivers } = useWaivers();
-  const { studentsMissingMeasurements } = useCostumes();
+  const { studentsMissingMeasurements, studentsWithStaleMeasurements, measurements } = useCostumes();
 
   useEffect(() => {
     if (!hasCompletedSetup()) {
@@ -57,6 +58,15 @@ export default function Dashboard() {
 
   // ── Computed metrics ──────────────────────────────────────────────
   const activeStudents = students.length;
+
+  // Measurement staleness computed metrics
+  const allStudentIds = useMemo(() => students.map((s) => s.id), [students]);
+  const missingMeasIds = useMemo(() => studentsMissingMeasurements(allStudentIds), [studentsMissingMeasurements, allStudentIds]);
+  const staleMeasIds = useMemo(() => studentsWithStaleMeasurements(allStudentIds), [studentsWithStaleMeasurements, allStudentIds]);
+  const missingOrStaleCount = missingMeasIds.length + staleMeasIds.length;
+  const staleStudentNames = useMemo(() =>
+    staleMeasIds.map((id) => students.find((s) => s.id === id)?.name).filter(Boolean) as string[],
+  [staleMeasIds, students]);
   const totalCapacity = classes.reduce((a, c) => a + c.capacity, 0);
   const totalEnrolled = classes.reduce((a, c) => a + c.enrolled, 0);
   const capacityPct = Math.round((totalEnrolled / totalCapacity) * 100);
@@ -113,7 +123,7 @@ export default function Dashboard() {
         <StatCard index={0} label={`Active ${term.participantPlural.toLowerCase()}`} value={String(activeStudents)} delta={6} hint="vs. last month" icon={Users} accent="rose" />
         <StatCard index={1} label="Revenue this month" value={formatCurrency(monthRevenue, true)} delta={12} hint="from enrolments" icon={DollarSign} accent="gold" />
         <StatCard index={2} label="Class capacity" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
-        <StatCard index={3} label="Missing Measurements" value={String(studentsMissingMeasurements(students.map((s) => s.id)).length)} delta={-3} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={Ruler} accent="plum" />
+        <StatCard index={3} label="Missing / Stale Measurements" value={String(missingOrStaleCount)} delta={missingOrStaleCount > 0 ? -3 : 0} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={Ruler} accent="plum" />
       </div>
 
       {/* ── Waiver compliance & alerts ───────────────────────────── */}
@@ -133,6 +143,37 @@ export default function Dashboard() {
           </div>
           <ArrowUpRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </Link>
+      )}
+
+      {/* ── Stale / missing measurement alert ──────────────────────── */}
+      {(missingMeasIds.length > 0 || staleMeasIds.length > 0) && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-rose/30 bg-rose/5 p-4 shadow-soft animate-float-up">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose/10 text-rose">
+              <Ruler className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Measurement alert</p>
+              <p className="text-sm text-muted-foreground">
+                {missingMeasIds.length > 0 && `${missingMeasIds.length} without measurements`}
+                {missingMeasIds.length > 0 && staleMeasIds.length > 0 && " · "}
+                {staleMeasIds.length > 0 && `${staleMeasIds.length} needing updated measurements (over 12 months old)`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/costumes"
+              className="rounded-full border border-rose/30 bg-white px-4 py-2 text-sm font-semibold text-rose transition hover:bg-rose/10"
+            >
+              View <ArrowUpRight className="inline-block ml-1 h-3.5 w-3.5" />
+            </Link>
+            <button className="rounded-full bg-rose px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose/90">
+              <Bell className="inline-block mr-1 h-3.5 w-3.5" />
+              Remind All
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Today's classes — operational command centre ───────────── */}
