@@ -230,7 +230,51 @@ export function useSupabaseStudents(isDemo: boolean) {
     async () => {
       const { data, error } = await supabase.from("students").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
-      return { data: data.map((s) => ({ id: s.id, studioId: s.studio_id, name: s.name, dob: s.dob ?? "", parentId: s.parent_id ?? "", parentName: s.parent_name ?? "", parentEmail: s.parent_email ?? "", classIds: s.class_ids ?? [], attendanceRate: s.attendance_rate ?? 1, waiver: (s.waiver as Student["waiver"]) ?? "missing", payment: (s.payment as Student["payment"]) ?? "paid", balanceCents: s.balance_cents ?? 0, medicalNotes: s.medical_notes ?? undefined, allergies: s.allergies ?? undefined })), error: null };
+      return { data: data.map((s) => ({
+        id: s.id, studioId: s.studio_id, name: s.name, dob: s.dob ?? "",
+        parentId: s.parent_id ?? "", parentName: s.parent_name ?? "", parentEmail: s.parent_email ?? "",
+        classIds: s.class_ids ?? [], attendanceRate: s.attendance_rate ?? 1,
+        waiver: (s.waiver as Student["waiver"]) ?? "missing",
+        payment: (s.payment as Student["payment"]) ?? "paid",
+        balanceCents: s.balance_cents ?? 0,
+        medicalNotes: s.medical_notes ?? undefined, allergies: s.allergies ?? undefined,
+        // New registration fields
+        legalFirstName: s.legal_first_name ?? undefined,
+        legalLastName: s.legal_last_name ?? undefined,
+        preferredName: s.preferred_name ?? undefined,
+        gender: s.gender ?? undefined,
+        pronouns: s.pronouns ?? undefined,
+        schoolGrade: s.school_grade ?? undefined,
+        ageAtRegistration: undefined, // computed client-side
+        emergencyContactName: s.emergency_contact_name ?? undefined,
+        emergencyContactRelationship: s.emergency_contact_relationship ?? undefined,
+        emergencyContactPhone: s.emergency_contact_phone ?? undefined,
+        emergencyContactSecondaryPhone: s.emergency_contact_secondary_phone ?? undefined,
+        emergencyContactCanPickup: s.emergency_contact_can_pickup ?? undefined,
+        authorizedPickupContacts: (s.authorized_pickup_contacts as Student["authorizedPickupContacts"]) ?? undefined,
+        medicalInfo: s.has_asthma != null || s.has_epipen != null ? {
+          allergies: s.allergies ?? undefined,
+          medications: s.medications ?? undefined,
+          medicalConditions: s.medical_conditions ?? undefined,
+          hasAsthma: s.has_asthma ?? false,
+          hasInhaler: s.has_inhaler ?? false,
+          hasEpiPen: s.has_epipen ?? false,
+          activityRestrictions: s.activity_restrictions ?? undefined,
+          safetyNotes: s.safety_notes ?? undefined,
+        } : undefined,
+        medicalInfoConfirmed: s.medical_info_confirmed ?? undefined,
+        guardianConfirmed: s.guardian_confirmed ?? undefined,
+        guardianRelationship: s.guardian_relationship ?? undefined,
+        guardianId: s.guardian_id ?? undefined,
+        consentTimestamp: s.consent_timestamp ?? undefined,
+        waivers: s.waiver_liability != null ? {
+          liability: (s.waiver_liability as "signed" | "pending" | "missing") ?? "missing",
+          medicalConsent: (s.waiver_medical_consent as "signed" | "pending" | "missing") ?? "missing",
+          photoVideo: (s.waiver_photo_video as "signed" | "pending" | "missing") ?? "missing",
+          codeOfConduct: (s.waiver_code_of_conduct as "signed" | "pending" | "missing") ?? "missing",
+          privacyData: (s.waiver_privacy_data as "signed" | "pending" | "missing") ?? "missing",
+        } : undefined,
+      })), error: null };
     },
     demoStudents,
     isDemo,
@@ -256,6 +300,36 @@ export function useAddStudent() {
         balance_cents: student.balanceCents,
         medical_notes: student.medicalNotes ?? null,
         allergies: student.allergies ?? null,
+        // New registration fields
+        legal_first_name: student.legalFirstName ?? null,
+        legal_last_name: student.legalLastName ?? null,
+        preferred_name: student.preferredName ?? null,
+        gender: student.gender ?? null,
+        pronouns: student.pronouns ?? null,
+        school_grade: student.schoolGrade ?? null,
+        emergency_contact_name: student.emergencyContactName ?? null,
+        emergency_contact_relationship: student.emergencyContactRelationship ?? null,
+        emergency_contact_phone: student.emergencyContactPhone ?? null,
+        emergency_contact_secondary_phone: student.emergencyContactSecondaryPhone ?? null,
+        emergency_contact_can_pickup: student.emergencyContactCanPickup ?? false,
+        authorized_pickup_contacts: student.authorizedPickupContacts ?? null,
+        medications: student.medicalInfo?.medications ?? null,
+        medical_conditions: student.medicalInfo?.medicalConditions ?? null,
+        has_asthma: student.medicalInfo?.hasAsthma ?? false,
+        has_inhaler: student.medicalInfo?.hasInhaler ?? false,
+        has_epipen: student.medicalInfo?.hasEpiPen ?? false,
+        activity_restrictions: student.medicalInfo?.activityRestrictions ?? null,
+        safety_notes: student.medicalInfo?.safetyNotes ?? null,
+        medical_info_confirmed: student.medicalInfoConfirmed ?? false,
+        guardian_confirmed: student.guardianConfirmed ?? false,
+        guardian_relationship: student.guardianRelationship ?? null,
+        guardian_id: student.guardianId ?? null,
+        consent_timestamp: student.consentTimestamp ?? null,
+        waiver_liability: student.waivers?.liability ?? "missing",
+        waiver_medical_consent: student.waivers?.medicalConsent ?? "missing",
+        waiver_photo_video: student.waivers?.photoVideo ?? "missing",
+        waiver_code_of_conduct: student.waivers?.codeOfConduct ?? "missing",
+        waiver_privacy_data: student.waivers?.privacyData ?? "missing",
       }).select().single();
       if (error) throw error;
       return { ...student, id: data.id, studioId };
@@ -281,6 +355,37 @@ export function useUpdateStudent() {
       if (patch.balanceCents !== undefined) updates.balance_cents = patch.balanceCents;
       if (patch.medicalNotes !== undefined) updates.medical_notes = patch.medicalNotes;
       if (patch.allergies !== undefined) updates.allergies = patch.allergies;
+      // New registration fields (update on patch)
+      if (patch.legalFirstName !== undefined) updates.legal_first_name = patch.legalFirstName;
+      if (patch.legalLastName !== undefined) updates.legal_last_name = patch.legalLastName;
+      if (patch.preferredName !== undefined) updates.preferred_name = patch.preferredName;
+      if (patch.gender !== undefined) updates.gender = patch.gender;
+      if (patch.pronouns !== undefined) updates.pronouns = patch.pronouns;
+      if (patch.schoolGrade !== undefined) updates.school_grade = patch.schoolGrade;
+      if (patch.emergencyContactName !== undefined) updates.emergency_contact_name = patch.emergencyContactName;
+      if (patch.emergencyContactRelationship !== undefined) updates.emergency_contact_relationship = patch.emergencyContactRelationship;
+      if (patch.emergencyContactPhone !== undefined) updates.emergency_contact_phone = patch.emergencyContactPhone;
+      if (patch.emergencyContactSecondaryPhone !== undefined) updates.emergency_contact_secondary_phone = patch.emergencyContactSecondaryPhone;
+      if (patch.emergencyContactCanPickup !== undefined) updates.emergency_contact_can_pickup = patch.emergencyContactCanPickup;
+      if (patch.authorizedPickupContacts !== undefined) updates.authorized_pickup_contacts = patch.authorizedPickupContacts;
+      if (patch.medicalInfo?.allergies !== undefined) updates.allergies = patch.medicalInfo.allergies;
+      if (patch.medicalInfo?.medications !== undefined) updates.medications = patch.medicalInfo.medications;
+      if (patch.medicalInfo?.medicalConditions !== undefined) updates.medical_conditions = patch.medicalInfo.medicalConditions;
+      if (patch.medicalInfo?.hasAsthma !== undefined) updates.has_asthma = patch.medicalInfo.hasAsthma;
+      if (patch.medicalInfo?.hasInhaler !== undefined) updates.has_inhaler = patch.medicalInfo.hasInhaler;
+      if (patch.medicalInfo?.hasEpiPen !== undefined) updates.has_epipen = patch.medicalInfo.hasEpiPen;
+      if (patch.medicalInfo?.activityRestrictions !== undefined) updates.activity_restrictions = patch.medicalInfo.activityRestrictions;
+      if (patch.medicalInfo?.safetyNotes !== undefined) updates.safety_notes = patch.medicalInfo.safetyNotes;
+      if (patch.medicalInfoConfirmed !== undefined) updates.medical_info_confirmed = patch.medicalInfoConfirmed;
+      if (patch.guardianConfirmed !== undefined) updates.guardian_confirmed = patch.guardianConfirmed;
+      if (patch.guardianRelationship !== undefined) updates.guardian_relationship = patch.guardianRelationship;
+      if (patch.guardianId !== undefined) updates.guardian_id = patch.guardianId;
+      if (patch.consentTimestamp !== undefined) updates.consent_timestamp = patch.consentTimestamp;
+      if (patch.waivers?.liability !== undefined) updates.waiver_liability = patch.waivers.liability;
+      if (patch.waivers?.medicalConsent !== undefined) updates.waiver_medical_consent = patch.waivers.medicalConsent;
+      if (patch.waivers?.photoVideo !== undefined) updates.waiver_photo_video = patch.waivers.photoVideo;
+      if (patch.waivers?.codeOfConduct !== undefined) updates.waiver_code_of_conduct = patch.waivers.codeOfConduct;
+      if (patch.waivers?.privacyData !== undefined) updates.waiver_privacy_data = patch.waivers.privacyData;
       const { error } = await supabase.from("students").update(updates).eq("id", id);
       if (error) throw error;
     },

@@ -60,7 +60,7 @@ interface ParentCtx {
   children: Student[];
   /** Switch to a different parent (demo convenience) */
   switchParent: (id: string) => void;
-  /** Add a new child to this parent */
+  /** Add a new child to this parent (accepts full registration payload with legal/medical/emergency fields). */
   addChild: (
     child: Omit<
       Student,
@@ -71,7 +71,6 @@ interface ParentCtx {
       | "parentEmail"
       | "classIds"
       | "attendanceRate"
-      | "waiver"
       | "payment"
       | "balanceCents"
     >,
@@ -164,13 +163,14 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
         | "parentEmail"
         | "classIds"
         | "attendanceRate"
-        | "waiver"
         | "payment"
         | "balanceCents"
       >,
     ) => {
       const pc = parent.primaryContact;
-      // Delegate to shared context so the new child appears everywhere
+      // Delegate to shared context so the new child appears everywhere.
+      // All registration fields (legal name, emergency, medical, consent, waivers)
+      // pass through as provided by the wizard.
       sharedAddStudent({
         ...child,
         parentId: parent.id,
@@ -178,7 +178,7 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
         parentEmail: pc.email,
         classIds: [],
         attendanceRate: 1,
-        waiver: "missing",
+        waiver: child.waiver ?? "missing",
         payment: "paid",
         balanceCents: 0,
       });

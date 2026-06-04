@@ -20,6 +20,93 @@ export interface Enrolment {
   updatedAt: string;
 }
 
+/* ── Child / Minor Participant Registration Types ───────────────── */
+
+/** An individual authorized to pick up a child from the studio. */
+export interface AuthorizedPickupContact {
+  name: string;
+  relationship: string;
+  phone: string;
+  authorized: boolean;
+}
+
+/** Structured medical and safety information captured during child registration. */
+export interface ChildMedicalInfo {
+  allergies?: string;
+  medications?: string;
+  medicalConditions?: string;
+  hasAsthma: boolean;
+  hasInhaler: boolean;
+  hasEpiPen: boolean;
+  activityRestrictions?: string;
+  safetyNotes?: string;
+}
+
+/** Guardian consent record captured during child registration. */
+export interface GuardianConsent {
+  guardianConfirmed: boolean;
+  guardianRelationship: string;
+  guardianId: string;
+  consentTimestamp: string;
+}
+
+/** Emergency contact attached to a child's profile. */
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+  secondaryPhone?: string;
+  canPickup: boolean;
+}
+
+/** Individual waiver type status. Mirrors WaiverStatus but per-waiver-type granularity. */
+export type IndividualWaiverStatus = "signed" | "pending" | "missing";
+
+/** Per-waiver-type tracking for child profiles. */
+export interface ChildWaivers {
+  liability: IndividualWaiverStatus;
+  medicalConsent: IndividualWaiverStatus;
+  photoVideo: IndividualWaiverStatus;
+  codeOfConduct: IndividualWaiverStatus;
+  privacyData: IndividualWaiverStatus;
+}
+
+export const DEFAULT_CHILD_WAIVERS: ChildWaivers = {
+  liability: "missing",
+  medicalConsent: "missing",
+  photoVideo: "missing",
+  codeOfConduct: "missing",
+  privacyData: "missing",
+};
+
+/** Complete registration payload from the multi-step child registration wizard. */
+export interface ChildRegistrationPayload {
+  // Step 1 — Child details
+  legalFirstName: string;
+  legalLastName: string;
+  preferredName?: string;
+  dob: string;
+  gender?: string;
+  pronouns?: string;
+  schoolGrade?: string;
+
+  // Step 2 — Guardian confirmation
+  guardianConfirmed: boolean;
+  guardianRelationship: string;
+  guardianId: string;
+
+  // Step 3 — Emergency & pickup
+  emergencyContact: EmergencyContact;
+  authorizedPickupContacts: AuthorizedPickupContact[];
+
+  // Step 4 — Medical & safety
+  medicalInfo: ChildMedicalInfo;
+  medicalInfoConfirmed: boolean;
+
+  // Derived (generated at submission)
+  consentTimestamp: string;
+}
+
 export type Vertical =
   | "dance"
   | "yoga"
@@ -94,18 +181,48 @@ export type PaymentStatus = "paid" | "due" | "overdue";
 export interface Student {
   id: string;
   studioId: string;
+  /** Display name — derived from legalFirstName + legalLastName for new records, raw name for legacy. */
   name: string;
+  /** Legal first name (new registration flow). */
+  legalFirstName?: string;
+  /** Legal last name (new registration flow). */
+  legalLastName?: string;
+  /** Preferred / nickname. */
+  preferredName?: string;
   dob: string; // ISO
+  /** Age group auto-derived from DOB at registration time. */
+  ageAtRegistration?: number;
+  gender?: string;
+  pronouns?: string;
+  schoolGrade?: string;
   parentId: string;
   parentName: string;
   parentEmail: string;
   classIds: string[];
   attendanceRate: number; // 0..1
   waiver: WaiverStatus;
+  /** Per-waiver-type tracking (new registration flow). */
+  waivers?: ChildWaivers;
   payment: PaymentStatus;
   balanceCents: number;
   medicalNotes?: string;
   allergies?: string;
+  /** Structured medical info (new registration flow). */
+  medicalInfo?: ChildMedicalInfo;
+  medicalInfoConfirmed?: boolean;
+  // Emergency contact (new registration flow)
+  emergencyContactName?: string;
+  emergencyContactRelationship?: string;
+  emergencyContactPhone?: string;
+  emergencyContactSecondaryPhone?: string;
+  emergencyContactCanPickup?: boolean;
+  // Authorized pickup contacts (new registration flow)
+  authorizedPickupContacts?: AuthorizedPickupContact[];
+  // Guardian consent (new registration flow)
+  guardianConfirmed?: boolean;
+  guardianRelationship?: string;
+  guardianId?: string;
+  consentTimestamp?: string;
 }
 
 export type AnnouncementScope = "Studio-wide" | "Class" | "Recital" | "Emergency";

@@ -53,7 +53,7 @@ import {
 } from "@/data/types";
 import { ageFromDob, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import AddChildModal from "@/components/AddChildModal";
+import ChildRegistrationWizard from "@/components/ChildRegistrationWizard";
 
 /* ── Tab definitions ──────────────────────────────────────────────── */
 
@@ -709,7 +709,7 @@ function ChildrenTab() {
         >
           Add child
         </button>
-        <AddChildModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+        <ChildRegistrationWizard open={showAddModal} onClose={() => setShowAddModal(false)} />
       </div>
     );
   }
@@ -866,7 +866,7 @@ function ChildrenTab() {
         );
       })}
 
-      <AddChildModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+      <ChildRegistrationWizard open={showAddModal} onClose={() => setShowAddModal(false)} />
     </div>
   );
 }

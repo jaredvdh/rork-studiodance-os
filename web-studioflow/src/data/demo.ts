@@ -198,7 +198,9 @@ export const parentAccounts: ParentAccount[] = [
 const allergyOptions = [undefined, undefined, undefined, "Peanuts", "Dairy", "Gluten", "Bee stings", "Latex"];
 
 export const students: Student[] = Array.from({ length: 42 }).map((_, i) => {
-  const name = `${pick(firstNames, i)} ${pick(lastNames, i * 3 + 1)}`;
+  const firstName = pick(firstNames, i);
+  const lastName = pick(lastNames, i * 3 + 1);
+  const name = `${firstName} ${lastName}`;
   const parentName = `${pick(parentFirst, i * 2)} ${pick(lastNames, i * 3 + 1)}`;
   const parentId = parentAccounts[i % parentAccounts.length].id;
   const enrolledClasses = classes.filter((_, ci) => (i + ci) % 4 === 0).slice(0, 2).map((c) => c.id);
@@ -209,6 +211,10 @@ export const students: Student[] = Array.from({ length: 42 }).map((_, i) => {
     id: `s${i + 1}`,
     studioId: studio.id,
     name,
+    // Legal name derived from display name for backward compat
+    legalFirstName: firstName,
+    legalLastName: lastName,
+    preferredName: undefined,
     dob: new Date(2008 + (i % 12), (i * 3) % 12, ((i * 7) % 27) + 1).toISOString(),
     parentId,
     parentName,
