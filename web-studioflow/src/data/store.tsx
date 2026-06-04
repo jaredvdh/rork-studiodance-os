@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "./studioStore";
 import { classes as demoClasses } from "./demo";
-import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount } from "./types";
+import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount, Enrolment } from "./types";
 import { useOptionalMigration } from "./migrationStore";
 import {
   useSupabaseTeachers,
@@ -12,6 +12,7 @@ import {
   useSupabaseStudents,
   useSupabaseAnnouncements,
   useSupabaseInvoices,
+  useSupabaseEnrolments,
   useAddTeacher,
   useUpdateTeacher,
   useRemoveTeacher,
@@ -30,6 +31,54 @@ import {
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
+
+/* ── Shared enrolments state (SOURCE OF TRUTH for student↔class) ─────── */
+
+interface EnrolmentsCtx {
+  enrolments: Enrolment[];
+  /** Map of classId → count of active & waitlisted enrolments */
+  countByClassId: Map<string, number>;
+  /** Map of studentId → array of active classIds */
+  classIdsByStudentId: Map<string, string[]>;
+}
+
+const EnrolmentsContext = createContext<EnrolmentsCtx | null>(null);
+
+export function EnrolmentsProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseEnrolments = [] } = useSupabaseEnrolments(isDemo);
+  const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
+
+  useEffect(() => {
+    setEnrolments(supabaseEnrolments);
+  }, [supabaseEnrolments]);
+
+  const ctx = useMemo((): EnrolmentsCtx => {
+    const active = enrolments.filter((e) => e.status === "active" || e.status === "waitlisted");
+    const countByClassId = new Map<string, number>();
+    const classIdsByStudentId = new Map<string, string[]>();
+    for (const e of active) {
+      countByClassId.set(e.classId, (countByClassId.get(e.classId) ?? 0) + 1);
+      const ids = classIdsByStudentId.get(e.studentId) ?? [];
+      ids.push(e.classId);
+      classIdsByStudentId.set(e.studentId, ids);
+    }
+    return { enrolments, countByClassId, classIdsByStudentId };
+  }, [enrolments]);
+
+  return (
+    <EnrolmentsContext.Provider value={ctx}>
+      {children}
+    </EnrolmentsContext.Provider>
+  );
+}
+
+export function useEnrolments() {
+  const ctx = useContext(EnrolmentsContext);
+  if (!ctx) throw new Error("useEnrolments must be used within EnrolmentsProvider");
+  return ctx;
+}
 
 /* ── Shared teachers state ───────────────────────────────────────────── */
 
@@ -104,10 +153,6 @@ interface ClassesCtx {
   addClass: (c: Omit<Class, "id" | "studioId">) => void;
   removeClass: (id: string) => void;
   updateClass: (id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => void;
-  /** Enrol a student, incrementing enrolled count */
-  enrolStudent: (classId: string) => void;
-  /** Withdraw a student, decrementing enrolled count */
-  withdrawStudent: (classId: string) => void;
 }
 
 const ClassesContext = createContext<ClassesCtx | null>(null);
@@ -119,7 +164,18 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   const [classes, setClasses] = useState<Class[]>([]);
   const queryClient = useQueryClient();
 
-  // Sync from Supabase — enrolled counts are maintained server-side via enrolment mutations
+  // Derive enrolled/waitlist counts from enrolments context (source of truth)
+  const enrolmentsCtx = useContext(EnrolmentsContext);
+
+  // Merge Supabase classes with derived enrolment counts
+  const derivedClasses = useMemo(() => {
+    if (!enrolmentsCtx) return classes;
+    return classes.map((c) => ({
+      ...c,
+      enrolled: enrolmentsCtx.countByClassId.get(c.id) ?? c.enrolled,
+      waitlist: 0, // waitlist derived from enrolments when status field is live
+    }));
+  }, [classes, enrolmentsCtx]);
   useEffect(() => {
     setClasses(supabaseClasses);
   }, [supabaseClasses]);
@@ -154,28 +210,8 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
     });
   }, [updateClassMut, queryClient]);
 
-  const enrolStudent = useCallback((classId: string) => {
-    setClasses((prev) =>
-      prev.map((c) =>
-        c.id === classId
-          ? { ...c, enrolled: c.enrolled + 1, waitlist: Math.max(0, c.waitlist - 1) }
-          : c,
-      ),
-    );
-  }, []);
-
-  const withdrawStudent = useCallback((classId: string) => {
-    setClasses((prev) =>
-      prev.map((c) =>
-        c.id === classId
-          ? { ...c, enrolled: Math.max(0, c.enrolled - 1) }
-          : c,
-      ),
-    );
-  }, []);
-
   return (
-    <ClassesContext.Provider value={{ classes, addClass, removeClass, updateClass, enrolStudent, withdrawStudent }}>
+    <ClassesContext.Provider value={{ classes: derivedClasses, addClass, removeClass, updateClass }}>
       {children}
     </ClassesContext.Provider>
   );
@@ -193,9 +229,9 @@ interface StudentsCtx {
   students: Student[];
   addStudent: (s: Omit<Student, "id" | "studioId">) => void;
   updateStudent: (id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => void;
-  /** Enrol a student into a class — updates both student.classIds and class.enrolled */
+  /** Enrol a student into a class — writes to enrolments table (source of truth) */
   enrolStudentInClass: (studentId: string, classId: string) => void;
-  /** Withdraw a student from a class */
+  /** Withdraw a student from a class — updates enrolment status to "withdrawn" */
   withdrawStudentFromClass: (studentId: string, classId: string) => void;
 }
 
@@ -208,15 +244,22 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
   const [students, setStudents] = useState<Student[]>([]);
   const queryClient = useQueryClient();
 
+  // Derive classIds from enrolments context (source of truth)
+  const enrolmentsCtx = useContext(EnrolmentsContext);
+
+  // Merge students with derived classIds from enrolments
+  const derivedStudents = useMemo(() => {
+    if (!enrolmentsCtx) return students;
+    return students.map((s) => ({
+      ...s,
+      classIds: enrolmentsCtx.classIdsByStudentId.get(s.id) ?? s.classIds,
+    }));
+  }, [students, enrolmentsCtx]);
+
   // Sync from Supabase
   useEffect(() => {
     setStudents(supabaseStudents);
   }, [supabaseStudents]);
-
-  // We need to update class enrolled counts, so we access the ClassesContext
-  const classesCtx = useContext(ClassesContext);
-  const incEnrolled = classesCtx?.enrolStudent;
-  const decEnrolled = classesCtx?.withdrawStudent;
 
   const addStudentMut = useAddStudent();
   const updateStudentMut = useUpdateStudent();
@@ -244,49 +287,31 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
   }, [updateStudentMut, queryClient]);
 
   const enrolStudentInClass = useCallback((studentId: string, classId: string) => {
-    // Optimistic UI
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === studentId && !s.classIds.includes(classId)
-          ? { ...s, classIds: [...s.classIds, classId] }
-          : s,
-      ),
-    );
-    incEnrolled?.(classId);
-
-    // Persist to Supabase
+    // Persist to enrolments table (source of truth).
+    // Derived counts in classes/students update on invalidation.
     enrolMut.mutate({ studentId, classId }, {
       onError: () => {
-        // Rollback
+        queryClient.invalidateQueries({ queryKey: ["enrolments"] });
         queryClient.invalidateQueries({ queryKey: ["students"] });
         queryClient.invalidateQueries({ queryKey: ["classes"] });
       },
     });
-  }, [enrolMut, incEnrolled, queryClient]);
+  }, [enrolMut, queryClient]);
 
   const withdrawStudentFromClass = useCallback((studentId: string, classId: string) => {
-    // Optimistic UI
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === studentId
-          ? { ...s, classIds: s.classIds.filter((id) => id !== classId) }
-          : s,
-      ),
-    );
-    decEnrolled?.(classId);
-
-    // Persist to Supabase
+    // Persist to enrolments table — updates status to "withdrawn" (preserves history).
+    // Derived counts in classes/students update on invalidation.
     withdrawMut.mutate({ studentId, classId }, {
       onError: () => {
-        // Rollback
+        queryClient.invalidateQueries({ queryKey: ["enrolments"] });
         queryClient.invalidateQueries({ queryKey: ["students"] });
         queryClient.invalidateQueries({ queryKey: ["classes"] });
       },
     });
-  }, [withdrawMut, decEnrolled, queryClient]);
+  }, [withdrawMut, queryClient]);
 
   return (
-    <StudentsContext.Provider value={{ students, addStudent, updateStudent, enrolStudentInClass, withdrawStudentFromClass }}>
+    <StudentsContext.Provider value={{ students: derivedStudents, addStudent, updateStudent, enrolStudentInClass, withdrawStudentFromClass }}>
       {children}
     </StudentsContext.Provider>
   );

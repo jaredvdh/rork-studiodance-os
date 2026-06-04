@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/studioStore";
-import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount } from "@/data/types";
+import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus } from "@/data/types";
 import {
   announcements as demoAnnouncements,
   classes as demoClasses,
@@ -11,6 +11,7 @@ import {
   parentAccounts as demoParents,
   studio as defaultStudio,
   invoices as demoInvoices,
+  enrolments as demoEnrolments,
 } from "@/data/demo";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
@@ -298,94 +299,173 @@ export function useRemoveStudent() {
   });
 }
 
-/**
- * Enrol a student into a class. Updates student.classIds array AND
- * increments class.enrolled count atomically via Supabase RPC or
- * sequential updates. The caller (StudentsProvider) handles the
- * optimistic UI; this hook does the server persistence.
- */
-/**
- * Update the enrolled count on a class row directly.
- * Reads current value then writes incremented/decremented count.
- */
-async function adjustClassEnrolled(classId: string, delta: number) {
-  const { data: cls, error: readErr } = await supabase
-    .from("classes")
-    .select("enrolled")
-    .eq("id", classId)
-    .single();
-  if (readErr) {
-    console.warn("Failed to read class enrolled count:", readErr);
-    return;
-  }
-  const newCount = Math.max(0, (cls?.enrolled ?? 0) + delta);
-  const { error: writeErr } = await supabase
-    .from("classes")
-    .update({ enrolled: newCount })
-    .eq("id", classId);
-  if (writeErr) {
-    console.warn("Failed to update class enrolled count:", writeErr);
-  }
+/* ── Enrolments (source of truth for student↔class relationships) ─── */
+
+/** Fetch all enrolments for the active studio from Supabase.
+ * For demo sessions, falls back to demo enrolments.
+ * This is the canonical data source — class.enrolled and student.classIds
+ * are DERIVED from this table, never manually maintained. */
+export function useSupabaseEnrolments(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<Enrolment>(
+    ["enrolments", studioId],
+    async () => {
+      const { data, error } = await supabase.from("enrolments").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return {
+        data: data.map((e) => ({
+          id: e.id,
+          studioId: e.studio_id,
+          studentId: e.student_id,
+          classId: e.class_id,
+          status: (e.status as EnrolmentStatus) ?? "active",
+          startedAt: e.started_at ?? e.created_at ?? new Date().toISOString(),
+          endedAt: e.ended_at ?? undefined,
+          createdAt: e.created_at ?? new Date().toISOString(),
+          updatedAt: e.updated_at ?? new Date().toISOString(),
+        })),
+        error: null,
+      };
+    },
+    demoEnrolments,
+    isDemo,
+  );
 }
 
+/**
+ * Enrol a student into a class by inserting a row into the enrolments table.
+ *
+ * If the class is at capacity, the enrolment is created with status "waitlisted".
+ * Otherwise status is "active".
+ *
+ * The student.classIds array and class.enrolled count are no longer written
+ * directly — they are DERIVED from this table.
+ */
 export function useEnrolStudent() {
   const queryClient = useQueryClient();
+  const studioId = useStudioId();
   return useMutation({
-    mutationFn: async ({ studentId, classId }: { studentId: string; classId: string }) => {
-      // 1. Fetch current student class_ids
-      const { data: student, error: fetchErr } = await supabase
-        .from("students")
-        .select("class_ids")
-        .eq("id", studentId)
-        .single();
-      if (fetchErr) throw fetchErr;
+    mutationFn: async ({
+      studentId,
+      classId,
+      forceWaitlist,
+    }: {
+      studentId: string;
+      classId: string;
+      forceWaitlist?: boolean;
+    }) => {
+      // Check if already enrolled (any status)
+      const { data: existing } = await supabase
+        .from("enrolments")
+        .select("id, status")
+        .eq("student_id", studentId)
+        .eq("class_id", classId)
+        .maybeSingle();
 
-      const classIds: string[] = (student?.class_ids ?? []) as string[];
-      if (classIds.includes(classId)) return; // already enrolled
+      if (existing) {
+        // If withdrawn, reactivate instead of duplicate
+        if (existing.status === "withdrawn") {
+          const { error } = await supabase
+            .from("enrolments")
+            .update({ status: "active", started_at: new Date().toISOString(), ended_at: null })
+            .eq("id", existing.id);
+          if (error) throw error;
+          return;
+        }
+        return; // Already active or waitlisted — no-op
+      }
 
-      // 2. Update student
-      const { error: updateErr } = await supabase
-        .from("students")
-        .update({ class_ids: [...classIds, classId] })
-        .eq("id", studentId);
-      if (updateErr) throw updateErr;
+      // Determine status: check class capacity
+      let status: EnrolmentStatus = "active";
+      if (forceWaitlist) {
+        status = "waitlisted";
+      } else {
+        const { data: cls } = await supabase
+          .from("classes")
+          .select("capacity")
+          .eq("id", classId)
+          .single();
+        if (cls) {
+          const { count } = await supabase
+            .from("enrolments")
+            .select("*", { count: "exact", head: true })
+            .eq("class_id", classId)
+            .eq("status", "active");
+          if (count !== null && count >= (cls.capacity ?? 99)) {
+            status = "waitlisted";
+          }
+        }
+      }
 
-      // 3. Increment class enrolled count
-      await adjustClassEnrolled(classId, 1);
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("enrolments").insert({
+        studio_id: studioId,
+        student_id: studentId,
+        class_id: classId,
+        status,
+        started_at: now,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enrolments"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });
     },
   });
 }
 
-/** Withdraw a student from a class. Counterpart to useEnrolStudent. */
+/**
+ * Withdraw a student from a class by updating the enrolment status to "withdrawn".
+ * Preserves history — the enrolment row is NOT deleted.
+ * Sets ended_at to the current timestamp.
+ */
 export function useWithdrawStudent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ studentId, classId }: { studentId: string; classId: string }) => {
-      const { data: student, error: fetchErr } = await supabase
-        .from("students")
-        .select("class_ids")
-        .eq("id", studentId)
-        .single();
-      if (fetchErr) throw fetchErr;
+      const { data: enrolment, error: fetchErr } = await supabase
+        .from("enrolments")
+        .select("id")
+        .eq("student_id", studentId)
+        .eq("class_id", classId)
+        .in("status", ["active", "waitlisted"])
+        .maybeSingle();
 
-      const classIds: string[] = (student?.class_ids ?? []) as string[];
-      if (!classIds.includes(classId)) return; // not enrolled
+      if (fetchErr || !enrolment) return; // Not enrolled — no-op
 
-      const { error: updateErr } = await supabase
-        .from("students")
-        .update({ class_ids: classIds.filter((id) => id !== classId) })
-        .eq("id", studentId);
-      if (updateErr) throw updateErr;
-
-      await adjustClassEnrolled(classId, -1);
+      const { error } = await supabase
+        .from("enrolments")
+        .update({ status: "withdrawn", ended_at: new Date().toISOString() })
+        .eq("id", enrolment.id);
+      if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enrolments"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}
+
+/**
+ * Promote a waitlisted enrolment to active (e.g. when a spot opens up).
+ */
+export function usePromoteEnrolment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enrolmentId: string) => {
+      const { error } = await supabase
+        .from("enrolments")
+        .update({ status: "active", started_at: new Date().toISOString() })
+        .eq("id", enrolmentId)
+        .eq("status", "waitlisted");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enrolments"] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     },
   });
 }

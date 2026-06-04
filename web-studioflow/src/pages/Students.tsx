@@ -330,15 +330,14 @@ function EnrolModal({
                     </div>
                     <button
                       onClick={() => onEnrol(studentId, c.id)}
-                      disabled={full}
                       className={cn(
                         "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
                         full
-                          ? "bg-muted text-muted-foreground cursor-not-allowed"
+                          ? "bg-gold/15 text-gold hover:bg-gold/25"
                           : "bg-rose/10 text-rose hover:bg-rose/20",
                       )}
                     >
-                      {full ? "Full" : "Enrol"}
+                      {full ? "Waitlist" : "Enrol"}
                     </button>
                   </div>
                 );

@@ -211,3 +211,53 @@ Ensured the shared admin contexts are production-ready, backed by Supabase as th
 - [x] No workflow depends only on local `useState`
 - [x] No duplicate or drifting enrolment counts (class.enrolled maintained server-side)
 - [x] Refresh/logout/login does not lose operational data
+
+---
+
+# StudioFlow — Enrolment Data-Model Hardening ✅
+
+Moved from array/counter-based enrolment tracking to a normalized production-safe model using the `enrolments` table as the single source of truth.
+
+---
+
+## Enrolments Table (Source of Truth)
+
+- [x] SQL migration: added `status`, `started_at`, `ended_at`, `updated_at` columns to `enrolments`
+- [x] Unique partial index: one active/waitlisted enrolment per student per class
+- [x] Indexes on `studio_id`, `student_id`, `class_id`, `status`
+- [x] Backfill existing rows with `status = 'active'`, `started_at = created_at`
+- [x] Updated-at trigger for automatic timestamp maintenance
+- [x] Added `enrolment_id` to invoices table for linking invoices to specific enrolments
+- [x] SQL functions: `class_enrolled_count`, `class_waitlist_count`, `student_active_class_ids`
+
+## Frontend Enrolment Layer
+
+- [x] `Enrolment` type and `EnrolmentStatus` union added to `types.ts`
+- [x] `useSupabaseEnrolments(isDemo)` hook — fetches all enrolments for the studio
+- [x] `useEnrolStudent` refactored: inserts into `enrolments` table (not `students.class_ids`)
+- [x] `useEnrolStudent` auto-detects capacity: `active` if under capacity, `waitlisted` if full
+- [x] `useWithdrawStudent` refactored: updates enrolment status to `withdrawn` (preserves history)
+- [x] `usePromoteEnrolment` hook: promotes waitlisted → active when spots open
+- [x] Removed `adjustClassEnrolled` helper (manual counter drift eliminated)
+- [x] `demo.ts`: generated enrolment records from existing `student.classIds`
+
+## Derived Counts
+
+- [x] `EnrolmentsProvider` in `store.tsx` — hydrates from Supabase, computes `countByClassId` and `classIdsByStudentId` maps
+- [x] `ClassesProvider` derives `class.enrolled` from active enrolments (no manual counter)
+- [x] `StudentsProvider` derives `student.classIds` from active enrolments (no dual array tracking)
+- [x] Enrol/withdraw mutations write ONLY to `enrolments` table; derived counts refresh via invalidation
+- [x] Removed `enrolStudent`/`withdrawStudent` from `ClassesContext` (no longer needed)
+- [x] Waitlist support in EnrolModal: full classes show "Waitlist" button instead of disabled "Full"
+- [x] `EnrolmentsProvider` wired into `App.tsx` for both admin and parent shells
+
+## Data Integrity
+
+- [x] Enrolments persist after refresh
+- [x] Withdrawals preserve history (status update, not deletion)
+- [x] Class counts derived from enrolments — cannot drift
+- [x] Student enrolled classes derived from enrolments — cannot drift
+- [x] One active enrolment per student per class (unique partial index)
+- [x] Full classes trigger waitlist status
+- [x] Invoices can reference `enrolment_id`
+- [x] Build passes cleanly

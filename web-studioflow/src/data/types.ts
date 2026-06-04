@@ -1,6 +1,25 @@
 /** Core domain types for StudioFlow. Every tenant-aware record carries studioId,
  * mirroring the multi-tenant Supabase schema (studio_id + row-level security). */
 
+/* ── Enrolment types ─────────────────────────────────────────────── */
+
+export type EnrolmentStatus = "active" | "waitlisted" | "withdrawn" | "completed";
+
+/** Canonical enrolment record — the single source of truth for which student
+ * is in which class. Replaces the dual array+counter tracking previously
+ * maintained in `students.classIds` and `classes.enrolled`. */
+export interface Enrolment {
+  id: string;
+  studioId: string;
+  studentId: string;
+  classId: string;
+  status: EnrolmentStatus;
+  startedAt: string;  // ISO
+  endedAt?: string;   // ISO — set on withdraw or completion
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type Vertical =
   | "dance"
   | "yoga"
@@ -111,6 +130,8 @@ export interface Invoice {
   amountCents: number;
   status: PaymentStatus;
   dueDate: string; // ISO
+  /** Optional link to the enrolment this invoice was generated from. */
+  enrolmentId?: string;
 }
 
 export interface RevenuePoint {

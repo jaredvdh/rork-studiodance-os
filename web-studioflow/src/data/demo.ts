@@ -3,6 +3,7 @@ import type {
   Caregiver,
   CaregiverAuditEvent,
   Class,
+  Enrolment,
   FamilyContact,
   Invoice,
   ParentAccount,
@@ -268,6 +269,23 @@ export const revenueSeries: RevenuePoint[] = [
   { month: "Apr", revenueCents: 3680000, enrollments: 248 },
   { month: "May", revenueCents: 4120000, enrollments: 261 },
 ];
+
+/* ── Enrolments — derived from student.classIds and class.enrolled ────
+ * These records make the enrolments table the source of truth.
+ * Each student→class mapping from the demo students array becomes an
+ * active enrolment. Counts match the hardcoded class.enrolled values. */
+export const enrolments: Enrolment[] = students.flatMap((student) =>
+  student.classIds.map((classId, idx) => ({
+    id: `enr_${student.id}_${classId}`,
+    studioId: studio.id,
+    studentId: student.id,
+    classId,
+    status: "active" as const,
+    startedAt: new Date(Date.now() - 86400000 * (30 + idx * 7)).toISOString(),
+    createdAt: new Date(Date.now() - 86400000 * (30 + idx * 7)).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * (2 + idx)).toISOString(),
+  })),
+);
 
 function daysAgo(n: number): string {
   const d = new Date();
