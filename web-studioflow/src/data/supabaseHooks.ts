@@ -528,7 +528,7 @@ export function useAddInvoice() {
   const studioId = useStudioId();
   return useMutation({
     mutationFn: async (inv: Omit<Invoice, "id" | "studioId">) => {
-      const { data, error } = await supabase.from("invoices").insert({
+      const insert: Record<string, unknown> = {
         studio_id: studioId,
         student_name: inv.studentName,
         parent_name: inv.parentName,
@@ -536,7 +536,12 @@ export function useAddInvoice() {
         amount_cents: inv.amountCents,
         status: inv.status,
         due_date: inv.dueDate,
-      }).select().single();
+      };
+      // Link to enrolment if provided (allows billing to reference the exact enrolment)
+      if (inv.enrolmentId) {
+        insert.enrolment_id = inv.enrolmentId;
+      }
+      const { data, error } = await supabase.from("invoices").insert(insert).select().single();
       if (error) throw error;
       return { ...inv, id: data.id, studioId };
     },

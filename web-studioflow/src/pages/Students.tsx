@@ -264,7 +264,7 @@ function EnrolModal({
   studentId: string;
   students: Student[];
   classes: { id: string; name: string; style: string; teacherId: string; enrolled: number; capacity: number; day: string; startTime: string; priceCents: number }[];
-  onEnrol: (studentId: string, classId: string) => void;
+  onEnrol: (studentId: string, classId: string, forceWaitlist?: boolean) => void;
   onWithdraw: (studentId: string, classId: string) => void;
   onClose: () => void;
 }) {
@@ -329,7 +329,7 @@ function EnrolModal({
                       </p>
                     </div>
                     <button
-                      onClick={() => onEnrol(studentId, c.id)}
+                      onClick={() => onEnrol(studentId, c.id, full)}
                       className={cn(
                         "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
                         full

@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 
 import {
   parentAccounts,
-  students as demoStudents,
   studio as defaultStudio,
 } from "./demo";
 import {
@@ -16,6 +15,7 @@ import {
   SAFE_SECONDARY_DEFAULTS,
   caregiverToContact,
 } from "./types";
+import { useStudents } from "./store";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -115,8 +115,11 @@ const ParentContext = createContext<ParentCtx | null>(null);
 
 export function ParentProvider({ children }: { children: React.ReactNode }) {
   const [parentId, setParentId] = useState<string>(parentAccounts[0].id);
-  const [allStudents, setAllStudents] = useState<Student[]>(demoStudents);
   const [allParents, setAllParents] = useState<ParentAccount[]>(parentAccounts);
+
+  // Derive students from the shared context (enrolment-aware), not standalone demo data.
+  // This ensures admin-made enrolment changes are reflected in the parent portal.
+  const { students: sharedStudents, addStudent: sharedAddStudent, updateStudent: sharedUpdateStudent } = useStudents();
 
   const parent = useMemo(
     () => allParents.find((p) => p.id === parentId) ?? allParents[0],
@@ -133,8 +136,8 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
   const auditLog = parent.caregiverAuditLog ?? [];
 
   const parentChildren = useMemo(
-    () => allStudents.filter((s) => parent.childIds.includes(s.id)),
-    [allStudents, parent.childIds],
+    () => sharedStudents.filter((s) => parent.childIds.includes(s.id)),
+    [sharedStudents, parent.childIds],
   );
 
   const switchParent = useCallback((id: string) => setParentId(id), []);
@@ -167,10 +170,9 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
       >,
     ) => {
       const pc = parent.primaryContact;
-      const next: Student = {
+      // Delegate to shared context so the new child appears everywhere
+      sharedAddStudent({
         ...child,
-        id: newId("s"),
-        studioId: defaultStudio.id,
         parentId: parent.id,
         parentName: `${pc.firstName} ${pc.lastName}`,
         parentEmail: pc.email,
@@ -179,16 +181,25 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
         waiver: "missing",
         payment: "paid",
         balanceCents: 0,
-      };
-      setAllStudents((prev) => [...prev, next]);
-      patchParent({ childIds: [...parent.childIds, next.id] });
+      });
+      // The shared addStudent creates an optimistic ID. Sync parent.childIds
+      // on the next render when sharedStudents updates.
+      setTimeout(() => {
+        const newChild = sharedStudents.find(
+          (s) =>
+            s.parentId === parent.id && !parent.childIds.includes(s.id),
+        );
+        if (newChild) {
+          patchParent({ childIds: [...parent.childIds, newChild.id] });
+        }
+      }, 100);
     },
-    [parent, patchParent],
+    [parent, sharedAddStudent, sharedStudents, patchParent],
   );
 
   const removeChild = useCallback(
     (id: string) => {
-      setAllStudents((prev) => prev.filter((s) => s.id !== id));
+      // Only unlink from parent — don't delete the student record
       patchParent({
         childIds: parent.childIds.filter((cid) => cid !== id),
       });
@@ -196,11 +207,12 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
     [parent.childIds, patchParent],
   );
 
-  const updateChild = useCallback((id: string, patch: Partial<Student>) => {
-    setAllStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...patch } : s)),
-    );
-  }, []);
+  const updateChild = useCallback(
+    (id: string, patch: Partial<Student>) => {
+      sharedUpdateStudent(id, patch);
+    },
+    [sharedUpdateStudent],
+  );
 
   /* ── Legacy contact management ───────────────────────────────── */
   const updatePrimaryContact = useCallback(

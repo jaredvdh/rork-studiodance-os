@@ -40,6 +40,10 @@ interface EnrolmentsCtx {
   countByClassId: Map<string, number>;
   /** Map of studentId → array of active classIds */
   classIdsByStudentId: Map<string, string[]>;
+  /** Optimistically add/update an enrolment in local state (for demo mode + instant UI). */
+  addEnrolment: (enrolment: Enrolment) => void;
+  /** Optimistically update an enrolment's status in local state. */
+  updateEnrolmentStatus: (studentId: string, classId: string, status: Enrolment["status"]) => void;
 }
 
 const EnrolmentsContext = createContext<EnrolmentsCtx | null>(null);
@@ -49,10 +53,39 @@ export function EnrolmentsProvider({ children }: { children: React.ReactNode }) 
   const isDemo = user?.isDemo === true;
   const { data: supabaseEnrolments = [] } = useSupabaseEnrolments(isDemo);
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
+  const [localMutations, setLocalMutations] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setEnrolments(supabaseEnrolments);
   }, [supabaseEnrolments]);
+
+  // Merge local (optimistic) mutations on top of Supabase/demo data.
+  // Key: `${studentId}:${classId}`
+  const addEnrolment = useCallback((enrolment: Enrolment) => {
+    const key = `${enrolment.studentId}:${enrolment.classId}`;
+    setLocalMutations((prev) => new Set(prev).add(key));
+    setEnrolments((prev) => {
+      const filtered = prev.filter(
+        (e) => !(e.studentId === enrolment.studentId && e.classId === enrolment.classId),
+      );
+      return [...filtered, enrolment];
+    });
+  }, []);
+
+  const updateEnrolmentStatus = useCallback(
+    (studentId: string, classId: string, status: Enrolment["status"]) => {
+      const key = `${studentId}:${classId}`;
+      setLocalMutations((prev) => new Set(prev).add(key));
+      setEnrolments((prev) =>
+        prev.map((e) =>
+          e.studentId === studentId && e.classId === classId
+            ? { ...e, status, endedAt: status === "withdrawn" ? new Date().toISOString() : e.endedAt, updatedAt: new Date().toISOString() }
+            : e,
+        ),
+      );
+    },
+    [],
+  );
 
   const ctx = useMemo((): EnrolmentsCtx => {
     const active = enrolments.filter((e) => e.status === "active" || e.status === "waitlisted");
@@ -64,8 +97,8 @@ export function EnrolmentsProvider({ children }: { children: React.ReactNode }) 
       ids.push(e.classId);
       classIdsByStudentId.set(e.studentId, ids);
     }
-    return { enrolments, countByClassId, classIdsByStudentId };
-  }, [enrolments]);
+    return { enrolments, countByClassId, classIdsByStudentId, addEnrolment, updateEnrolmentStatus };
+  }, [enrolments, addEnrolment, updateEnrolmentStatus]);
 
   return (
     <EnrolmentsContext.Provider value={ctx}>
@@ -167,13 +200,16 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   // Derive enrolled/waitlist counts from enrolments context (source of truth)
   const enrolmentsCtx = useContext(EnrolmentsContext);
 
-  // Merge Supabase classes with derived enrolment counts
+  // Merge Supabase classes with derived enrolment counts.
+  // enrolled is ALWAYS derived from the enrolments table — never from the hardcoded
+  // class.enrolled column (which can drift). Zero is the safe default when no
+  // enrolments context exists (e.g. before first hydration).
   const derivedClasses = useMemo(() => {
     if (!enrolmentsCtx) return classes;
     return classes.map((c) => ({
       ...c,
-      enrolled: enrolmentsCtx.countByClassId.get(c.id) ?? c.enrolled,
-      waitlist: 0, // waitlist derived from enrolments when status field is live
+      enrolled: enrolmentsCtx.countByClassId.get(c.id) ?? 0,
+      waitlist: 0,
     }));
   }, [classes, enrolmentsCtx]);
   useEffect(() => {
@@ -229,8 +265,9 @@ interface StudentsCtx {
   students: Student[];
   addStudent: (s: Omit<Student, "id" | "studioId">) => void;
   updateStudent: (id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => void;
-  /** Enrol a student into a class — writes to enrolments table (source of truth) */
-  enrolStudentInClass: (studentId: string, classId: string) => void;
+  /** Enrol a student into a class — writes to enrolments table (source of truth).
+   * Pass forceWaitlist to bypass capacity check and force waitlist status. */
+  enrolStudentInClass: (studentId: string, classId: string, forceWaitlist?: boolean) => void;
   /** Withdraw a student from a class — updates enrolment status to "withdrawn" */
   withdrawStudentFromClass: (studentId: string, classId: string) => void;
 }
@@ -286,29 +323,59 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [updateStudentMut, queryClient]);
 
-  const enrolStudentInClass = useCallback((studentId: string, classId: string) => {
-    // Persist to enrolments table (source of truth).
-    // Derived counts in classes/students update on invalidation.
-    enrolMut.mutate({ studentId, classId }, {
-      onError: () => {
-        queryClient.invalidateQueries({ queryKey: ["enrolments"] });
-        queryClient.invalidateQueries({ queryKey: ["students"] });
-        queryClient.invalidateQueries({ queryKey: ["classes"] });
+  const enrolStudentInClass = useCallback((studentId: string, classId: string, forceWaitlist?: boolean) => {
+    if (!enrolmentsCtx) return;
+    // Determine status: check if class is at capacity
+    const cls = classes.find((c) => c.id === classId);
+    const enrolledCount = enrolmentsCtx.countByClassId.get(classId) ?? 0;
+    const isFull = cls ? enrolledCount >= cls.capacity : false;
+    const status: Enrolment["status"] = forceWaitlist || isFull ? "waitlisted" : "active";
+
+    const now = new Date().toISOString();
+    const optimistic: Enrolment = {
+      id: `enr_opt_${studentId}_${classId}`,
+      studioId: "",
+      studentId,
+      classId,
+      status,
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Optimistic update — UI responds instantly (critical for demo mode)
+    enrolmentsCtx.addEnrolment(optimistic);
+
+    // Persist to Supabase (no-op on failure — local state already updated)
+    enrolMut.mutate(
+      { studentId, classId, forceWaitlist: forceWaitlist ?? isFull },
+      {
+        onError: () => {
+          // Rollback: remove optimistic, reload from source
+          queryClient.invalidateQueries({ queryKey: ["enrolments"] });
+          queryClient.invalidateQueries({ queryKey: ["students"] });
+          queryClient.invalidateQueries({ queryKey: ["classes"] });
+        },
       },
-    });
-  }, [enrolMut, queryClient]);
+    );
+  }, [enrolmentsCtx, classes, enrolMut, queryClient]);
 
   const withdrawStudentFromClass = useCallback((studentId: string, classId: string) => {
-    // Persist to enrolments table — updates status to "withdrawn" (preserves history).
-    // Derived counts in classes/students update on invalidation.
+    if (!enrolmentsCtx) return;
+
+    // Optimistic update — mark as withdrawn immediately
+    enrolmentsCtx.updateEnrolmentStatus(studentId, classId, "withdrawn");
+
+    // Persist to Supabase (no-op on failure — local state already updated)
     withdrawMut.mutate({ studentId, classId }, {
       onError: () => {
+        // Rollback: reload from source
         queryClient.invalidateQueries({ queryKey: ["enrolments"] });
         queryClient.invalidateQueries({ queryKey: ["students"] });
         queryClient.invalidateQueries({ queryKey: ["classes"] });
       },
     });
-  }, [withdrawMut, queryClient]);
+  }, [enrolmentsCtx, withdrawMut, queryClient]);
 
   return (
     <StudentsContext.Provider value={{ students: derivedStudents, addStudent, updateStudent, enrolStudentInClass, withdrawStudentFromClass }}>

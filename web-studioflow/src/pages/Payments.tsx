@@ -101,7 +101,8 @@ function CreateInvoiceModal({
 
     const desc = description || (cls ? `Tuition — ${cls.name}` : "Tuition");
 
-    // addInvoice now persists to Supabase via the shared context mutation
+    // addInvoice persists to Supabase via the shared context mutation.
+    // enrolmentId links the invoice to the specific enrolment for billing traceability.
     addInvoice({
       studentName: student?.name ?? "",
       parentName: student?.parentName ?? "",
@@ -109,6 +110,7 @@ function CreateInvoiceModal({
       amountCents: Math.round(Number(amountCents)),
       status: "draft",
       dueDate: due.toISOString(),
+      enrolmentId: cls ? `enr_${studentId}_${classId}` : undefined,
     });
 
     toast.success("Draft invoice created");
