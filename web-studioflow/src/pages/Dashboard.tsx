@@ -15,7 +15,7 @@ import {
 import RevenueChart from "@/components/charts/RevenueChart";
 import StatCard from "@/components/StatCard";
 import { SetupWizard } from "@/components/SetupWizard";
-import { styleStyles, teacherName, useClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices } from "@/data/store";
+import { styleStyles, teacherName, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices } from "@/data/store";
 import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export default function Dashboard() {
 
   const { studio } = useStudio();
   const term = useTerminology();
-  const { classes } = useClasses();
+  const classes = useEnrichedClasses();
   const { students } = useStudents();
   const { teachers } = useTeachers();
   const { invoices } = useInvoices();

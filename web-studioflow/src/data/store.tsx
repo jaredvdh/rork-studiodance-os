@@ -197,21 +197,6 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   const [classes, setClasses] = useState<Class[]>([]);
   const queryClient = useQueryClient();
 
-  // Derive enrolled/waitlist counts from enrolments context (source of truth)
-  const enrolmentsCtx = useContext(EnrolmentsContext);
-
-  // Merge Supabase classes with derived enrolment counts.
-  // enrolled is ALWAYS derived from the enrolments table — never from the hardcoded
-  // class.enrolled column (which can drift). Zero is the safe default when no
-  // enrolments context exists (e.g. before first hydration).
-  const derivedClasses = useMemo(() => {
-    if (!enrolmentsCtx) return classes;
-    return classes.map((c) => ({
-      ...c,
-      enrolled: enrolmentsCtx.countByClassId.get(c.id) ?? 0,
-      waitlist: 0,
-    }));
-  }, [classes, enrolmentsCtx]);
   useEffect(() => {
     setClasses(supabaseClasses);
   }, [supabaseClasses]);
@@ -247,7 +232,7 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   }, [updateClassMut, queryClient]);
 
   return (
-    <ClassesContext.Provider value={{ classes: derivedClasses, addClass, removeClass, updateClass }}>
+    <ClassesContext.Provider value={{ classes, addClass, removeClass, updateClass }}>
       {children}
     </ClassesContext.Provider>
   );
@@ -257,6 +242,22 @@ export function useClasses() {
   const ctx = useContext(ClassesContext);
   if (!ctx) throw new Error("useClasses must be used within ClassesProvider");
   return ctx;
+}
+
+/** Returns classes with enrolled counts derived from the enrolments table
+ * (the single source of truth). Safe to call even if EnrolmentsProvider is a
+ * descendant — falls back to raw class.enrolled when enrolments aren't available. */
+export function useEnrichedClasses() {
+  const { classes } = useClasses();
+  const enrolmentsCtx = useContext(EnrolmentsContext);
+  return useMemo(() => {
+    if (!enrolmentsCtx) return classes;
+    return classes.map((c) => ({
+      ...c,
+      enrolled: enrolmentsCtx.countByClassId.get(c.id) ?? c.enrolled,
+      waitlist: 0,
+    }));
+  }, [classes, enrolmentsCtx]);
 }
 
 /* ── Shared students state ───────────────────────────────────────────── */
@@ -512,7 +513,7 @@ export function useInvoices() {
  * any imported records from the Migration Assistant, and shared context state. */
 export function useStudioData() {
   const { teachers } = useTeachers();
-  const { classes } = useClasses();
+  const classes = useEnrichedClasses();
   const { students } = useStudents();
   const { announcements: anns } = useAnnouncements();
   const { invoices: invs } = useInvoices();

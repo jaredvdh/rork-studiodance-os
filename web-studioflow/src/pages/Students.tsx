@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useClasses, useStudents, useStudioData, useTerminology } from "@/data/store";
+import { useEnrichedClasses, useStudents, useStudioData, useTerminology } from "@/data/store";
 import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, WaiverStatus } from "@/data/types";
 import { caregiverFullName } from "@/data/types";
 import { parentAccounts } from "@/data/demo";
@@ -45,7 +45,7 @@ type Filter = "all" | "waiver" | "overdue";
 
 export default function Students() {
   const { students, enrolStudentInClass, withdrawStudentFromClass } = useStudents();
-  const { classes } = useClasses();
+  const classes = useEnrichedClasses();
   const term = useTerminology();
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<Filter>("all");

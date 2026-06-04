@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Clock, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
-import { styleStyles, teacherName, useStudio, useClasses, useTeachers, useTerminology } from "@/data/store";
+import { styleStyles, teacherName, useStudio, useEnrichedClasses, useClasses, useTeachers, useTerminology } from "@/data/store";
 import type { AgeGroup, ClassStyle, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,8 @@ const DAYS: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function Classes() {
   const { studio } = useStudio();
   const term = useTerminology();
-  const { classes, addClass, removeClass } = useClasses();
+  const classes = useEnrichedClasses();
+  const { addClass, removeClass } = useClasses();
   const { teachers } = useTeachers();
   const [styleFilter, setStyleFilter] = useState<ClassStyle | "All">("All");
   const [open, setOpen] = useState<boolean>(false);

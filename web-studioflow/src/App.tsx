@@ -46,45 +46,45 @@ const queryClient = new QueryClient();
 
 const withShell = (Page: React.ComponentType) => (
   <StudioProvider>
-    <EnrolmentsProvider>
-      <ClassesProvider>
-        <TeachersProvider>
-          <AnnouncementsProvider>
-            <InvoicesProvider>
-              <StudentsProvider>
+    <ClassesProvider>
+      <EnrolmentsProvider>
+        <StudentsProvider>
+          <TeachersProvider>
+            <AnnouncementsProvider>
+              <InvoicesProvider>
                 <MigrationProvider>
                   <AppShell>
                     <Page />
                   </AppShell>
                 </MigrationProvider>
-              </StudentsProvider>
-            </InvoicesProvider>
-          </AnnouncementsProvider>
-        </TeachersProvider>
-      </ClassesProvider>
-    </EnrolmentsProvider>
+              </InvoicesProvider>
+            </AnnouncementsProvider>
+          </TeachersProvider>
+        </StudentsProvider>
+      </EnrolmentsProvider>
+    </ClassesProvider>
   </StudioProvider>
 );
 
 const withParentShell = (Page: React.ComponentType) => (
   <StudioProvider>
-    <EnrolmentsProvider>
-      <ClassesProvider>
-        <TeachersProvider>
-          <AnnouncementsProvider>
-            <InvoicesProvider>
-              <StudentsProvider>
+    <ClassesProvider>
+      <EnrolmentsProvider>
+        <StudentsProvider>
+          <TeachersProvider>
+            <AnnouncementsProvider>
+              <InvoicesProvider>
                 <ParentProvider>
                   <ParentShell>
                     <Page />
                   </ParentShell>
                 </ParentProvider>
-              </StudentsProvider>
-            </InvoicesProvider>
-          </AnnouncementsProvider>
-        </TeachersProvider>
-      </ClassesProvider>
-    </EnrolmentsProvider>
+              </InvoicesProvider>
+            </AnnouncementsProvider>
+          </TeachersProvider>
+        </StudentsProvider>
+      </EnrolmentsProvider>
+    </ClassesProvider>
   </StudioProvider>
 );
 

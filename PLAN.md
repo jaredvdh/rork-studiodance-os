@@ -157,7 +157,7 @@ Connected modules into a unified operational platform. "Create once, use everywh
 - [x] `StudentsProvider` + `useStudents()` shared context — student records unified
 - [x] `AnnouncementsProvider` + `useAnnouncements()` — shared announcement state
 - [x] `InvoicesProvider` + `useInvoices()` — shared invoice state
-- [x] All providers nested in `App.tsx` with correct dependency order
+- [x] All providers nested in `App.tsx` with correct dependency order: `StudioProvider → ClassesProvider → EnrolmentsProvider → StudentsProvider → TeachersProvider → AnnouncementsProvider → InvoicesProvider`
 
 ---
 
@@ -244,12 +244,15 @@ Moved from array/counter-based enrolment tracking to a normalized production-saf
 ## Derived Counts
 
 - [x] `EnrolmentsProvider` in `store.tsx` — hydrates from Supabase, computes `countByClassId` and `classIdsByStudentId` maps
-- [x] `ClassesProvider` derives `class.enrolled` from active enrolments (no manual counter)
+- [x] `ClassesProvider` returns raw class data; consumer hook `useEnrichedClasses()` derives `class.enrolled` from `EnrolmentsContext.countByClassId` with fallback to raw value
 - [x] `StudentsProvider` derives `student.classIds` from active enrolments (no dual array tracking)
 - [x] Enrol/withdraw mutations write ONLY to `enrolments` table; derived counts refresh via invalidation
 - [x] Removed `enrolStudent`/`withdrawStudent` from `ClassesContext` (no longer needed)
 - [x] Waitlist support in EnrolModal: full classes show "Waitlist" button instead of disabled "Full"
-- [x] `EnrolmentsProvider` wired into `App.tsx` for both admin and parent shells
+- [x] `StudentsProvider` derives `student.classIds` from active enrolments via `EnrolmentsContext.classIdsByStudentId`
+- [x] `ClassesProvider` reads `EnrolmentsContext` for enrolled derivation (via `useEnrichedClasses`) — null-safe fallback when EnrolmentsProvider is a descendant
+- [x] `StudentsProvider` reads both `ClassesContext` and `EnrolmentsContext` — both available with new provider order
+- [x] `useStudioData()` uses `useEnrichedClasses()` so all downstream consumers (Schedule, Instructors, Payments, Recitals, parent pages) get correct enrolled counts
 
 ## Data Integrity
 
