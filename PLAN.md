@@ -436,11 +436,14 @@ Complete costume planning, measurement tracking, vendor ordering, distribution, 
 ## Supabase Hooks
 
 - [x] Query hooks: useSupabaseCostumes, useSupabaseCostumeAssignments, useSupabaseStudentMeasurements, useSupabaseSizingCharts, useSupabaseSizeRecommendations, useSupabaseCostumeFees, useSupabaseVendorOrders, useSupabaseAlterations, useSupabaseCostumeDistributions, useSupabaseReusableCostumes, useSupabaseCostumeRentals, useSupabaseQuickChangeConflicts
+- [x] **Mutation hooks: useAddCostume, useUpdateCostume, useDeleteCostume** — full CRUD with Supabase persistence
+- [x] **Costume type extended: vendorWebsiteUrl, productPageUrl, style, taxable, depositAmountCents, sizesAvailable, sizingNotes, autoSizingEnabled, isReusable, quantityOwned, storageLocation, condition, CostumeStatus**
 - [x] Demo fallback pattern: demo data only for `isDemo` sessions; real studios get empty arrays
 
 ## Shared Provider
 
 - [x] `CostumesProvider` in `store.tsx` — hydrates all 11 entity types from Supabase, exposes computed helpers: costumesForClass, costumesForStudent, sizeRecForStudentCostume, measurementForStudent, feesForStudent, alterationCountByStatus, studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount, ordersByStatus
+- [x] **Mutation methods: addCostume, updateCostume, deleteCostume, duplicateCostume — demo mode mutates local state for testing**
 - [x] Provider nested in `App.tsx` inside `withShell` and `withParentShell` chains (between InvoicesProvider and WaiversProvider)
 
 ## Admin Portal — Costumes Page
@@ -450,7 +453,11 @@ Complete costume planning, measurement tracking, vendor ordering, distribution, 
 - [x] Upcoming deadlines widget: measurement deadline, ordering deadline, distribution date, recital date
 - [x] AI Insights panel: contextual recommendations (students missing measurements, unpaid fees, conflicts, reusable savings, shipping savings)
 - [x] Recent activity feed: measurement approvals, distributions, fee payments, pending parent approvals
-- [x] Costume Library: card grid with category badges, pricing breakdown (wholesale, shipping, markup, retail, margin), SKU, assigned class chips
+- [x] **Costume Library: card grid with category badges, pricing breakdown (wholesale, shipping, markup, retail, margin), SKU, assigned class chips**
+- [x] **Admin action bar: + Add Costume, Import CSV, Export CSV buttons**
+- [x] **Card action menus: View Details, Edit, Duplicate, Archive, Delete with confirmation**
+- [x] **CostumeForm modal: add/edit with full field set (name, SKU, vendor + website, category, colour, season, description, pricing with auto-calculated retail/margin, images via URL, sizing charts, care instructions, assignments, inventory, status)**
+- [x] **CostumeDetail page at `/costumes/:id`: images, vendor links, pricing breakdown, sizing, assignments, related orders, alterations, inventory**
 - [x] Measurements tab: student measurement cards with status badges, measurement grid, AI size recommendations with confidence scores, vendor sizing chart tables
 - [x] Vendor Orders tab: order cards with status workflow timeline, date tracking, line-item tables, vendor notes
 - [x] Alterations tab: overdue alert banner, status-coded cards with assignee and due dates

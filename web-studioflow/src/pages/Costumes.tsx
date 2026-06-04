@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { formatHeight, formatWeight, formatCm } from "@/lib/units";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
+import CostumeForm from "@/components/CostumeForm";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -12,15 +14,20 @@ import {
   ChevronRight,
   ClipboardCheck,
   Clock,
+  Copy,
   DollarSign,
   Download,
   ExternalLink,
   Eye,
   FileText,
+  FileUp,
   Hash,
+  MoreHorizontal,
   Package,
   Palette,
+  Pencil,
   PencilRuler,
+  Plus,
   Ruler,
   Scissors,
   Search,
@@ -28,8 +35,10 @@ import {
   Sparkles,
   Store,
   Ticket,
+  Trash2,
   TrendingUp,
   Truck,
+  Upload,
   Users,
   Warehouse,
   XCircle,
@@ -76,6 +85,8 @@ const TABS: { key: Tab; label: string; icon: typeof Shirt }[] = [
 export default function Costumes() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [search, setSearch] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingCostume, setEditingCostume] = useState<Costume | null>(null);
   const { studio } = useStudio();
   const term = useTerminology();
   const { students } = useStudents();
@@ -83,6 +94,11 @@ export default function Costumes() {
   const { teachers } = useTeachers();
   const ctx = useCostumes();
   const { preferredUnits: units } = useUnitPreference();
+  const navigate = useNavigate();
+
+  function openAdd() { setEditingCostume(null); setFormOpen(true); }
+  function openEdit(c: Costume) { setEditingCostume(c); setFormOpen(true); }
+  function closeForm() { setFormOpen(false); setEditingCostume(null); }
 
   const filteredCostumes = useMemo(() => {
     if (!search.trim()) return ctx.costumes;
@@ -180,7 +196,20 @@ export default function Costumes() {
       {tab === "dashboard" && <CostumeDashboard summary={summary} ctx={ctx} students={students} term={term} />}
 
       {/* ── Tab: Costume Library ───────────────────────────────── */}
-      {tab === "library" && <CostumeLibrary costumes={filteredCostumes} assignments={ctx.assignments} classes={classes} ctx={ctx} />}
+      {tab === "library" && (
+        <CostumeLibrary
+          costumes={filteredCostumes}
+          assignments={ctx.assignments}
+          classes={classes}
+          ctx={ctx}
+          onAdd={openAdd}
+          onEdit={openEdit}
+          onView={(c) => navigate(`/costumes/${c.id}`)}
+        />
+      )}
+
+      {/* Add/Edit Modal */}
+      <CostumeForm open={formOpen} onClose={closeForm} edit={editingCostume} />
 
       {/* ── Tab: Measurements ──────────────────────────────────── */}
       {tab === "measurements" && <MeasurementsTab measurements={ctx.measurements} students={students} sizingCharts={ctx.sizingCharts} recommendations={ctx.sizeRecommendations} costumes={ctx.costumes} />}
@@ -339,108 +368,276 @@ function CostumeDashboard({ summary, ctx, students, term }: {
 
 /* ── Costume Library Sub-Component ──────────────────────────────────────── */
 
-function CostumeLibrary({ costumes, assignments, classes, ctx }: {
+function CostumeLibrary({ costumes, assignments, classes, ctx, onAdd, onEdit, onView }: {
   costumes: Costume[];
   assignments: CostumeAssignment[];
   classes: ReturnType<typeof useEnrichedClasses>;
   ctx: ReturnType<typeof useCostumes>;
+  onAdd: () => void;
+  onEdit: (c: Costume) => void;
+  onView: (c: Costume) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
+  function handleDuplicate(c: Costume) {
+    toast.promise(ctx.duplicateCostume(c.id), {
+      loading: "Duplicating costume…",
+      success: `"${c.name}" duplicated`,
+      error: "Failed to duplicate",
+    });
+    setMenuOpen(null);
+  }
+
+  function handleDelete(c: Costume) {
+    if (!confirm(`Delete "${c.name}"? This cannot be undone.`)) return;
+    toast.promise(ctx.deleteCostume(c.id), {
+      loading: "Deleting costume…",
+      success: `"${c.name}" deleted`,
+      error: "Failed to delete",
+    });
+    setMenuOpen(null);
+  }
+
+  function handleArchive(c: Costume) {
+    toast.promise(ctx.updateCostume(c.id, { status: "retired" }), {
+      loading: "Archiving costume…",
+      success: `"${c.name}" archived`,
+      error: "Failed to archive",
+    });
+    setMenuOpen(null);
+  }
+
+  function handleExportCsv() {
+    if (costumes.length === 0) { toast.error("No costumes to export"); return; }
+    const headers = ["Name","SKU","Vendor","Category","Colour","Season","Wholesale","Shipping","Markup%","Retail","Status"];
+    const rows = costumes.map((c) => [
+      c.name, c.sku ?? "", c.vendor ?? "", COSTUME_CATEGORY_LABELS[c.category], c.colour ?? "", c.season ?? "",
+      (c.wholesaleCostCents / 100).toFixed(2), (c.shippingAllocationCents / 100).toFixed(2),
+      String(c.markupPct), (c.retailCostCents / 100).toFixed(2), c.status,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "costume-library.csv"; a.click();
+    toast.success("Library exported as CSV");
+  }
+
+  function handleImportCsv() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const lines = text.split("\n").filter(Boolean);
+      if (lines.length < 2) { toast.error("CSV must have a header row and at least one data row"); return; }
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+        if (!cols[0]) continue;
+        await ctx.addCostume({
+          name: cols[0],
+          sku: cols[1] || undefined,
+          vendor: cols[2] || undefined,
+          category: (Object.keys(COSTUME_CATEGORY_LABELS).find((k) => COSTUME_CATEGORY_LABELS[k as CostumeCategory].toLowerCase() === cols[3]?.toLowerCase()) ?? "other") as CostumeCategory,
+          colour: cols[4] || undefined,
+          season: cols[5] || undefined,
+          wholesaleCostCents: Math.round(Number(cols[6] || "0") * 100),
+          shippingAllocationCents: Math.round(Number(cols[7] || "0") * 100),
+          markupPct: Number(cols[8] || "30"),
+          status: (cols[10] as CostumeStatus) || "active",
+          images: [],
+          taxable: false,
+          depositAmountCents: 0,
+          sizesAvailable: [],
+          autoSizingEnabled: false,
+          isReusable: false,
+          quantityOwned: 0,
+        });
+        imported++;
+      }
+      toast.success(`${imported} costume${imported !== 1 ? "s" : ""} imported`);
+    };
+    input.click();
+  }
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {costumes.length === 0 ? (
-        <div className="col-span-full rounded-2xl border border-border/70 bg-card p-12 text-center">
-          <Shirt className="mx-auto h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-4 text-lg font-semibold">No costumes yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">Add your first costume to the library to get started.</p>
-        </div>
-      ) : (
-        costumes.map((c) => {
-          const relatedAssignments = assignments.filter((a) => a.costumeId === c.id);
-          const assignedClasses = relatedAssignments
-            .filter((a) => a.classId)
-            .map((a) => classes.find((cl) => cl.id === a.classId))
-            .filter(Boolean);
-          const totalAssigned = relatedAssignments.reduce((sum, a) => sum + a.assignedCount, 0);
-          const margin = c.retailCostCents - c.wholesaleCostCents - c.shippingAllocationCents;
-          return (
-            <div
-              key={c.id}
-              className="group rounded-2xl border border-border/70 bg-card p-5 shadow-soft transition-all hover:shadow-md hover:border-rose/30"
+    <div className="space-y-4">
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={onAdd}
+          className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-white shadow-lift transition hover:bg-rose/90 active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          Add Costume
+        </button>
+        <button
+          onClick={handleImportCsv}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+        >
+          <Upload className="h-4 w-4" />
+          Import CSV
+        </button>
+        <button
+          onClick={handleExportCsv}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </button>
+      </div>
+
+      {/* Costume grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {costumes.length === 0 ? (
+          <div className="col-span-full rounded-2xl border border-border/70 bg-card p-12 text-center">
+            <Shirt className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <p className="mt-4 text-lg font-semibold">No costumes yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Add your first costume to the library to get started.</p>
+            <button
+              onClick={onAdd}
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-rose px-5 py-3 text-sm font-semibold text-white shadow-lift transition hover:bg-rose/90 active:scale-95"
             >
-              {/* Category + vendor badges */}
-              <div className="flex items-center justify-between mb-3">
-                <span className="rounded-full bg-rose/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose">
-                  {COSTUME_CATEGORY_LABELS[c.category]}
-                </span>
-                {c.vendor && (
-                  <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground">
-                    {c.vendor}
+              <Plus className="h-4 w-4" />
+              Add Your First Costume
+            </button>
+          </div>
+        ) : (
+          costumes.map((c) => {
+            const relatedAssignments = assignments.filter((a) => a.costumeId === c.id);
+            const assignedClasses = relatedAssignments
+              .filter((a) => a.classId)
+              .map((a) => classes.find((cl) => cl.id === a.classId))
+              .filter(Boolean);
+            const totalAssigned = relatedAssignments.reduce((sum, a) => sum + a.assignedCount, 0);
+            const margin = c.retailCostCents - c.wholesaleCostCents - c.shippingAllocationCents;
+            return (
+              <div
+                key={c.id}
+                className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-soft transition-all hover:shadow-md hover:border-rose/30"
+              >
+                {/* Action menu */}
+                <div className="absolute top-3 right-3 z-10">
+                  <button
+                    onClick={() => setMenuOpen(menuOpen === c.id ? null : c.id)}
+                    className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 transition hover:bg-secondary"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                  {menuOpen === c.id && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(null)} />
+                      <div className="absolute right-0 top-10 z-30 w-48 rounded-2xl border border-border/70 bg-card p-1.5 shadow-lift animate-float-up">
+                        <button onClick={() => { onView(c); setMenuOpen(null); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-secondary">
+                          <Eye className="h-4 w-4 text-muted-foreground" /> View Details
+                        </button>
+                        <button onClick={() => { onEdit(c); setMenuOpen(null); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-secondary">
+                          <Pencil className="h-4 w-4 text-muted-foreground" /> Edit
+                        </button>
+                        <button onClick={() => handleDuplicate(c)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-secondary">
+                          <Copy className="h-4 w-4 text-muted-foreground" /> Duplicate
+                        </button>
+                        {c.status !== "retired" && (
+                          <button onClick={() => handleArchive(c)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-secondary">
+                            <FileUp className="h-4 w-4 text-muted-foreground" /> Archive
+                          </button>
+                        )}
+                        <div className="my-1 border-t border-border/50" />
+                        <button onClick={() => handleDelete(c)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose transition hover:bg-rose/10">
+                          <Trash2 className="h-4 w-4" /> Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Status badge (top left) */}
+                {c.status !== "active" && (
+                  <span className={cn(
+                    "absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    c.status === "draft" ? "bg-secondary text-muted-foreground" :
+                    c.status === "retired" ? "bg-muted/20 text-muted-foreground" :
+                    "bg-gold/10 text-gold",
+                  )}>
+                    {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                   </span>
                 )}
-              </div>
 
-              {/* Name + description */}
-              <h4 className="font-display text-base font-semibold">{c.name}</h4>
-              {c.colour && <p className="text-sm text-muted-foreground">{c.colour}</p>}
-              {c.description && (
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{c.description}</p>
-              )}
-
-              {/* Pricing */}
-              <div className="mt-3 rounded-xl bg-secondary/40 p-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Wholesale</span>
-                  <span className="font-medium">{formatCurrency(c.wholesaleCostCents)}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="font-medium">{formatCurrency(c.shippingAllocationCents)}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-muted-foreground">Markup</span>
-                  <span className="font-medium">{c.markupPct}%</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
-                  <span className="font-semibold">Retail</span>
-                  <span className="font-display font-semibold text-rose">{formatCurrency(c.retailCostCents)}</span>
-                </div>
-                <div className="mt-0.5 flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Margin</span>
-                  <span className={cn("font-medium", margin > 0 ? "text-teal" : "text-rose")}>
-                    {formatCurrency(margin)}
+                {/* Category + vendor badges */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="rounded-full bg-rose/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose">
+                    {COSTUME_CATEGORY_LABELS[c.category]}
                   </span>
+                  {c.vendor && (
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground">
+                      {c.vendor}
+                    </span>
+                  )}
                 </div>
-              </div>
 
-              {/* Skills + assigned classes */}
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Hash className="h-3 w-3" />
-                  <span>SKU: {c.sku ?? "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Users className="h-3 w-3" />
-                  <span>{totalAssigned} assigned across {relatedAssignments.length} {relatedAssignments.length === 1 ? "entry" : "entries"}</span>
-                </div>
-                {assignedClasses.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {assignedClasses.slice(0, 3).map((cls) => (
-                      <span key={cls!.id} className="rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-medium text-plum">
-                        {cls!.name}
-                      </span>
-                    ))}
-                    {assignedClasses.length > 3 && (
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                        +{assignedClasses.length - 3}
-                      </span>
-                    )}
+                {/* Name + description */}
+                <h4 className="font-display text-base font-semibold pr-8">{c.name}</h4>
+                {c.colour && <p className="text-sm text-muted-foreground">{c.colour}</p>}
+                {c.description && (
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{c.description}</p>
+                )}
+
+                {/* Pricing */}
+                <div className="mt-3 rounded-xl bg-secondary/40 p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Wholesale</span>
+                    <span className="font-medium">{formatCurrency(c.wholesaleCostCents)}</span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span className="font-medium">{formatCurrency(c.shippingAllocationCents)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-muted-foreground">Markup</span>
+                    <span className="font-medium">{c.markupPct}%</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
+                    <span className="font-semibold">Retail</span>
+                    <span className="font-display font-semibold text-rose">{formatCurrency(c.retailCostCents)}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Margin</span>
+                    <span className={cn("font-medium", margin > 0 ? "text-teal" : "text-rose")}>
+                      {formatCurrency(margin)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* SKU + assigned classes */}
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3 w-3" />
+                    <span>SKU: {c.sku ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3" />
+                    <span>{totalAssigned} assigned across {relatedAssignments.length} {relatedAssignments.length === 1 ? "entry" : "entries"}</span>
+                  </div>
+                  {assignedClasses.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {assignedClasses.slice(0, 3).map((cls) => (
+                        <span key={cls!.id} className="rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-medium text-plum">
+                          {cls!.name}
+                        </span>
+                      ))}
+                      {assignedClasses.length > 3 && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                          +{assignedClasses.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })
-      )}
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

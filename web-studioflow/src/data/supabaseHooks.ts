@@ -1050,6 +1050,9 @@ export function useSupabaseCostumes(isDemo: boolean) {
       return { data: (data as unknown as Record<string, unknown>[]).map((c) => ({
         id: c.id as string, studioId: c.studio_id as string, name: c.name as string,
         sku: (c.sku as string) ?? undefined, vendor: (c.vendor as string) ?? undefined,
+        vendorWebsiteUrl: (c.vendor_website_url as string) ?? undefined,
+        productPageUrl: (c.product_page_url as string) ?? undefined,
+        style: (c.style as string) ?? undefined,
         season: (c.season as string) ?? undefined, category: (c.category as string) ?? "other",
         colour: (c.colour as string) ?? undefined, description: (c.description as string) ?? undefined,
         images: (c.images as string[]) ?? [], vendorPdfUrl: (c.vendor_pdf_url as string) ?? undefined,
@@ -1059,12 +1062,114 @@ export function useSupabaseCostumes(isDemo: boolean) {
         shippingAllocationCents: (c.shipping_allocation_cents as number) ?? 0,
         markupPct: (c.markup_pct as number) ?? 30,
         retailCostCents: (c.retail_cost_cents as number) ?? 0,
+        taxable: (c.taxable as boolean) ?? false,
+        depositAmountCents: (c.deposit_amount_cents as number) ?? 0,
+        sizesAvailable: (c.sizes_available as string[]) ?? [],
+        sizingNotes: (c.sizing_notes as string) ?? undefined,
+        autoSizingEnabled: (c.auto_sizing_enabled as boolean) ?? false,
+        isReusable: (c.is_reusable as boolean) ?? false,
+        quantityOwned: (c.quantity_owned as number) ?? 0,
+        storageLocation: (c.storage_location as string) ?? undefined,
+        condition: (c.condition as string) ?? undefined,
+        status: ((c.status as string) ?? "active") as CostumeStatus,
         createdAt: (c.created_at as string) ?? "", updatedAt: (c.updated_at as string) ?? "",
       })), error: null };
     },
     demoCostumes,
     isDemo,
   );
+}
+
+export function useAddCostume() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (costume: Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">) => {
+      const { data, error } = await supabase.from("costumes").insert({
+        studio_id: studioId,
+        name: costume.name,
+        sku: costume.sku ?? null,
+        vendor: costume.vendor ?? null,
+        vendor_website_url: costume.vendorWebsiteUrl ?? null,
+        product_page_url: costume.productPageUrl ?? null,
+        style: costume.style ?? null,
+        season: costume.season ?? null,
+        category: costume.category,
+        colour: costume.colour ?? null,
+        description: costume.description ?? null,
+        images: costume.images ?? [],
+        vendor_pdf_url: costume.vendorPdfUrl ?? null,
+        sizing_chart_pdf_url: costume.sizingChartPdfUrl ?? null,
+        care_instructions: costume.careInstructions ?? null,
+        wholesale_cost_cents: costume.wholesaleCostCents,
+        shipping_allocation_cents: costume.shippingAllocationCents,
+        markup_pct: costume.markupPct,
+        taxable: costume.taxable,
+        deposit_amount_cents: costume.depositAmountCents,
+        sizes_available: costume.sizesAvailable ?? [],
+        sizing_notes: costume.sizingNotes ?? null,
+        auto_sizing_enabled: costume.autoSizingEnabled,
+        is_reusable: costume.isReusable,
+        quantity_owned: costume.quantityOwned,
+        storage_location: costume.storageLocation ?? null,
+        condition: costume.condition ?? null,
+        status: costume.status ?? "active",
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["costumes"] }),
+  });
+}
+
+export function useUpdateCostume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">> }) => {
+      const updates: Record<string, unknown> = {};
+      if (patch.name !== undefined) updates.name = patch.name;
+      if (patch.sku !== undefined) updates.sku = patch.sku;
+      if (patch.vendor !== undefined) updates.vendor = patch.vendor;
+      if (patch.vendorWebsiteUrl !== undefined) updates.vendor_website_url = patch.vendorWebsiteUrl;
+      if (patch.productPageUrl !== undefined) updates.product_page_url = patch.productPageUrl;
+      if (patch.style !== undefined) updates.style = patch.style;
+      if (patch.season !== undefined) updates.season = patch.season;
+      if (patch.category !== undefined) updates.category = patch.category;
+      if (patch.colour !== undefined) updates.colour = patch.colour;
+      if (patch.description !== undefined) updates.description = patch.description;
+      if (patch.images !== undefined) updates.images = patch.images;
+      if (patch.vendorPdfUrl !== undefined) updates.vendor_pdf_url = patch.vendorPdfUrl;
+      if (patch.sizingChartPdfUrl !== undefined) updates.sizing_chart_pdf_url = patch.sizingChartPdfUrl;
+      if (patch.careInstructions !== undefined) updates.care_instructions = patch.careInstructions;
+      if (patch.wholesaleCostCents !== undefined) updates.wholesale_cost_cents = patch.wholesaleCostCents;
+      if (patch.shippingAllocationCents !== undefined) updates.shipping_allocation_cents = patch.shippingAllocationCents;
+      if (patch.markupPct !== undefined) updates.markup_pct = patch.markupPct;
+      if (patch.taxable !== undefined) updates.taxable = patch.taxable;
+      if (patch.depositAmountCents !== undefined) updates.deposit_amount_cents = patch.depositAmountCents;
+      if (patch.sizesAvailable !== undefined) updates.sizes_available = patch.sizesAvailable;
+      if (patch.sizingNotes !== undefined) updates.sizing_notes = patch.sizingNotes;
+      if (patch.autoSizingEnabled !== undefined) updates.auto_sizing_enabled = patch.autoSizingEnabled;
+      if (patch.isReusable !== undefined) updates.is_reusable = patch.isReusable;
+      if (patch.quantityOwned !== undefined) updates.quantity_owned = patch.quantityOwned;
+      if (patch.storageLocation !== undefined) updates.storage_location = patch.storageLocation;
+      if (patch.condition !== undefined) updates.condition = patch.condition;
+      if (patch.status !== undefined) updates.status = patch.status;
+      const { error } = await supabase.from("costumes").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["costumes"] }),
+  });
+}
+
+export function useDeleteCostume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("costumes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["costumes"] }),
+  });
 }
 
 export function useSupabaseCostumeAssignments(isDemo: boolean) {

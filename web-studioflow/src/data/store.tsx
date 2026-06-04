@@ -29,6 +29,9 @@ import {
   useSupabaseReusableCostumes,
   useSupabaseCostumeRentals,
   useSupabaseQuickChangeConflicts,
+  useAddCostume,
+  useUpdateCostume,
+  useDeleteCostume,
   useAddTeacher,
   useUpdateTeacher,
   useRemoveTeacher,
@@ -815,6 +818,14 @@ interface CostumesCtx {
   quickChangeConflictCount: () => number;
   /** Get orders by status. */
   ordersByStatus: (status: VendorOrder["status"]) => VendorOrder[];
+  /** Add a new costume. */
+  addCostume: (c: Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">) => Promise<string>;
+  /** Update an existing costume. */
+  updateCostume: (id: string, patch: Partial<Costume>) => Promise<void>;
+  /** Delete a costume (with confirmation). */
+  deleteCostume: (id: string) => Promise<void>;
+  /** Duplicate a costume. */
+  duplicateCostume: (id: string) => Promise<string>;
 }
 
 const CostumesContext = createContext<CostumesCtx | null>(null);
@@ -851,6 +862,50 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { setCostumes(supabaseCostumes); }, [supabaseCostumes]);
   useEffect(() => { setAssignments(supabaseAssignments); }, [supabaseAssignments]);
   useEffect(() => { setMeasurements(supabaseMeasurements); }, [supabaseMeasurements]);
+
+  const addCostumeMutation = useAddCostume();
+  const updateCostumeMutation = useUpdateCostume();
+  const deleteCostumeMutation = useDeleteCostume();
+
+  const addCostume = useCallback(async (c: Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">): Promise<string> => {
+    if (isDemo) {
+      const id = `cos_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date().toISOString();
+      const retail = Math.round((c.wholesaleCostCents + c.shippingAllocationCents) * (1 + c.markupPct / 100));
+      const newCostume: Costume = { ...c, id, studioId: "demo", retailCostCents: retail, createdAt: now, updatedAt: now } as Costume;
+      setCostumes((prev) => [newCostume, ...prev]);
+      return id;
+    }
+    await addCostumeMutation.mutateAsync(c);
+    return "";
+  }, [isDemo, addCostumeMutation]);
+
+  const updateCostume = useCallback(async (id: string, patch: Partial<Costume>): Promise<void> => {
+    if (isDemo) {
+      setCostumes((prev) => prev.map((c) => c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c));
+      return;
+    }
+    await updateCostumeMutation.mutateAsync({ id, patch: patch as Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents"> & Partial<Pick<Costume, "id" | "studioId" | "createdAt" | "updatedAt">> });
+  }, [isDemo, updateCostumeMutation]);
+
+  const deleteCostume = useCallback(async (id: string): Promise<void> => {
+    if (isDemo) {
+      setCostumes((prev) => prev.filter((c) => c.id !== id));
+      return;
+    }
+    await deleteCostumeMutation.mutateAsync(id);
+  }, [isDemo, deleteCostumeMutation]);
+
+  const duplicateCostume = useCallback(async (id: string): Promise<string> => {
+    const source = costumes.find((c) => c.id === id);
+    if (!source) throw new Error("Costume not found");
+    const { id: _sid, studioId: _sst, createdAt: _sca, updatedAt: _sup, retailCostCents: _sret, ...rest } = source;
+    return addCostume({
+      ...rest,
+      name: `${source.name} (Copy)`,
+      sku: source.sku ? `${source.sku}-COPY` : undefined,
+    });
+  }, [costumes, addCostume]);
 
   const costumesForClass = useCallback((classId: string) => {
     const assignmentIds = new Set(assignments.filter((a) => a.classId === classId).map((a) => a.costumeId));
@@ -904,13 +959,15 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     measurementForStudent, feesForStudent, alterationCountByStatus,
     studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
+    addCostume, updateCostume, deleteCostume, duplicateCostume,
   }), [costumes, assignments, measurements, sizingCharts, sizeRecommendations,
     costumeFees, vendorOrders, alterations, distributions, reusableInventory,
     rentals, quickChangeConflicts,
     costumesForClass, costumesForStudent, sizeRecForStudentCostume,
     measurementForStudent, feesForStudent, alterationCountByStatus,
     studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
-    ordersByStatus]);
+    ordersByStatus,
+    addCostume, updateCostume, deleteCostume, duplicateCostume]);
 
   return <CostumesContext.Provider value={ctx}>{children}</CostumesContext.Provider>;
 }

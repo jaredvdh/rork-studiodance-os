@@ -26,6 +26,7 @@ import Recitals from "./pages/Recitals";
 import Schedule from "./pages/Schedule";
 import Settings from "./pages/Settings";
 import Costumes from "./pages/Costumes";
+import CostumeDetail from "./pages/CostumeDetail";
 import Waivers from "./pages/Waivers";
 import Students from "./pages/Students";
 
@@ -133,6 +134,7 @@ const App = () => (
           <Route path="/payments" element={<ProtectedRoute><ErrorBoundary>{withShell(Payments)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/recitals" element={<ProtectedRoute><ErrorBoundary>{withShell(Recitals)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/costumes" element={<ProtectedRoute><ErrorBoundary>{withShell(Costumes)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/costumes/:id" element={<ProtectedRoute><ErrorBoundary>{withShell(CostumeDetail)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructors" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(InstructorPay)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/waivers" element={<ProtectedRoute><ErrorBoundary>{withShell(Waivers)}</ErrorBoundary></ProtectedRoute>} />

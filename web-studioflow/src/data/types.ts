@@ -586,12 +586,23 @@ export const COSTUME_CATEGORY_LABELS: Record<CostumeCategory, string> = {
   other: "Other",
 };
 
+export type CostumeStatus = "draft" | "active" | "ordered" | "retired";
+export const COSTUME_STATUS_LABELS: Record<CostumeStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  ordered: "Ordered",
+  retired: "Retired",
+};
+
 export interface Costume {
   id: string;
   studioId: string;
   name: string;
   sku?: string;
   vendor?: string;
+  vendorWebsiteUrl?: string;
+  productPageUrl?: string;
+  style?: string;
   season?: string;
   category: CostumeCategory;
   colour?: string;
@@ -604,6 +615,16 @@ export interface Costume {
   shippingAllocationCents: number;
   markupPct: number;
   retailCostCents: number;
+  taxable: boolean;
+  depositAmountCents: number;
+  sizesAvailable: string[];
+  sizingNotes?: string;
+  autoSizingEnabled: boolean;
+  isReusable: boolean;
+  quantityOwned: number;
+  storageLocation?: string;
+  condition?: string;
+  status: CostumeStatus;
   createdAt: string;
   updatedAt: string;
 }
