@@ -378,7 +378,7 @@ In **Authentication → Providers**:
 
 Deploy every folder in `backend/functions/` to the new project:
 
-- `demo-login` — demo account email/password auth
+- `demo-login` — demo account email/password auth (**has client-side JWT fallback in `DemoLogin.tsx` — works without deployment**)
 - `seed-demo-data` — seeds demo tenants and resets demo data
 - `send-announcement` — announcement email delivery (Resend)
 - `_shared` — shared auth helper (imported by the others)

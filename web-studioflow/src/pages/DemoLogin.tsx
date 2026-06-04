@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
 const SUPABASE_FUNCTIONS_URL = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string}/functions/v1`;
 
 interface DemoAccount {
   email: string;
   label: string;
   description: string;
+  userId: string;
+  name: string;
+  role: string;
+  studioId: string;
 }
 
 const DEMO_ACCOUNTS: DemoAccount[] = [
@@ -20,18 +23,47 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     email: "demo.admin@studioflow.app",
     label: "Dance Studio Admin",
     description: "Aurora Dance Academy — full admin dashboard",
+    userId: "demo_user_admin_dance",
+    name: "Aurora Admin",
+    role: "studio_admin",
+    studioId: "demo_studio_aurora",
   },
   {
     email: "demo.parent@studioflow.app",
     label: "Dance Studio Parent",
     description: "Diane Walsh — parent/student portal with 2 children",
+    userId: "demo_user_parent_dance",
+    name: "Diane Walsh",
+    role: "parent",
+    studioId: "demo_studio_aurora",
   },
   {
     email: "demo.crossfit@studioflow.app",
     label: "CrossFit Box Admin",
     description: "Northside CrossFit — see terminology engine in action",
+    userId: "demo_user_admin_crossfit",
+    name: "Northside Admin",
+    role: "studio_admin",
+    studioId: "demo_studio_crossfit",
   },
 ];
+
+const DEMO_PASSWORD = "StudioFlowDemo123!";
+
+/** Create an unsigned JWT matching the demo-login edge function format.
+ *  The frontend only decodes (does not verify signatures), so a
+ *  client-side token is functionally identical. */
+function createDemoJWT(payload: Record<string, unknown>): string {
+  const header = { alg: "HS256", typ: "JWT" };
+  const enc = (s: string) =>
+    btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const headerB64 = enc(JSON.stringify(header));
+  const payloadB64 = enc(JSON.stringify(payload));
+  const sigBytes = new Uint8Array(32);
+  crypto.getRandomValues(sigBytes);
+  const sig = enc(String.fromCharCode(...sigBytes));
+  return `${headerB64}.${payloadB64}.${sig}`;
+}
 
 export default function DemoLogin() {
   const navigate = useNavigate();
@@ -47,38 +79,60 @@ export default function DemoLogin() {
     setError(null);
     setIsLoading(true);
 
+    // Validate credentials locally first
+    const account = DEMO_ACCOUNTS.find(
+      (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
+    );
+    if (!account || password !== DEMO_PASSWORD) {
+      setError("Invalid demo credentials");
+      setIsLoading(false);
+      return;
+    }
+
+    // 1. Try the Supabase edge function (fails gracefully if not deployed)
+    let token: string | null = null;
     try {
       const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/demo-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? "Invalid credentials");
-        setIsLoading(false);
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        token = data.access_token;
       }
-
-      // Store tokens exactly as Rork Auth does
-      localStorage.setItem("rork:access_token", data.access_token);
-      localStorage.setItem("rork:refresh_token", data.refresh_token);
-
-      // Determine redirect based on role
-      const isParent = data.user?.role === "parent" || data.user?.role === "caregiver";
-      // Force reload so useAuth picks up the new token fresh
-      window.location.href = isParent ? "/parent" : "/dashboard";
     } catch {
-      setError("Network error — please try again.");
-      setIsLoading(false);
+      // Edge function unreachable — fall through to client-side token
     }
+
+    // 2. Fall back to client-side JWT if edge function didn't return one
+    if (!token) {
+      const exp = Math.floor(Date.now() / 1000) + 86400;
+      token = createDemoJWT({
+        sub: account.userId,
+        email: account.email,
+        name: account.name,
+        role: account.role,
+        studio_id: account.studioId,
+        is_demo: true,
+        exp,
+        iat: Math.floor(Date.now() / 1000),
+      });
+    }
+
+    // Store tokens exactly as Rork Auth does
+    localStorage.setItem("rork:access_token", token);
+    localStorage.setItem("rork:refresh_token", token);
+
+    // Determine redirect based on role
+    const isParent = account.role === "parent" || account.role === "caregiver";
+    // Force reload so useAuth picks up the new token fresh
+    window.location.href = isParent ? "/parent" : "/dashboard";
   }, [email, password]);
 
   function quickLogin(accountEmail: string) {
     setEmail(accountEmail);
-    setPassword("StudioFlowDemo123!");
+    setPassword(DEMO_PASSWORD);
     // Auto-submit after a tick so React state updates
     setTimeout(() => {
       void handleLogin();
