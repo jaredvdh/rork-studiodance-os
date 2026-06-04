@@ -282,7 +282,7 @@ Complete waiver, release, and document compliance system supporting digital sign
 - [x] RLS policies for all four tables (studio-scoped)
 - [x] Unique partial index: one active signed record per student per template
 - [x] Delete prevention trigger: signed waiver records cannot be deleted (must use revoke)
-- [x] Storage bucket documentation for waiver-documents, uploaded-family-documents, medical-documents
+- [x] Storage buckets created & secured in migration `004_storage_buckets.sql`: studio-logos, waiver-documents, student-documents, medical-files, recital-exports, migration-files
 - [x] Helper function: `student_has_outstanding_waivers()` for compliance checks
 
 ## Frontend Types & Data
@@ -347,3 +347,56 @@ Complete waiver, release, and document compliance system supporting digital sign
 - [x] No React hook violations
 - [x] All providers in correct nesting order
 - [x] Build passes cleanly
+
+---
+
+# StudioFlow — Backend Setup Checklist (Fresh Supabase Project)
+
+Reproduce the entire StudioFlow backend on a clean Supabase project from GitHub source.
+GitHub is the source of truth; the Supabase project is the production backend.
+
+## 1. Run migrations 000–004 in order
+
+Apply each file in `backend/migrations/` via the Supabase SQL editor or CLI, in this exact order:
+
+1. `000_base_schema.sql` — core tables (studios, profiles, parents, students, teachers, classes, enrolments, invoices, announcements, recital_events, activity_logs, import_history, studio_settings), `user_id()` helper, RLS, `handle_new_user()` trigger
+2. `001_enrolments_hardening.sql` — enrolment status/timestamps, unique index, count functions
+3. `002_child_registration_fields.sql` — expanded student registration fields
+4. `003_waiver_document_system.sql` — waiver templates/versions/signatures, uploaded_documents, RLS, compliance helpers
+5. `004_storage_buckets.sql` — private storage buckets + studio-scoped object policies
+
+All migrations are idempotent (safe to re-run, safe if partially applied).
+
+## 2. Configure auth providers
+
+In **Authentication → Providers**:
+
+- Enable **Email** (magic link) — used by the parent portal
+- Enable **Google** OAuth — used by the admin dashboard; set authorized redirect URLs to your app origin + `/auth/callback`
+
+## 3. Deploy edge functions
+
+Deploy every folder in `backend/functions/` to the new project:
+
+- `demo-login` — demo account email/password auth
+- `seed-demo-data` — seeds demo tenants and resets demo data
+- `send-announcement` — announcement email delivery (Resend)
+- `_shared` — shared auth helper (imported by the others)
+
+## 4. Set secrets (Edge Functions → Secrets)
+
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — auto-injected by Supabase
+- `RESEND_API_KEY` — optional; `send-announcement` logs only if absent
+
+## 5. Update client environment variables
+
+Set these on the web app (prefixed `EXPO_PUBLIC_`, read via `import.meta.env`):
+
+- `EXPO_PUBLIC_SUPABASE_URL` → `https://<new-ref>.supabase.co`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY` → new project anon/publishable key
+
+These are the only two Supabase values the frontend reads — there are no hardcoded project references in `web-studioflow/src`.
+
+## 6. Seed demo data
+
+Invoke the `seed-demo-data` edge function once to create the demo tenants (Aurora Dance Academy, Northside CrossFit) with their profiles, classes, students, families, invoices, announcements, recitals, and activity logs. Real/trial studios start empty (no demo fallback).

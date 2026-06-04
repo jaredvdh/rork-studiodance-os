@@ -42,11 +42,19 @@ CREATE TABLE IF NOT EXISTS waiver_versions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Now add the FK from waiver_templates.current_version_id
-ALTER TABLE waiver_templates
-  ADD CONSTRAINT fk_waiver_templates_current_version
-  FOREIGN KEY (current_version_id) REFERENCES waiver_versions(id)
-  ON DELETE SET NULL;
+-- Now add the FK from waiver_templates.current_version_id.
+-- Guarded so the migration is safe to re-run / safe if partially applied.
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_waiver_templates_current_version'
+  ) THEN
+    ALTER TABLE waiver_templates
+      ADD CONSTRAINT fk_waiver_templates_current_version
+      FOREIGN KEY (current_version_id) REFERENCES waiver_versions(id)
+      ON DELETE SET NULL;
+  END IF;
+END $;
 
 CREATE INDEX IF NOT EXISTS idx_waiver_versions_template ON waiver_versions(waiver_template_id, version_number);
 CREATE INDEX IF NOT EXISTS idx_waiver_versions_studio ON waiver_versions(studio_id);
@@ -156,7 +164,7 @@ CREATE TRIGGER trg_waiver_templates_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_waiver_updated_at();
 
 DROP TRIGGER IF EXISTS trg_uploaded_docs_updated_at ON uploaded_documents;
-CREATE TRIGGER trunc_uploaded_docs_updated_at
+CREATE TRIGGER trg_uploaded_docs_updated_at
   BEFORE UPDATE ON uploaded_documents
   FOR EACH ROW EXECUTE FUNCTION update_waiver_updated_at();
 
@@ -202,26 +210,11 @@ CREATE POLICY uploaded_docs_studio_policy ON uploaded_documents
     SELECT studio_id FROM profiles WHERE id = (select user_id())
   ));
 
--- 7. Storage buckets (note: buckets are created via Supabase dashboard or management API;
---    this comment documents the expected bucket configuration)
-
--- Bucket: waiver-documents
---   - Public: false
---   - Allowed MIME types: application/pdf, image/png, image/jpeg, image/webp
---   - File size limit: 10 MB
---   - RLS policy: authenticated users can read their studio's documents
-
--- Bucket: uploaded-family-documents
---   - Public: false
---   - Allowed MIME types: application/pdf, image/png, image/jpeg, image/webp
---   - File size limit: 25 MB
---   - RLS policy: admin read/write; caregiver can read own family's documents
-
--- Bucket: medical-documents
---   - Public: false
---   - Allowed MIME types: application/pdf, image/png, image/jpeg
---   - File size limit: 10 MB
---   - RLS policy: admin-only access by default; caregiver with can_view_medical_notes = true
+-- 7. Storage buckets are created and secured in migration 004_storage_buckets.sql.
+--    The app (web-studioflow/src/lib/storage.ts) uses these bucket names:
+--      studio-logos, waiver-documents, student-documents,
+--      medical-files, recital-exports, migration-files
+--    All sensitive buckets are private; see 004 for policies and path conventions.
 
 -- 8. Helper function: check if a student has outstanding required waivers
 CREATE OR REPLACE FUNCTION student_has_outstanding_waivers(p_student_id uuid, p_studio_id uuid)
