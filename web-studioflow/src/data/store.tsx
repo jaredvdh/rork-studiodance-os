@@ -32,6 +32,8 @@ import {
   useAddCostume,
   useUpdateCostume,
   useDeleteCostume,
+  useAddMeasurement,
+  useUpdateMeasurement,
   useAddTeacher,
   useUpdateTeacher,
   useRemoveTeacher,
@@ -826,6 +828,8 @@ interface CostumesCtx {
   deleteCostume: (id: string) => Promise<void>;
   /** Duplicate a costume. */
   duplicateCostume: (id: string) => Promise<string>;
+  /** Submit a measurement (draft or pending for approval). */
+  submitMeasurement: (m: Omit<StudentMeasurement, "id" | "studioId" | "createdAt"> & { id?: string }) => Promise<string>;
 }
 
 const CostumesContext = createContext<CostumesCtx | null>(null);
@@ -866,6 +870,8 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
   const addCostumeMutation = useAddCostume();
   const updateCostumeMutation = useUpdateCostume();
   const deleteCostumeMutation = useDeleteCostume();
+  const addMeasurementMutation = useAddMeasurement();
+  const updateMeasurementMutation = useUpdateMeasurement();
 
   const addCostume = useCallback(async (c: Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">): Promise<string> => {
     if (isDemo) {
@@ -906,6 +912,31 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       sku: source.sku ? `${source.sku}-COPY` : undefined,
     });
   }, [costumes, addCostume]);
+
+  const submitMeasurement = useCallback(async (
+    m: Omit<StudentMeasurement, "id" | "studioId" | "createdAt"> & { id?: string },
+  ): Promise<string> => {
+    if (isDemo) {
+      const now = new Date().toISOString();
+      if (m.id) {
+        setMeasurements((prev) => prev.map((x) =>
+          x.id === m.id ? { ...x, ...m, updatedAt: now } as StudentMeasurement : x,
+        ));
+        return m.id;
+      }
+      const id = `sm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const newMeas: StudentMeasurement = { ...m, id, studioId: "demo", createdAt: now } as StudentMeasurement;
+      setMeasurements((prev) => [newMeas, ...prev]);
+      return id;
+    }
+    if (m.id) {
+      const { id, ...patch } = m;
+      await updateMeasurementMutation.mutateAsync({ id, patch });
+      return id;
+    }
+    await addMeasurementMutation.mutateAsync(m);
+    return "";
+  }, [isDemo, addMeasurementMutation, updateMeasurementMutation]);
 
   const costumesForClass = useCallback((classId: string) => {
     const assignmentIds = new Set(assignments.filter((a) => a.classId === classId).map((a) => a.costumeId));
@@ -959,7 +990,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     measurementForStudent, feesForStudent, alterationCountByStatus,
     studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
-    addCostume, updateCostume, deleteCostume, duplicateCostume,
+    addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement,
   }), [costumes, assignments, measurements, sizingCharts, sizeRecommendations,
     costumeFees, vendorOrders, alterations, distributions, reusableInventory,
     rentals, quickChangeConflicts,
@@ -967,7 +998,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     measurementForStudent, feesForStudent, alterationCountByStatus,
     studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
-    addCostume, updateCostume, deleteCostume, duplicateCostume]);
+    addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement]);
 
   return <CostumesContext.Provider value={ctx}>{children}</CostumesContext.Provider>;
 }

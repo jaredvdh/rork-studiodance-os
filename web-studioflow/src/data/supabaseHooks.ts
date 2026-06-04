@@ -1413,6 +1413,63 @@ export function useSupabaseCostumeRentals(isDemo: boolean) {
   );
 }
 
+/* ── Measurement Mutations ──────────────────────────────────────── */
+
+export function useAddMeasurement() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (measurement: Omit<StudentMeasurement, "id" | "studioId" | "createdAt">) => {
+      const { data, error } = await supabase.from("student_measurements").insert({
+        studio_id: studioId,
+        student_id: measurement.studentId,
+        height_cm: measurement.heightCm ?? null,
+        weight_kg: measurement.weightKg ?? null,
+        chest_cm: measurement.chestCm ?? null,
+        waist_cm: measurement.waistCm ?? null,
+        hips_cm: measurement.hipsCm ?? null,
+        girth_cm: measurement.girthCm ?? null,
+        inseam_cm: measurement.inseamCm ?? null,
+        shoe_size: measurement.shoeSize ?? null,
+        measured_by: measurement.measuredBy ?? null,
+        measured_at: measurement.measuredAt ?? null,
+        submitted_by: measurement.submittedBy ?? null,
+        status: measurement.status,
+        notes: measurement.notes ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["student_measurements"] }),
+  });
+}
+
+export function useUpdateMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<StudentMeasurement, "id" | "studioId" | "createdAt">> }) => {
+      const updates: Record<string, unknown> = {};
+      if (patch.studentId !== undefined) updates.student_id = patch.studentId;
+      if (patch.heightCm !== undefined) updates.height_cm = patch.heightCm;
+      if (patch.weightKg !== undefined) updates.weight_kg = patch.weightKg;
+      if (patch.chestCm !== undefined) updates.chest_cm = patch.chestCm;
+      if (patch.waistCm !== undefined) updates.waist_cm = patch.waistCm;
+      if (patch.hipsCm !== undefined) updates.hips_cm = patch.hipsCm;
+      if (patch.girthCm !== undefined) updates.girth_cm = patch.girthCm;
+      if (patch.inseamCm !== undefined) updates.inseam_cm = patch.inseamCm;
+      if (patch.shoeSize !== undefined) updates.shoe_size = patch.shoeSize;
+      if (patch.measuredBy !== undefined) updates.measured_by = patch.measuredBy;
+      if (patch.measuredAt !== undefined) updates.measured_at = patch.measuredAt;
+      if (patch.submittedBy !== undefined) updates.submitted_by = patch.submittedBy;
+      if (patch.status !== undefined) updates.status = patch.status;
+      if (patch.notes !== undefined) updates.notes = patch.notes;
+      const { error } = await supabase.from("student_measurements").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["student_measurements"] }),
+  });
+}
+
 export function useSupabaseQuickChangeConflicts(isDemo: boolean) {
   const studioId = useStudioId();
   return useDualQuery<QuickChangeConflict>(

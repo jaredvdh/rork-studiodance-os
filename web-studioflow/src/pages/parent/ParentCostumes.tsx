@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Clock,
@@ -18,6 +18,8 @@ import { formatCurrency } from "@/lib/format";
 import { formatHeight, formatWeight, formatCm } from "@/lib/units";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { cn } from "@/lib/utils";
+import MeasurementWizard from "@/components/MeasurementWizard";
+import type { MeasurementSubmission } from "@/components/MeasurementWizard";
 
 type Tab = "costumes" | "measurements" | "fees";
 
@@ -27,12 +29,45 @@ export default function ParentCostumes() {
   const ctx = useCostumes();
   const { preferredUnits: units } = useUnitPreference();
 
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardStudentId, setWizardStudentId] = useState<string>();
+
   // In a real app, we'd filter by the logged-in parent's children
   // For demo, show all students that have costume assignments
   const parentStudents = useMemo(() => {
     const assignedIds = new Set(ctx.assignments.map((a) => a.studentId));
     return students.filter((s) => assignedIds.has(s.id));
   }, [students, ctx.assignments]);
+
+  const handleOpenWizard = useCallback((studentId?: string) => {
+    setWizardStudentId(studentId);
+    setShowWizard(true);
+  }, []);
+
+  const handleSubmitMeasurement = useCallback(async (data: MeasurementSubmission) => {
+    const draft = ctx.measurements.find(
+      (m) => m.studentId === data.studentId && (m.status === "draft" || m.status === "pending"),
+    );
+    await ctx.submitMeasurement({
+      ...data,
+      id: draft?.id,
+      status: "pending",
+      submittedBy: "parent",
+      measuredAt: new Date().toISOString(),
+    });
+  }, [ctx]);
+
+  const handleSaveDraftMeasurement = useCallback(async (data: MeasurementSubmission) => {
+    const draft = ctx.measurements.find(
+      (m) => m.studentId === data.studentId && m.status === "draft",
+    );
+    await ctx.submitMeasurement({
+      ...data,
+      id: draft?.id,
+      status: "draft",
+      submittedBy: "parent",
+    });
+  }, [ctx]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -173,7 +208,20 @@ export default function ParentCostumes() {
 
       {/* ── Tab: Measurements ──────────────────────────────────── */}
       {tab === "measurements" && (
-        <div className="space-y-6">
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Submit measurements for your children. The studio uses these for costume sizing.
+            </p>
+            <button
+              onClick={() => handleOpenWizard()}
+              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-500"
+            >
+              <Ruler className="inline-block mr-1.5 h-4 w-4" />
+              New Measurement
+            </button>
+          </div>
+          <div className="space-y-6">
           {parentStudents.length === 0 ? (
             <div className="rounded-2xl border border-amber-200/60 bg-cream/80 p-12 text-center">
               <Ruler className="mx-auto h-10 w-10 text-muted-foreground/50" />
@@ -185,10 +233,48 @@ export default function ParentCostumes() {
           ) : (
             parentStudents.map((student) => {
               const measurement = ctx.measurementForStudent(student.id);
+              const draft = ctx.measurements.find(
+                (m) => m.studentId === student.id && m.status === "draft",
+              );
+              const pending = ctx.measurements.find(
+                (m) => m.studentId === student.id && m.status === "pending",
+              );
               const recs = ctx.sizeRecommendations.filter((r) => r.studentId === student.id);
               return (
                 <div key={student.id} className="rounded-2xl border border-amber-200/60 bg-cream/80 p-6 shadow-soft">
-                  <h3 className="font-display text-lg font-semibold mb-4">{student.name}</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display text-lg font-semibold">{student.name}</h3>
+                    <div className="flex items-center gap-2">
+                      {draft && (
+                        <button
+                          onClick={() => handleOpenWizard(student.id)}
+                          className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition"
+                        >
+                          Resume Draft
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleOpenWizard(student.id)}
+                        className="rounded-full bg-amber-400 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-500"
+                      >
+                        {measurement || pending ? "Update" : "Submit"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {pending && (
+                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 mb-4">
+                      <Clock className="h-3.5 w-3.5" />
+                      Pending studio approval
+                    </div>
+                  )}
+
+                  {draft && !measurement && !pending && (
+                    <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs font-medium text-muted-foreground mb-4">
+                      <Clock className="h-3.5 w-3.5" />
+                      Draft saved
+                    </div>
+                  )}
 
                   {measurement ? (
                     <div className="grid grid-cols-4 gap-3 mb-4">
@@ -203,8 +289,11 @@ export default function ParentCostumes() {
                     </div>
                   ) : (
                     <div className="rounded-xl bg-amber-50 p-4 mb-4 text-center">
-                      <p className="text-sm text-muted-foreground">No measurements on file.</p>
-                      <button className="mt-3 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-500">
+                      <p className="text-sm text-muted-foreground">No approved measurements on file.</p>
+                      <button
+                        onClick={() => handleOpenWizard(student.id)}
+                        className="mt-3 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-500"
+                      >
                         Submit Measurements
                       </button>
                     </div>
@@ -242,7 +331,25 @@ export default function ParentCostumes() {
               );
             })
           )}
-        </div>
+          </div>
+          {showWizard && (
+            <MeasurementWizard
+              students={parentStudents}
+              existingMeasurements={ctx.measurements}
+              preselectedStudentId={wizardStudentId}
+              draftMeasurement={
+                wizardStudentId
+                  ? ctx.measurements.find(
+                      (m) => m.studentId === wizardStudentId && m.status === "draft",
+                    )
+                  : undefined
+              }
+              onSubmit={handleSubmitMeasurement}
+              onSaveDraft={handleSaveDraftMeasurement}
+              onClose={() => setShowWizard(false)}
+            />
+          )}
+        </>
       )}
 
       {/* ── Tab: Costume Fees ──────────────────────────────────── */}

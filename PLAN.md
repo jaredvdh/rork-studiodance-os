@@ -509,18 +509,18 @@ Studio-level and parent-level unit preferences with automatic conversion. All va
 
 ---
 
-## Phase 14 — Parent Measurement Wizard
+## Phase 14 — Parent Measurement Wizard ✅
 
 Guided 5-step measurement collection flow replacing the current single-form approach.
 
-- [ ] Step 1 — Select Student: pick which child to measure
-- [ ] Step 2 — Measurement Guide: visual diagrams, tutorial content, and measurement tips
-- [ ] Step 3 — Enter Measurements: form with unit-aware inputs, validation in real time
-- [ ] Step 4 — Review: side-by-side review with previous measurements (growth indicators)
-- [ ] Step 5 — Submit: confirmation screen with submission timestamp
-- [ ] Save draft functionality — resume incomplete measurements later
-- [ ] Progress indicator (5-step visual bar matching waiver signing wizard pattern)
-- [ ] Responsive mobile-first design for parent phone use
+- [x] Step 1 — Select Student: pick which child to measure
+- [x] Step 2 — Measurement Guide: visual diagrams, tutorial content, and measurement tips
+- [x] Step 3 — Enter Measurements: form with unit-aware inputs, validation in real time
+- [x] Step 4 — Review: side-by-side review with previous measurements (growth indicators)
+- [x] Step 5 — Submit: confirmation screen with submission timestamp
+- [x] Save draft functionality — resume incomplete measurements later
+- [x] Progress indicator (5-step visual bar matching waiver signing wizard pattern)
+- [x] Responsive mobile-first design for parent phone use
 
 ---
 
