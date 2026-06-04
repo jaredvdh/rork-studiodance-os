@@ -491,14 +491,14 @@ Transform the existing Costume Management Suite into the first AI-powered costum
 
 Studio-level and parent-level unit preferences with automatic conversion. All values stored as metric internally; UI converts at render time.
 
-- [ ] Studio settings → Units preference: Metric (cm/kg) or Imperial (ft-in/lb)
-- [ ] Parent portal → Units display override (Metric / Imperial, independent from studio default)
-- [ ] Unit-conversion utility: cm ↔ ft/in, kg ↔ lb, with proper display formatting
-- [ ] Measurement display always includes units (never unitless values)
-- [ ] Validation rules based on selected units: flag impossible values (e.g., 120 inches as height)
-- [ ] Student measurement fields stored in cm/kg internally; UI converts automatically
-- [ ] `useUnitPreference()` hook — resolves studio default + parent override
-- [ ] Migration `006_unit_system.sql`: add `preferred_units` column to `studio_settings` and `profiles`
+- [x] Studio settings → Units preference: Metric (cm/kg) or Imperial (ft-in/lb)
+- [x] Parent portal → Units display override (Metric / Imperial, independent from studio default)
+- [x] Unit-conversion utility: cm ↔ ft/in, kg ↔ lb, with proper display formatting
+- [x] Measurement display always includes units (never unitless values)
+- [x] Validation rules based on selected units: flag impossible values (e.g., 120 inches as height)
+- [x] Student measurement fields stored in cm/kg internally; UI converts automatically
+- [x] `useUnitPreference()` hook — resolves studio default + parent override
+- [x] Migration `006_unit_system.sql`: add `preferred_units` column to `studio_settings` and `profiles`
 
 ---
 
@@ -608,20 +608,20 @@ Deep integration between Costume Management and Recital Planner, plus platform p
 ## Database (Migration 006)
 
 
-- [ ] `studio_settings.preferred_units` — studio-wide unit default (metric/imperial)
-- [ ] `profiles.preferred_units` — parent-level unit override
-- [ ] `notifications` table — in-app notification feed with read/unread, type, and metadata
-- [ ] `costume_images` table — multiple images per costume with sort order
-- [ ] Updated `sizing_charts.chart_data` to support `unit` field per row
-- [ ] RLS policies for new tables
+- [x] `studio_settings.preferred_units` — studio-wide unit default (metric/imperial)
+- [x] `profiles.preferred_units` — parent-level unit override
+- [x] `notifications` table — in-app notification feed with read/unread, type, and metadata
+- [x] `costume_images` table — multiple images per costume with sort order
+- [x] Updated `sizing_charts.chart_data` to support `unit` field per row
+- [x] RLS policies for new tables
 
 ---
 
 ## Backend Setup Checklist Update
 
-- [ ] Run migration `006_unit_system.sql` after `005_costume_management.sql`
-- [ ] Deploy updated `send-announcement` edge function for costume notifications
-- [ ] Configure storage bucket for costume images and alteration photos
+- [x] Run migration `006_unit_system.sql` after `005_costume_management.sql`
+- [x] Deploy updated `send-announcement` edge function for costume notifications
+- [x] Configure storage bucket for costume images and alteration photos
 
 ---
 

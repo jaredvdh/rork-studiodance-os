@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Camera, Check, ExternalLink, Loader2, RefreshCw, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { ArrowRight, Building2, Camera, Check, ExternalLink, Loader2, RefreshCw, Ruler, Save, ShieldAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
-import type { Vertical } from "@/data/types";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
+import type { Vertical, UnitSystem } from "@/data/types";
 import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 import { getStripeConnectState, startStripeConnect } from "@/lib/stripe";
@@ -237,6 +238,9 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* Unit System */}
+      <UnitPreferenceSection />
+
       {/* Stripe Connect */}
       <StripeConnectSection />
 
@@ -288,6 +292,66 @@ export default function Settings() {
         )}
       </div>
     </div>
+  );
+}
+
+function UnitPreferenceSection() {
+  const { studio, updateStudio } = useStudio();
+  const current = (studio.settings?.preferredUnits ?? "metric") as UnitSystem;
+
+  const handleChange = (units: UnitSystem) => {
+    updateStudio({
+      settings: { ...studio.settings, preferredUnits: units },
+    });
+    toast.success(`Measurement units set to ${units === "metric" ? "Metric (cm/kg)" : "Imperial (ft-in/lb)"}`);
+  };
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div>
+        <h3 className="text-sm font-semibold">Measurement units</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Sets the default unit system for all measurements in the studio and parent portal.
+          Parents can override this preference individually. All values are stored internally as metric.
+        </p>
+      </div>
+      <div className="mt-4 flex gap-4">
+        {([
+          { value: "metric" as const, label: "Metric", desc: "cm · kg", icon: "🇪🇺" },
+          { value: "imperial" as const, label: "Imperial", desc: "ft/in · lb", icon: "🇺🇸" },
+        ]).map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => handleChange(opt.value)}
+            className={cn(
+              "flex flex-1 max-w-60 flex-col items-center gap-2 rounded-2xl border p-5 transition-all",
+              current === opt.value
+                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                : "border-border/70 bg-card hover:bg-secondary/50",
+            )}
+          >
+            <span className="text-2xl">{opt.icon}</span>
+            <div className="text-center">
+              <p className={cn(
+                "text-sm font-semibold",
+                current === opt.value && "text-primary",
+              )}>
+                {opt.label}
+              </p>
+              <p className="text-xs text-muted-foreground">{opt.desc}</p>
+            </div>
+            {current === opt.value && (
+              <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                Active
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Example: 135 cm → {current === "metric" ? "135 cm" : "4 ft 5 in"} · 32 kg → {current === "metric" ? "32 kg" : "71 lb"}
+      </p>
+    </section>
   );
 }
 

@@ -15,6 +15,8 @@ import { useStudents, useCostumes } from "@/data/store";
 import { COSTUME_FEE_TYPE_LABELS } from "@/data/types";
 import type { CostumeFee, SizeRecommendation } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
+import { formatHeight, formatWeight, formatCm } from "@/lib/units";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
 import { cn } from "@/lib/utils";
 
 type Tab = "costumes" | "measurements" | "fees";
@@ -23,6 +25,7 @@ export default function ParentCostumes() {
   const [tab, setTab] = useState<Tab>("costumes");
   const { students } = useStudents();
   const ctx = useCostumes();
+  const { preferredUnits: units } = useUnitPreference();
 
   // In a real app, we'd filter by the logged-in parent's children
   // For demo, show all students that have costume assignments
@@ -189,13 +192,13 @@ export default function ParentCostumes() {
 
                   {measurement ? (
                     <div className="grid grid-cols-4 gap-3 mb-4">
-                      {measurement.heightCm && <MeasBlock label="Height" value={`${measurement.heightCm} cm`} />}
-                      {measurement.weightKg && <MeasBlock label="Weight" value={`${measurement.weightKg} kg`} />}
-                      {measurement.chestCm && <MeasBlock label="Chest" value={`${measurement.chestCm} cm`} />}
-                      {measurement.waistCm && <MeasBlock label="Waist" value={`${measurement.waistCm} cm`} />}
-                      {measurement.hipsCm && <MeasBlock label="Hips" value={`${measurement.hipsCm} cm`} />}
-                      {measurement.girthCm && <MeasBlock label="Girth" value={`${measurement.girthCm} cm`} />}
-                      {measurement.inseamCm && <MeasBlock label="Inseam" value={`${measurement.inseamCm} cm`} />}
+                      {measurement.heightCm != null && <MeasBlock label="Height" value={formatHeight(measurement.heightCm, units)} />}
+                      {measurement.weightKg != null && <MeasBlock label="Weight" value={formatWeight(measurement.weightKg, units)} />}
+                      {measurement.chestCm != null && <MeasBlock label="Chest" value={formatCm(measurement.chestCm, units)} />}
+                      {measurement.waistCm != null && <MeasBlock label="Waist" value={formatCm(measurement.waistCm, units)} />}
+                      {measurement.hipsCm != null && <MeasBlock label="Hips" value={formatCm(measurement.hipsCm, units)} />}
+                      {measurement.girthCm != null && <MeasBlock label="Girth" value={formatCm(measurement.girthCm, units)} />}
+                      {measurement.inseamCm != null && <MeasBlock label="Inseam" value={formatCm(measurement.inseamCm, units)} />}
                       {measurement.shoeSize && <MeasBlock label="Shoe Size" value={measurement.shoeSize} />}
                     </div>
                   ) : (

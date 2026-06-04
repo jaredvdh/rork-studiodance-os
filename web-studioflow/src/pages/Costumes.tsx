@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatHeight, formatWeight, formatCm } from "@/lib/units";
+import { useUnitPreference } from "@/hooks/useUnitPreference";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -80,6 +82,7 @@ export default function Costumes() {
   const classes = useEnrichedClasses();
   const { teachers } = useTeachers();
   const ctx = useCostumes();
+  const { preferredUnits: units } = useUnitPreference();
 
   const filteredCostumes = useMemo(() => {
     if (!search.trim()) return ctx.costumes;
@@ -484,13 +487,13 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
 
               {/* Measurements grid */}
               <div className="grid grid-cols-3 gap-2 text-xs">
-                {m.heightCm && <MeasField label="Height" value={`${m.heightCm} cm`} />}
-                {m.weightKg && <MeasField label="Weight" value={`${m.weightKg} kg`} />}
-                {m.chestCm && <MeasField label="Chest" value={`${m.chestCm} cm`} />}
-                {m.waistCm && <MeasField label="Waist" value={`${m.waistCm} cm`} />}
-                {m.hipsCm && <MeasField label="Hips" value={`${m.hipsCm} cm`} />}
-                {m.girthCm && <MeasField label="Girth" value={`${m.girthCm} cm`} />}
-                {m.inseamCm && <MeasField label="Inseam" value={`${m.inseamCm} cm`} />}
+                {m.heightCm != null && <MeasField label="Height" value={formatHeight(m.heightCm, units)} />}
+                {m.weightKg != null && <MeasField label="Weight" value={formatWeight(m.weightKg, units)} />}
+                {m.chestCm != null && <MeasField label="Chest" value={formatCm(m.chestCm, units)} />}
+                {m.waistCm != null && <MeasField label="Waist" value={formatCm(m.waistCm, units)} />}
+                {m.hipsCm != null && <MeasField label="Hips" value={formatCm(m.hipsCm, units)} />}
+                {m.girthCm != null && <MeasField label="Girth" value={formatCm(m.girthCm, units)} />}
+                {m.inseamCm != null && <MeasField label="Inseam" value={formatCm(m.inseamCm, units)} />}
                 {m.shoeSize && <MeasField label="Shoe" value={m.shoeSize} />}
               </div>
 

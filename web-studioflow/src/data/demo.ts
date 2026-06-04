@@ -40,6 +40,7 @@ export const studio: Studio = {
   brandColor: "350 74% 60%",
   initials: "AD",
   vertical: "dance",
+  settings: { preferredUnits: "metric" },
 };
 
 export const teachers: Teacher[] = [

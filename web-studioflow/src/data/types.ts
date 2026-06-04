@@ -142,6 +142,9 @@ export interface Studio {
   initials: string;
   logoUrl?: string;
   vertical: Vertical;
+  settings?: {
+    preferredUnits?: "metric" | "imperial";
+  };
 }
 
 export interface Class {
@@ -618,6 +621,7 @@ export interface CostumeAssignment {
 }
 
 export type MeasurementStatus = "draft" | "pending" | "approved" | "rejected";
+export type UnitSystem = "metric" | "imperial";
 
 export interface StudentMeasurement {
   id: string;
