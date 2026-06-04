@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Check,
   CreditCard,
-  DollarSign,
   GraduationCap,
   LayoutDashboard,
   Loader2,
@@ -48,7 +47,7 @@ import type { VerticalTerminology } from "@/data/terminology";
 import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 
-type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "costumes" | "instructors" | "instructorPay" | "announcements" | "payments" | "waivers" | "migration";
+type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "costumes" | "instructors" | "announcements" | "payments" | "waivers" | "migration";
 
 interface NavItem {
   to: string;
@@ -64,7 +63,6 @@ const navItems: NavItem[] = [
   { to: "/recitals", key: "recitals", icon: Trophy },
   { to: "/costumes", key: "costumes", icon: Shirt },
   { to: "/instructors", key: "instructors", icon: UserRound },
-  { to: "/instructor-pay", key: "instructorPay", icon: DollarSign },
   { to: "/announcements", key: "announcements", icon: Megaphone },
   { to: "/payments", key: "payments", icon: CreditCard },
   { to: "/waivers", key: "waivers", icon: Signature },
@@ -80,7 +78,6 @@ function navLabel(key: NavKey, term: VerticalTerminology): string {
     case "recitals": return term.eventPlural;
     case "costumes": return "Costumes";
     case "instructors": return term.instructorPlural;
-    case "instructorPay": return `${term.instructor} Pay`;
     case "announcements": return "Announcements";
     case "payments": return "Payments";
     case "waivers": return "Waivers & Docs";

@@ -14,7 +14,6 @@ import AppShell from "./components/layout/AppShell";
 import Announcements from "./pages/Announcements";
 import Classes from "./pages/Classes";
 import Dashboard from "./pages/Dashboard";
-import InstructorPay from "./pages/InstructorPay";
 import Instructors from "./pages/Instructors";
 import Landing from "./pages/Landing";
 import MigrationWizard from "./pages/MigrationWizard";
@@ -136,7 +135,7 @@ const App = () => (
           <Route path="/costumes" element={<ProtectedRoute><ErrorBoundary>{withShell(Costumes)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/costumes/:id" element={<ProtectedRoute><ErrorBoundary>{withShell(CostumeDetail)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructors" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
-          <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(InstructorPay)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/waivers" element={<ProtectedRoute><ErrorBoundary>{withShell(Waivers)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><ErrorBoundary>{withShell(Settings)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/migration" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationWizard)}</ErrorBoundary></ProtectedRoute>} />

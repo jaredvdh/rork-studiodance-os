@@ -168,12 +168,54 @@ export interface Class {
 /** @deprecated Use Class instead. Kept for backward compatibility. */
 export type DanceClass = Class;
 
+export type InstructorStatus = "active" | "on_leave" | "archived";
+
+export const INSTRUCTOR_STATUS_LABELS: Record<InstructorStatus, string> = {
+  active: "Active",
+  on_leave: "On Leave",
+  archived: "Archived",
+};
+
+export interface Certification {
+  name: string;
+  issuedAt?: string;
+  expiresAt?: string;
+  notes?: string;
+}
+
+export interface InstructorDocument {
+  id: string;
+  studioId: string;
+  instructorId: string;
+  title: string;
+  documentType: string; // e.g. "employment_agreement", "certification", "background_check", "insurance"
+  fileUrl?: string;
+  fileName?: string;
+  expiresAt?: string;
+  uploadedAt: string;
+  notes?: string;
+}
+
+export interface EmergencyContact_Teacher {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
 export interface Teacher {
   id: string;
   studioId: string;
   name: string;
+  preferredName?: string;
   styles: ClassStyle[];
   email: string;
+  phone?: string;
+  address?: string;
+  emergencyContact?: EmergencyContact_Teacher;
+  status: InstructorStatus;
+  hireDate?: string;
+  employeeId?: string;
+  certifications: Certification[];
   hourlyRateCents?: number;
   payType?: PayType;
 }
