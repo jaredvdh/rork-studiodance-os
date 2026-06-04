@@ -6,7 +6,7 @@ import {
   CalendarClock,
   CreditCard,
   DollarSign,
-  FileSignature,
+  Signature,
   Megaphone,
   TrendingUp,
   Users,
@@ -207,7 +207,7 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
             <h3 className="font-display text-lg font-semibold">Studio health</h3>
             <div className="mt-4 space-y-4">
-              <Progress label="Waivers completed" value={waiverDone} icon={FileSignature} tone="bg-teal" />
+              <Progress label="Waivers completed" value={waiverDone} icon={Signature} tone="bg-teal" />
               <Progress label="Capacity filled" value={capacityPct} icon={TrendingUp} tone="bg-rose" />
               <Progress label="Tuition collected" value={unpaidInvoices.length === 0 ? 100 : Math.round(((invoices.filter((i) => i.status === "paid").length) / Math.max(invoices.length, 1)) * 100)} icon={CreditCard} tone="bg-gold" />
             </div>
@@ -232,7 +232,7 @@ export default function Dashboard() {
             {expiringWaivers > 0 && (
               <Link to="/students?filter=waiver" className="flex items-center gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-4 transition hover:bg-gold/10">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold/10 text-gold">
-                  <FileSignature className="h-4 w-4" />
+                  <Signature className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gold">{expiringWaivers} waivers pending</p>

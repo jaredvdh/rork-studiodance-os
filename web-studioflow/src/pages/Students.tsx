@@ -4,7 +4,7 @@ import {
   Clock,
   Eye,
   EyeOff,
-  FileSignature,
+  Signature,
   GraduationCap,
   KeyRound,
   Mail,
@@ -396,7 +396,7 @@ function CaregiverMini({ caregiver, label }: { caregiver: Caregiver; label: stri
         {caregiver.receives_emergency_messages && <span className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-2 py-0.5 text-[10px] font-medium text-rose"><ShieldAlert className="h-2.5 w-2.5" /> Emergency</span>}
         {caregiver.can_view_billing && <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold"><Eye className="h-2.5 w-2.5" /> Billing</span>}
         {caregiver.can_view_medical_notes && <span className="inline-flex items-center gap-1 rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-medium text-plum"><Stethoscope className="h-2.5 w-2.5" /> Medical</span>}
-        {caregiver.can_sign_waivers && <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-medium text-teal"><FileSignature className="h-2.5 w-2.5" /> Waivers</span>}
+        {caregiver.can_sign_waivers && <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-medium text-teal"><Signature className="h-2.5 w-2.5" /> Waivers</span>}
       </div>
       {(caregiver.custody_restriction || caregiver.court_order_on_file || caregiver.communication_only) && (
         <div className="mt-2 border-t border-border pt-2">

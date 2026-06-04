@@ -3,7 +3,7 @@ import {
   ArrowRight,
   CalendarDays,
   CreditCard,
-  FileSignature,
+  Signature,
   Megaphone,
   Sparkles,
   Star,
@@ -17,7 +17,7 @@ const features = [
   { icon: Users, title: "Caregiver coordination", body: "Multiple caregivers per family, granular permissions, pickup authorization, and emergency contacts." },
   { icon: CreditCard, title: "Payments (Stripe coming soon)", body: "Track tuition, recital fees, and invoices. Full Stripe integration on the roadmap." },
   { icon: Megaphone, title: "Announcements", body: "Studio-wide, per-class or emergency messages with delivery rules respecting caregiver permissions." },
-  { icon: FileSignature, title: "Digital waivers", body: "Liability, media and medical forms signed online with timestamps and signature records." },
+  { icon: Signature, title: "Digital waivers", body: "Liability, media and medical forms signed online with timestamps and signature records." },
   { icon: Sparkles, title: "Recital tools", body: "Generate rosters, running orders, and print-ready programmes from enrolled classes." },
 ];
 

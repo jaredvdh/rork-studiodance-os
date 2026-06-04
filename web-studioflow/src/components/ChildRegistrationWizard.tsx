@@ -8,7 +8,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ClipboardList,
-  FileSignature,
+  Signature,
   Heart,
   Phone,
   Plus,
@@ -963,7 +963,7 @@ function ReviewStep({
 
       {/* Waiver notice */}
       <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 flex items-start gap-3">
-        <FileSignature className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+        <Signature className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-medium">Waivers will be required after registration</p>
           <p className="text-xs text-muted-foreground mt-0.5">

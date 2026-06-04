@@ -13,7 +13,7 @@ import {
   CreditCard,
   Eye,
   EyeOff,
-  FileSignature,
+  Signature,
   FileText,
   Heart,
   Info,
@@ -62,7 +62,7 @@ const TABS = [
   { key: "children", label: "Children", icon: Users },
   { key: "caregivers", label: "Caregivers", icon: Shield },
   { key: "medical", label: "Medical", icon: Stethoscope },
-  { key: "waivers", label: "Waivers", icon: FileSignature },
+  { key: "waivers", label: "Waivers", icon: Signature },
   { key: "activity", label: "Activity", icon: Activity },
 ] as const;
 
@@ -353,7 +353,7 @@ function OverviewTab() {
               color="teal"
             />
             <MetaBadge
-              icon={FileSignature}
+              icon={Signature}
               label="Waivers"
               value={allWaiversCurrent ? "All signed" : `${unsignedWaivers.length} needed`}
               href="/parent/family"
@@ -462,7 +462,7 @@ function OverviewTab() {
         {/* Waiver compliance */}
         <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-3">
-            <FileSignature className="h-4 w-4 text-muted-foreground" />
+            <Signature className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Waiver compliance
             </h4>
@@ -524,7 +524,7 @@ function OverviewTab() {
               const tab = document.querySelector('[data-tab="waivers"]') as HTMLElement | null;
               tab?.click();
             },
-            icon: FileSignature,
+            icon: Signature,
             label: "Sign waivers",
             body: unsignedWaivers.length > 0
               ? `${unsignedWaivers.length} waiver${unsignedWaivers.length !== 1 ? "s" : ""} need attention.`
@@ -825,7 +825,7 @@ function ChildrenTab() {
                     </div>
                   </div>
                   <div className="rounded-lg bg-amber-50/60 px-3 py-2.5 flex items-center gap-3">
-                    <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <Signature className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className={cn(
                         "text-sm font-medium",
@@ -1032,7 +1032,7 @@ function InviteForm({
               { label: "Announcements", icon: Megaphone },
               { label: "Emergency alerts", icon: ShieldAlert },
               { label: "View schedule", icon: CalendarClock },
-              { label: "Sign waivers", icon: FileSignature },
+              { label: "Sign waivers", icon: Signature },
               { label: "Authorized pickup", icon: KeyRound },
             ].map((p) => (
               <span
@@ -1164,7 +1164,7 @@ function CaregiverCard({
     { key: "can_view_billing" as const, label: "View billing", icon: Eye, desc: "See invoice amounts and payment history", sensitive: true },
     { key: "can_pay_invoices" as const, label: "Pay invoices", icon: CreditCard, desc: "Make payments on behalf of the family", sensitive: true },
     { key: "can_manage_enrolments" as const, label: "Manage enrolments", icon: Users, desc: "Add or drop classes for students", sensitive: true },
-    { key: "can_sign_waivers" as const, label: "Sign waivers", icon: FileSignature, desc: "Complete liability waivers for students", sensitive: true },
+    { key: "can_sign_waivers" as const, label: "Sign waivers", icon: Signature, desc: "Complete liability waivers for students", sensitive: true },
     { key: "can_view_medical_notes" as const, label: "Medical notes", icon: Stethoscope, desc: "View allergies, medical conditions, and health notes", sensitive: true },
     { key: "authorized_pickup" as const, label: "Authorized pickup", icon: KeyRound, desc: "Can pick up students from the studio", sensitive: true },
   ];
@@ -1626,7 +1626,7 @@ function WaiversTab() {
   if (myStudents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FileSignature className="h-12 w-12 text-muted-foreground/30" />
+        <Signature className="h-12 w-12 text-muted-foreground/30" />
         <h3 className="mt-4 font-display text-xl font-semibold">No children to sign for</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Add your children first, then come back to sign waivers.
@@ -1670,7 +1670,7 @@ function WaiversTab() {
           >
             <div className="flex items-start gap-4">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
-                <FileSignature className="h-5 w-5" />
+                <Signature className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

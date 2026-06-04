@@ -5,7 +5,7 @@ import {
   Bell,
   CalendarDays,
   CreditCard,
-  FileSignature,
+  Signature,
   Heart,
   Home,
   Loader2,
@@ -39,7 +39,7 @@ const nav = [
   { to: "/parent/schedule", label: "Schedule", icon: Heart },
   { to: "/parent/payments", label: "Payments", icon: CreditCard },
   { to: "/parent/announcements", label: "Updates", icon: Megaphone },
-  { to: "/parent/waivers", label: "Waivers", icon: FileSignature },
+  { to: "/parent/waivers", label: "Waivers", icon: Signature },
 ];
 
 function StudioLogoMark() {

@@ -7,7 +7,7 @@ import {
   Clock,
   Eye,
   EyeOff,
-  FileSignature,
+  Signature,
   Heart,
   Info,
   KeyRound,
@@ -485,7 +485,7 @@ function CaregiverCard({
     {
       key: "can_sign_waivers" as const,
       label: "Sign waivers",
-      icon: FileSignature,
+      icon: Signature,
       desc: "Complete liability waivers for students",
       sensitive: true,
     },

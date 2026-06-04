@@ -8,7 +8,7 @@ import {
   ChevronRight,
   Clock,
   Eye,
-  FileSignature,
+  Signature,
   FileText,
   Globe,
   Layers,
@@ -50,7 +50,7 @@ const typeIcons: Record<WaiverTemplateType, typeof FileText> = {
   payment_auth: FileText,
   travel_consent: Globe,
   event_release: Tag,
-  custom: FileSignature,
+  custom: Signature,
 };
 
 /* ── Create / Edit modal ──────────────────────────────────────── */
@@ -328,7 +328,7 @@ export default function Waivers() {
           <p className="text-sm text-muted-foreground">Published templates</p>
         </div>
         <div className="rounded-2xl border border-amber-200/70 bg-white p-5 shadow-soft animate-float-up [animation-delay:60ms]">
-          <FileSignature className="h-5 w-5 text-muted-foreground mb-3" />
+          <Signature className="h-5 w-5 text-muted-foreground mb-3" />
           <p className="font-display text-2xl font-semibold">{stats.totalSignatures}</p>
           <p className="text-sm text-muted-foreground">Signed records</p>
         </div>
@@ -354,7 +354,7 @@ export default function Waivers() {
       {/* Template list */}
       {templates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FileSignature className="h-12 w-12 text-muted-foreground/30" />
+          <Signature className="h-12 w-12 text-muted-foreground/30" />
           <h3 className="mt-4 font-display text-xl font-semibold">No templates yet</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Create your first waiver template to begin collecting digital signatures.

@@ -8,7 +8,7 @@ import {
   ChevronRight,
   Clock,
   Eye,
-  FileSignature,
+  Signature,
   FileText,
   Loader2,
   Lock,
@@ -309,7 +309,7 @@ function SigningWizard({
                     <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      <FileSignature className="inline-block mr-1.5 h-4 w-4" />
+                      <Signature className="inline-block mr-1.5 h-4 w-4" />
                       Submit signed document
                     </>
                   )}
@@ -410,7 +410,7 @@ export default function ParentWaivers() {
           </h2>
         </div>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FileSignature className="h-12 w-12 text-muted-foreground/30" />
+          <Signature className="h-12 w-12 text-muted-foreground/30" />
           <h3 className="mt-4 font-display text-xl font-semibold">
             No children to sign for
           </h3>
@@ -484,7 +484,7 @@ export default function ParentWaivers() {
             >
               <div className="flex items-start gap-4">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
-                  <FileSignature className="h-5 w-5" />
+                  <Signature className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

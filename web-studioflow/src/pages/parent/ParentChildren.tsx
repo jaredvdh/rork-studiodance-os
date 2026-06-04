@@ -5,7 +5,7 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronUp,
-  FileSignature,
+  Signature,
   Heart,
   Mail,
   Megaphone,
@@ -351,7 +351,7 @@ export default function ParentChildren() {
                       </h4>
                       <div className="flex items-center justify-between rounded-xl bg-amber-50/60 p-3">
                         <div className="flex items-center gap-3">
-                          <FileSignature className="h-5 w-5 text-muted-foreground" />
+                          <Signature className="h-5 w-5 text-muted-foreground" />
                           <div>
                             <p
                               className={cn(

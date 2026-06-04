@@ -5,7 +5,7 @@ import {
   ArrowRight,
   CalendarClock,
   Clock,
-  FileSignature,
+  Signature,
   Heart,
   Megaphone,
   Plus,
@@ -116,7 +116,7 @@ export default function ParentDashboard() {
           {unsignedWaivers.length > 0 && (
             <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-200 text-amber-700">
-                <FileSignature className="h-5 w-5" />
+                <Signature className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">
@@ -372,7 +372,7 @@ export default function ParentDashboard() {
             className="rounded-2xl border border-amber-200/70 bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:shadow-lift"
           >
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700">
-              <FileSignature className="h-5 w-5" />
+              <Signature className="h-5 w-5" />
             </div>
             <h4 className="mt-3 font-display text-base font-semibold">Sign waivers</h4>
             <p className="mt-1 text-sm text-muted-foreground">

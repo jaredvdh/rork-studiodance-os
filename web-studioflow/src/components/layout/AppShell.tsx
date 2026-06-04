@@ -16,6 +16,7 @@ import {
   Palette,
   Search,
   Settings,
+  Signature,
   Sparkles,
   Store,
   Trophy,
@@ -64,7 +65,7 @@ const navItems: NavItem[] = [
   { to: "/instructor-pay", key: "instructorPay", icon: DollarSign },
   { to: "/announcements", key: "announcements", icon: Megaphone },
   { to: "/payments", key: "payments", icon: CreditCard },
-  { to: "/waivers", key: "waivers", icon: FileSignature },
+  { to: "/waivers", key: "waivers", icon: Signature },
   { to: "/migration", key: "migration", icon: Upload },
 ];
 
