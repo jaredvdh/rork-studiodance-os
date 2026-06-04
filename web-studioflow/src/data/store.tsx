@@ -283,6 +283,9 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
 
   // Derive classIds from enrolments context (source of truth)
   const enrolmentsCtx = useContext(EnrolmentsContext);
+  // Access classes from sibling context (needed for capacity checks in enrolStudentInClass)
+  const classesCtx = useContext(ClassesContext);
+  const classes = classesCtx?.classes ?? [];
 
   // Merge students with derived classIds from enrolments
   const derivedStudents = useMemo(() => {
@@ -358,7 +361,7 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
         },
       },
     );
-  }, [enrolmentsCtx, classes, enrolMut, queryClient]);
+  }, [enrolmentsCtx, classes, enrolMut, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const withdrawStudentFromClass = useCallback((studentId: string, classId: string) => {
     if (!enrolmentsCtx) return;
