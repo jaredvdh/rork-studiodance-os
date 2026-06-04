@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Clock, MapPin, Plus, Trophy, Users } from "lucide-react";
+import { Clock, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
-import { styleStyles, teacherName, useStudio, useStudioData, useTeachers, useTerminology } from "@/data/store";
-import type { AgeGroup, Class, ClassStyle, WeekDay } from "@/data/types";
+import { styleStyles, teacherName, useStudio, useClasses, useTeachers, useTerminology } from "@/data/store";
+import type { AgeGroup, ClassStyle, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -14,11 +14,11 @@ const DAYS: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function Classes() {
   const { studio } = useStudio();
   const term = useTerminology();
-  const { classes: initial } = useStudioData();
+  const { classes, addClass, removeClass } = useClasses();
   const { teachers } = useTeachers();
-  const [classes, setClasses] = useState<Class[]>(initial);
   const [styleFilter, setStyleFilter] = useState<ClassStyle | "All">("All");
   const [open, setOpen] = useState<boolean>(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (styleFilter === "All" ? classes : classes.filter((c) => c.style === styleFilter)),
@@ -39,11 +39,9 @@ export default function Classes() {
     price: 95,
   });
 
-  function addClass() {
+  function handleAddClass() {
     if (!form.name.trim()) return;
-    const newClass: Class = {
-      id: `c${Date.now()}`,
-      studioId: studio.id,
+    addClass({
       name: form.name.trim(),
       style: form.style,
       ageGroup: form.ageGroup,
@@ -57,10 +55,14 @@ export default function Classes() {
       waitlist: 0,
       inRecital: form.inRecital,
       priceCents: form.price * 100,
-    };
-    setClasses((prev) => [newClass, ...prev]);
+    });
     setOpen(false);
     setForm((f) => ({ ...f, name: "" }));
+  }
+
+  function handleDelete(id: string) {
+    removeClass(id);
+    setConfirmDeleteId(null);
   }
 
   return (
@@ -131,12 +133,37 @@ export default function Classes() {
 
               <div className="mt-4 flex items-center justify-between border-t border-border/70 pt-3">
                 <span className="font-display text-base font-semibold">{formatCurrency(c.priceCents)}<span className="text-xs font-normal text-muted-foreground">/mo</span></span>
-                <span className="text-xs text-muted-foreground">{c.durationMins} min</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">{c.durationMins} min</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(c.id); }}
+                    className="ml-2 grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-rose/10 hover:text-rose"
+                    aria-label={`Delete ${c.name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Remove class"
+        description="This class will be removed from the schedule. Students enrolled in this class will need to be reassigned."
+        footer={
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirmDeleteId(null)} className="rounded-full border border-border px-4 py-2 text-sm font-semibold transition hover:bg-secondary">Keep class</button>
+            <button onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)} className="rounded-full bg-rose px-5 py-2 text-sm font-semibold text-rose-foreground transition hover:opacity-90">Yes, remove</button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">This action cannot be undone. Student enrolment records for this class will be preserved.</p>
+      </Modal>
 
       <Modal
         open={open}
@@ -146,7 +173,7 @@ export default function Classes() {
         footer={
           <div className="flex justify-end gap-2">
             <button onClick={() => setOpen(false)} className="rounded-full border border-border px-4 py-2 text-sm font-semibold transition hover:bg-secondary">Cancel</button>
-            <button onClick={addClass} className="rounded-full bg-rose px-5 py-2 text-sm font-semibold text-rose-foreground transition hover:opacity-90">Create class</button>
+            <button onClick={handleAddClass} className="rounded-full bg-rose px-5 py-2 text-sm font-semibold text-rose-foreground transition hover:opacity-90">Create class</button>
           </div>
         }
       >

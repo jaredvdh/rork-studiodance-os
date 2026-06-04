@@ -27,7 +27,7 @@ import Schedule from "./pages/Schedule";
 import Settings from "./pages/Settings";
 import Students from "./pages/Students";
 
-import { StudioProvider, TeachersProvider } from "./data/store";
+import { StudioProvider, TeachersProvider, ClassesProvider, StudentsProvider, AnnouncementsProvider, InvoicesProvider } from "./data/store";
 import { MigrationProvider } from "./data/migrationStore";
 import { ParentProvider } from "./data/parentStore";
 
@@ -46,25 +46,41 @@ const queryClient = new QueryClient();
 
 const withShell = (Page: React.ComponentType) => (
   <StudioProvider>
-    <TeachersProvider>
-      <MigrationProvider>
-        <AppShell>
-          <Page />
-        </AppShell>
-      </MigrationProvider>
-    </TeachersProvider>
+    <ClassesProvider>
+      <TeachersProvider>
+        <AnnouncementsProvider>
+          <InvoicesProvider>
+            <StudentsProvider>
+              <MigrationProvider>
+                <AppShell>
+                  <Page />
+                </AppShell>
+              </MigrationProvider>
+            </StudentsProvider>
+          </InvoicesProvider>
+        </AnnouncementsProvider>
+      </TeachersProvider>
+    </ClassesProvider>
   </StudioProvider>
 );
 
 const withParentShell = (Page: React.ComponentType) => (
   <StudioProvider>
-    <TeachersProvider>
-      <ParentProvider>
-        <ParentShell>
-          <Page />
-        </ParentShell>
-      </ParentProvider>
-    </TeachersProvider>
+    <ClassesProvider>
+      <TeachersProvider>
+        <AnnouncementsProvider>
+          <InvoicesProvider>
+            <StudentsProvider>
+              <ParentProvider>
+                <ParentShell>
+                  <Page />
+                </ParentShell>
+              </ParentProvider>
+            </StudentsProvider>
+          </InvoicesProvider>
+        </AnnouncementsProvider>
+      </TeachersProvider>
+    </ClassesProvider>
   </StudioProvider>
 );
 

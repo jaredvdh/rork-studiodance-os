@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -10,6 +10,7 @@ import {
   DollarSign,
   Download,
   FileText,
+  GraduationCap,
   Loader2,
   Mail,
   RefreshCcw,
@@ -20,14 +21,13 @@ import { toast } from "sonner";
 
 import StatCard from "@/components/StatCard";
 import { supabase } from "@/lib/supabase";
-import { useStudioData, useStudio } from "@/data/store";
+import { useClasses, useInvoices, useStudents, useStudio } from "@/data/store";
 import {
   createInvoice,
   sendInvoice,
   payInvoice,
   markOverdue,
   getStripeConnectState,
-  type StudioFlowInvoice,
   type InvoiceStatus,
 } from "@/lib/stripe";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -57,7 +57,7 @@ const statusMeta: Record<string, { chip: string; label: string; icon: typeof Che
   refunded: { chip: "bg-plum/10 text-plum", label: "Refunded", icon: RefreshCcw },
 };
 
-/* ── Create invoice modal ──────────────────────────────────────────── */
+/* ── Create invoice modal — now enrolment-aware ────────────────────── */
 
 function CreateInvoiceModal({
   open,
@@ -66,25 +66,60 @@ function CreateInvoiceModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const { students } = useStudioData();
+  const { students } = useStudents();
+  const { classes } = useClasses();
   const { studio } = useStudio();
+  const { addInvoice } = useInvoices();
   const qc = useQueryClient();
+
   const [studentId, setStudentId] = useState("");
   const [description, setDescription] = useState("");
   const [amountCents, setAmountCents] = useState("9500");
   const [dueDays, setDueDays] = useState("14");
+  const [classId, setClassId] = useState(""); // optional: link to a class
+
+  // When student is selected, show their enrolled classes for quick-link
+  const selectedStudent = students.find((s) => s.id === studentId);
+  const enrolledClasses = useMemo(
+    () => (selectedStudent ? classes.filter((c) => selectedStudent.classIds.includes(c.id)) : []),
+    [selectedStudent, classes],
+  );
+
+  // Auto-fill amount and description from selected class
+  const handleClassSelect = useCallback((clsId: string, priceCents: number, className: string) => {
+    setClassId(clsId);
+    setAmountCents(String(priceCents));
+    if (!description) {
+      setDescription(`Tuition — ${className}`);
+    }
+  }, []);
 
   const create = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const student = students.find((s) => s.id === studentId);
+      const cls = classId ? classes.find((c) => c.id === classId) : undefined;
       const due = new Date();
       due.setDate(due.getDate() + Number(dueDays));
+
+      const desc = description || (cls ? `Tuition — ${cls.name}` : "Tuition");
+
+      // Add to shared state
+      addInvoice({
+        studentName: student?.name ?? "",
+        parentName: student?.parentName ?? "",
+        description: desc,
+        amountCents: Math.round(Number(amountCents)),
+        status: "draft",
+        dueDate: due.toISOString(),
+      });
+
+      // Persist to Supabase
       return createInvoice({
         studioId: studio.id,
         studentName: student?.name ?? "",
         parentName: student?.parentName ?? "",
         parentEmail: student?.parentEmail,
-        description,
+        description: desc,
         amountCents: Math.round(Number(amountCents)),
         dueDate: due.toISOString(),
       });
@@ -96,6 +131,7 @@ function CreateInvoiceModal({
       setDescription("");
       setAmountCents("9500");
       setStudentId("");
+      setClassId("");
     },
     onError: () => toast.error("Failed to create invoice"),
   });
@@ -103,7 +139,7 @@ function CreateInvoiceModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-border/70 bg-card p-6 shadow-lift">
+      <div className="w-full max-w-md rounded-2xl border border-border/70 bg-card p-6 shadow-lift max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display text-xl font-semibold">Create invoice</h3>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary">
@@ -115,7 +151,7 @@ function CreateInvoiceModal({
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Student</span>
             <select
               value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
+              onChange={(e) => { setStudentId(e.target.value); setClassId(""); }}
               className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm"
             >
               <option value="">Select student…</option>
@@ -124,6 +160,35 @@ function CreateInvoiceModal({
               ))}
             </select>
           </label>
+
+          {/* Enrolment-based quick-fill */}
+          {enrolledClasses.length > 0 && (
+            <div>
+              <span className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <GraduationCap className="h-3.5 w-3.5" /> Link to enrolment
+              </span>
+              <div className="space-y-1.5">
+                {enrolledClasses.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleClassSelect(c.id, c.priceCents, c.name)}
+                    className={cn(
+                      "w-full text-left rounded-lg border px-3 py-2 text-sm transition",
+                      classId === c.id
+                        ? "border-rose/30 bg-rose/5 text-rose"
+                        : "border-border bg-secondary/30 text-foreground/80 hover:bg-secondary/60",
+                    )}
+                  >
+                    <span className="font-medium">{c.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {c.day} {c.startTime} · {formatCurrency(c.priceCents)}/mo
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</span>
             <input
@@ -170,7 +235,7 @@ function CreateInvoiceModal({
 
 export default function Payments() {
   const { studio } = useStudio();
-  const { invoices: demoInvoices, revenueSeries } = useStudioData();
+  const { invoices: sharedInvoices } = useInvoices();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
 
@@ -192,7 +257,7 @@ export default function Payments() {
     },
   });
 
-  // Merge: DB invoices take precedence, fallback to demo data
+  // Merge: DB invoices take precedence, fallback to shared state
   const allInvoices = dbInvoices && dbInvoices.length > 0
     ? dbInvoices.map((i) => ({
         id: i.id,
@@ -205,7 +270,7 @@ export default function Payments() {
         dueDate: i.due_date ?? "",
         paidAt: i.paid_at,
       }))
-    : demoInvoices.map((d) => ({
+    : sharedInvoices.map((d) => ({
         id: d.id,
         studioId: d.studioId,
         studentName: d.studentName,
@@ -216,7 +281,9 @@ export default function Payments() {
         dueDate: d.dueDate,
       }));
 
-  const monthRevenue = revenueSeries[revenueSeries.length - 1].revenueCents;
+  const monthRevenue = allInvoices
+    .filter((i) => i.status === "paid")
+    .reduce((a, i) => a + i.amountCents, 0);
   const overdue = allInvoices.filter((i) => i.status === "overdue");
   const totalOutstanding = allInvoices
     .filter((i) => i.status !== "paid" && i.status !== "refunded")

@@ -142,3 +142,31 @@ Seeded demo environments for evaluation and sales demos.
 - [x] "Demo account" banner in AppShell and ParentShell
 - [x] Reset demo data admin action via seed edge function
 - [x] Seed edge function creates all tenants, profiles, teachers, classes, students, families, caregivers, announcements, invoices, recitals, activity logs
+
+---
+
+# StudioFlow — UX Refinement Sprint ✅
+
+Connected modules into a unified operational platform. "Create once, use everywhere."
+
+---
+
+## Shared Data Architecture
+
+- [x] `ClassesProvider` + `useClasses()` shared context — classes created anywhere appear everywhere
+- [x] `StudentsProvider` + `useStudents()` shared context — student records unified
+- [x] `AnnouncementsProvider` + `useAnnouncements()` — shared announcement state
+- [x] `InvoicesProvider` + `useInvoices()` — shared invoice state
+- [x] All providers nested in `App.tsx` with correct dependency order
+
+---
+
+## Module Integration
+
+- [x] Classes → Schedule auto-population: new classes in Classes page immediately appear in Schedule, Instructor timetable, and Dashboard
+- [x] Instructor profiles show assigned classes, weekly teaching hours, and payroll estimates
+- [x] Enrolment workflow: enrol/withdraw students from the Students page, roster and counts update automatically
+- [x] Dashboard operationalised: today's classes, attendance alerts, unpaid invoice links, expiring waiver count, waitlist alerts — all cards link to actions
+- [x] Announcements support targeted scoping: specific class dropdown, recital show selector
+- [x] Payments linked to enrolments: invoice modal shows student's enrolled classes, one-click auto-fill from class pricing
+- [x] Duplicate data entry eliminated: classes created once, visible everywhere

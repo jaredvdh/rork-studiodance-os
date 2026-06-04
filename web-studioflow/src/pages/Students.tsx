@@ -5,10 +5,12 @@ import {
   Eye,
   EyeOff,
   FileSignature,
+  GraduationCap,
   KeyRound,
   Mail,
   Megaphone,
   Phone,
+  Plus,
   Search,
   Shield,
   ShieldAlert,
@@ -18,9 +20,10 @@ import {
   Upload,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 
-import { classById, useStudioData, useTerminology } from "@/data/store";
+import { useClasses, useStudents, useStudioData, useTerminology } from "@/data/store";
 import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, WaiverStatus } from "@/data/types";
 import { caregiverFullName } from "@/data/types";
 import { parentAccounts } from "@/data/demo";
@@ -41,11 +44,13 @@ const payBadge: Record<PaymentStatus, string> = {
 type Filter = "all" | "waiver" | "overdue";
 
 export default function Students() {
-  const { students } = useStudioData();
+  const { students, enrolStudentInClass, withdrawStudentFromClass } = useStudents();
+  const { classes } = useClasses();
   const term = useTerminology();
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Student | null>(null);
+  const [enrolOpen, setEnrolOpen] = useState<string | null>(null); // studentId being enrolled
 
   const rows = useMemo(() => {
     return students.filter((s) => {
@@ -76,7 +81,7 @@ export default function Students() {
             <Upload className="h-4 w-4" /> Import CSV
           </button>
           <button className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
-            <UserPlus className="h-4 w-4" /> Add student
+            <UserPlus className="h-4 w-4" /> Add {term.participant.toLowerCase()}
           </button>
         </div>
       </div>
@@ -111,7 +116,7 @@ export default function Students() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-soft">
         <div className="hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] gap-4 border-b border-border/70 bg-secondary/40 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
-          <span>Student</span>
+          <span>{term.participant}</span>
           <span>Parent / Guardian</span>
           <span>Classes</span>
           <span>Attendance</span>
@@ -152,9 +157,21 @@ export default function Students() {
               </div>
             </button>
           ))}
-          {rows.length === 0 && <p className="px-5 py-10 text-center text-sm text-muted-foreground">No students match your search.</p>}
+          {rows.length === 0 && <p className="px-5 py-10 text-center text-sm text-muted-foreground">No {term.participantPlural.toLowerCase()} match your search.</p>}
         </div>
       </div>
+
+      {/* Enrolment modal */}
+      {enrolOpen && (
+        <EnrolModal
+          studentId={enrolOpen}
+          students={students}
+          classes={classes}
+          onEnrol={enrolStudentInClass}
+          onWithdraw={withdrawStudentFromClass}
+          onClose={() => setEnrolOpen(null)}
+        />
+      )}
 
       {/* Detail drawer */}
       {selected && (
@@ -171,11 +188,38 @@ export default function Students() {
               <CaregiverSection student={selected} />
               <DetailRow label="Attendance rate" value={`${Math.round(selected.attendanceRate * 100)}%`} />
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Enrolled classes</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Enrolled classes</p>
+                  <button
+                    onClick={() => { setSelected(null); setEnrolOpen(selected.id); }}
+                    className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-3 py-1 text-xs font-semibold text-rose transition hover:bg-rose/20"
+                  >
+                    <Plus className="h-3 w-3" /> Enrol
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {selected.classIds.map((id) => (
-                    <span key={id} className="rounded-full bg-secondary px-3 py-1 text-sm font-medium">{classById(id)?.name ?? "Class"}</span>
-                  ))}
+                  {selected.classIds.map((id) => {
+                    const cls = classes.find((c) => c.id === id);
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium">
+                        {cls?.name ?? "Class"}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); withdrawStudentFromClass(selected.id, id); }}
+                          className="grid h-4 w-4 place-items-center rounded-full text-muted-foreground transition hover:text-rose"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  {selected.classIds.length === 0 && (
+                    <button
+                      onClick={() => { setSelected(null); setEnrolOpen(selected.id); }}
+                      className="rounded-full border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground transition hover:border-rose hover:text-rose"
+                    >
+                      <Plus className="mr-1 inline h-3 w-3" /> Enrol in a class
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -207,6 +251,110 @@ export default function Students() {
   );
 }
 
+/* ── Enrolment modal ──────────────────────────────────────────────── */
+
+function EnrolModal({
+  studentId,
+  students,
+  classes,
+  onEnrol,
+  onWithdraw,
+  onClose,
+}: {
+  studentId: string;
+  students: Student[];
+  classes: { id: string; name: string; style: string; teacherId: string; enrolled: number; capacity: number; day: string; startTime: string; priceCents: number }[];
+  onEnrol: (studentId: string, classId: string) => void;
+  onWithdraw: (studentId: string, classId: string) => void;
+  onClose: () => void;
+}) {
+  const student = students.find((s) => s.id === studentId);
+  if (!student) return null;
+
+  const enrolledIds = new Set(student.classIds);
+  const availableClasses = classes.filter((c) => !enrolledIds.has(c.id));
+  const currentClasses = classes.filter((c) => enrolledIds.has(c.id));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl border border-border/70 bg-card p-6 shadow-lift">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-display text-xl font-semibold">Manage enrolments</h3>
+            <p className="text-sm text-muted-foreground">{student.name}</p>
+          </div>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Currently enrolled */}
+        {currentClasses.length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Currently enrolled</p>
+            <div className="space-y-1.5">
+              {currentClasses.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg bg-success/5 border border-success/10 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.day} {c.startTime} · {formatCurrency(c.priceCents)}/mo</p>
+                  </div>
+                  <button
+                    onClick={() => onWithdraw(studentId, c.id)}
+                    className="shrink-0 rounded-full bg-rose/10 px-3 py-1 text-xs font-semibold text-rose transition hover:bg-rose/20"
+                  >
+                    Withdraw
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Available to enrol */}
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Available classes</p>
+          {availableClasses.length === 0 ? (
+            <p className="py-3 text-center text-sm text-muted-foreground">{term.participant} is enrolled in all available classes.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {availableClasses.map((c) => {
+                const full = c.enrolled >= c.capacity;
+                return (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.day} {c.startTime} · {c.enrolled}/{c.capacity} · {formatCurrency(c.priceCents)}/mo
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => onEnrol(studentId, c.id)}
+                      disabled={full}
+                      className={cn(
+                        "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
+                        full
+                          ? "bg-muted text-muted-foreground cursor-not-allowed"
+                          : "bg-rose/10 text-rose hover:bg-rose/20",
+                      )}
+                    >
+                      {full ? "Full" : "Enrol"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <button onClick={onClose} className="mt-5 w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DetailRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div>
@@ -223,121 +371,41 @@ const cgStatusMeta: Record<
   CaregiverStatus,
   { label: string; icon: typeof CheckCircle2; color: string }
 > = {
-  active: {
-    label: "Active",
-    icon: CheckCircle2,
-    color: "bg-success/10 text-success border-success/20",
-  },
-  invited: {
-    label: "Invited",
-    icon: Clock,
-    color: "bg-amber-100 text-amber-700 border-amber-200",
-  },
-  disabled: {
-    label: "Disabled",
-    icon: ShieldOff,
-    color: "bg-muted text-muted-foreground border-border",
-  },
-  removed: {
-    label: "Removed",
-    icon: EyeOff,
-    color: "bg-destructive/10 text-destructive border-destructive/20",
-  },
+  active: { label: "Active", icon: CheckCircle2, color: "bg-success/10 text-success border-success/20" },
+  invited: { label: "Invited", icon: Clock, color: "bg-amber-100 text-amber-700 border-amber-200" },
+  disabled: { label: "Disabled", icon: ShieldOff, color: "bg-muted text-muted-foreground border-border" },
+  removed: { label: "Removed", icon: EyeOff, color: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
-function CaregiverMini({
-  caregiver,
-  label,
-}: {
-  caregiver: Caregiver;
-  label: string;
-}) {
+function CaregiverMini({ caregiver, label }: { caregiver: Caregiver; label: string }) {
   const meta = cgStatusMeta[caregiver.status];
   const StatusIcon = meta.icon;
-
   return (
     <div className="rounded-xl border border-border bg-secondary/30 p-4">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-            meta.color,
-          )}
-        >
-          <StatusIcon className="h-3 w-3" />
-          {meta.label}
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold", meta.color)}>
+          <StatusIcon className="h-3 w-3" />{meta.label}
         </span>
       </div>
       <p className="text-sm font-semibold">{caregiverFullName(caregiver)}</p>
-      <p className="text-xs text-muted-foreground">
-        {caregiver.relationship_to_student}
-        {caregiver.household_label ? ` · ${caregiver.household_label}` : ""}
-      </p>
-      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-        <Mail className="h-3 w-3" />
-        <span className="truncate">{caregiver.email}</span>
-      </div>
-      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-        <Phone className="h-3 w-3" />
-        <span>{caregiver.phone}</span>
-      </div>
-
-      {/* Key permission flags */}
+      <p className="text-xs text-muted-foreground">{caregiver.relationship_to_student}{caregiver.household_label ? ` · ${caregiver.household_label}` : ""}</p>
+      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{caregiver.email}</span></div>
+      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"><Phone className="h-3 w-3" /><span>{caregiver.phone}</span></div>
       <div className="mt-3 flex flex-wrap gap-1">
-        {caregiver.authorized_pickup && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-            <KeyRound className="h-2.5 w-2.5" /> Pickup
-          </span>
-        )}
-        {caregiver.receives_emergency_messages && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-2 py-0.5 text-[10px] font-medium text-rose">
-            <ShieldAlert className="h-2.5 w-2.5" /> Emergency
-          </span>
-        )}
-        {caregiver.can_view_billing && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold">
-            <Eye className="h-2.5 w-2.5" /> Billing
-          </span>
-        )}
-        {caregiver.can_view_medical_notes && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-medium text-plum">
-            <Stethoscope className="h-2.5 w-2.5" /> Medical
-          </span>
-        )}
-        {caregiver.can_sign_waivers && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-medium text-teal">
-            <FileSignature className="h-2.5 w-2.5" /> Waivers
-          </span>
-        )}
+        {caregiver.authorized_pickup && <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success"><KeyRound className="h-2.5 w-2.5" /> Pickup</span>}
+        {caregiver.receives_emergency_messages && <span className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-2 py-0.5 text-[10px] font-medium text-rose"><ShieldAlert className="h-2.5 w-2.5" /> Emergency</span>}
+        {caregiver.can_view_billing && <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold"><Eye className="h-2.5 w-2.5" /> Billing</span>}
+        {caregiver.can_view_medical_notes && <span className="inline-flex items-center gap-1 rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-medium text-plum"><Stethoscope className="h-2.5 w-2.5" /> Medical</span>}
+        {caregiver.can_sign_waivers && <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-medium text-teal"><FileSignature className="h-2.5 w-2.5" /> Waivers</span>}
       </div>
-
-      {/* Admin-only flags */}
-      {(caregiver.custody_restriction ||
-        caregiver.court_order_on_file ||
-        caregiver.communication_only) && (
+      {(caregiver.custody_restriction || caregiver.court_order_on_file || caregiver.communication_only) && (
         <div className="mt-2 border-t border-border pt-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-            Admin flags
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Admin flags</p>
           <div className="flex flex-wrap gap-1">
-            {caregiver.custody_restriction && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-2 py-0.5 text-[10px] font-semibold text-rose">
-                <ShieldAlert className="h-2.5 w-2.5" /> Custody restriction
-              </span>
-            )}
-            {caregiver.court_order_on_file && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                <Shield className="h-2.5 w-2.5" /> Court order on file
-              </span>
-            )}
-            {caregiver.communication_only && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                <Megaphone className="h-2.5 w-2.5" /> Communication only
-              </span>
-            )}
+            {caregiver.custody_restriction && <span className="inline-flex items-center gap-1 rounded-full bg-rose/10 px-2 py-0.5 text-[10px] font-semibold text-rose"><ShieldAlert className="h-2.5 w-2.5" /> Custody restriction</span>}
+            {caregiver.court_order_on_file && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700"><Shield className="h-2.5 w-2.5" /> Court order on file</span>}
+            {caregiver.communication_only && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"><Megaphone className="h-2.5 w-2.5" /> Communication only</span>}
           </div>
         </div>
       )}
@@ -346,31 +414,17 @@ function CaregiverMini({
 }
 
 function CaregiverSection({ student }: { student: Student }) {
-  const parentAcct: ParentAccount | undefined = parentAccounts.find(
-    (p) => p.id === student.parentId,
-  );
-
+  const parentAcct: ParentAccount | undefined = parentAccounts.find((p) => p.id === student.parentId);
   if (!parentAcct) return null;
-
   const additional = parentAcct.additionalCaregivers ?? [];
   const allCaregivers = additional.filter((a) => a.status !== "removed");
-
   return (
     <div>
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Caregivers
-      </p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Caregivers</p>
       <div className="space-y-3">
-        <CaregiverMini
-          caregiver={parentAcct.primaryCaregiver}
-          label="Primary caregiver"
-        />
+        <CaregiverMini caregiver={parentAcct.primaryCaregiver} label="Primary caregiver" />
         {allCaregivers.map((cg, i) => (
-          <CaregiverMini
-            key={cg.id}
-            caregiver={cg}
-            label={cg.household_label ?? `Additional caregiver ${allCaregivers.length > 1 ? i + 1 : ""}`.trim()}
-          />
+          <CaregiverMini key={cg.id} caregiver={cg} label={cg.household_label ?? `Additional caregiver ${allCaregivers.length > 1 ? i + 1 : ""}`.trim()} />
         ))}
       </div>
     </div>

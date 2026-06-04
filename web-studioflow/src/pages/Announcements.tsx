@@ -1,31 +1,65 @@
 import { useState } from "react";
-import { AlertTriangle, Loader2, Mail, Megaphone, Plus, Send, Sparkles, Trophy, Users } from "lucide-react";
+import { AlertTriangle, Loader2, Mail, Megaphone, Plus, Send, Sparkles, Target, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabase";
 import { aiDraftAnnouncement } from "@/lib/ai";
-import { useStudio, useStudioData } from "@/data/store";
-import type { Announcement, AnnouncementScope } from "@/data/types";
+import { useAnnouncements, useClasses, useStudio, useStudents, useTeachers } from "@/data/store";
+import type { AnnouncementScope } from "@/data/types";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const scopeMeta: Record<AnnouncementScope, { icon: typeof Megaphone; chip: string }> = {
   "Studio-wide": { icon: Users, chip: "bg-plum/10 text-plum" },
-  Class: { icon: Megaphone, chip: "bg-teal/10 text-teal" },
-  Recital: { icon: Trophy, chip: "bg-gold/15 text-gold" },
-  Emergency: { icon: AlertTriangle, chip: "bg-destructive/10 text-destructive" },
+  "Class": { icon: Target, chip: "bg-teal/10 text-teal" },
+  "Recital": { icon: Trophy, chip: "bg-gold/15 text-gold" },
+  "Emergency": { icon: AlertTriangle, chip: "bg-destructive/10 text-destructive" },
 };
 
 const SCOPES: AnnouncementScope[] = ["Studio-wide", "Class", "Recital", "Emergency"];
 
+/** Derive a human-readable audience string from scope + target */
+function buildAudience(
+  scope: AnnouncementScope,
+  targetId: string,
+  classes: { id: string; name: string }[],
+  teachers: { id: string; name: string }[],
+): string {
+  if (!targetId) {
+    if (scope === "Studio-wide") return "All families";
+    if (scope === "Recital") return "All recital participants";
+    if (scope === "Emergency") return "All families";
+    if (scope === "Class") return "All classes";
+  }
+  const cls = classes.find((c) => c.id === targetId);
+  if (cls) return cls.name;
+  const tch = teachers.find((t) => t.id === targetId);
+  if (tch) return `${tch.name}'s classes`;
+  return targetId;
+}
+
 export default function Announcements() {
   const { studio } = useStudio();
-  const { announcements: initial } = useStudioData();
-  const [items, setItems] = useState<Announcement[]>(initial);
+  const { announcements: items, addAnnouncement } = useAnnouncements();
+  const { classes } = useClasses();
+  const { teachers } = useTeachers();
+  const { students } = useStudents();
   const [open, setOpen] = useState<boolean>(false);
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">("idle");
   const [draftLoading, setDraftLoading] = useState(false);
-  const [form, setForm] = useState({ title: "", body: "", scope: "Studio-wide" as AnnouncementScope });
+  const [form, setForm] = useState({
+    title: "",
+    body: "",
+    scope: "Studio-wide" as AnnouncementScope,
+    targetId: "",
+  });
+
+  // Filter targets based on scope
+  const targets = form.scope === "Class"
+    ? classes.map((c) => ({ id: c.id, label: `${c.name} (${c.day} ${c.startTime})` }))
+    : form.scope === "Recital"
+    ? classes.filter((c) => c.inRecital).map((c) => ({ id: c.id, label: c.name }))
+    : [];
 
   async function handleAiDraft() {
     setDraftLoading(true);
@@ -34,9 +68,7 @@ export default function Announcements() {
         `Studio: ${studio.name}. Type: ${form.scope} announcement. Studio is a ${studio.vertical} studio in ${studio.city}.`,
         form.scope,
       );
-      if (text) setForm((prev) => ({ ...prev, body: prev.body ? `${prev.body}
-
-${text}` : text }));
+      if (text) setForm((prev) => ({ ...prev, body: prev.body ? `${prev.body}\n\n${text}` : text }));
     } catch {
       // Silently fail
     } finally {
@@ -47,37 +79,45 @@ ${text}` : text }));
   async function send() {
     if (!form.title.trim()) return;
     setSendState("sending");
-    const id = `a${Date.now()}`;
-    const a: Announcement = {
-      id,
-      studioId: studio.id,
+
+    const audience = buildAudience(form.scope, form.targetId, classes, teachers);
+
+    addAnnouncement({
       title: form.title.trim(),
       body: form.body.trim(),
       scope: form.scope,
-      sentAt: new Date().toISOString(),
-      audience: form.scope === "Studio-wide" ? "All families" : form.scope,
-      reach: 0,
-    };
-    setItems((prev) => [a, ...prev]);
+      audience,
+    });
+
     try {
       // Persist to Supabase
+      const token = localStorage.getItem("rork:access_token");
       await supabase.from("announcements").insert({
-        id, studio_id: studio.id, title: a.title, body: a.body,
-        scope: a.scope, sent_at: a.sentAt, audience: a.audience, reach: 0,
+        id: `a${Date.now()}`,
+        studio_id: studio.id,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        scope: form.scope,
+        sent_at: new Date().toISOString(),
+        audience,
+        reach: 0,
       });
       // Trigger edge function for delivery
-      const token = localStorage.getItem("rork:access_token");
-      await fetch("https://qhourrdjhxwofweowkal.supabase.co/functions/v1/send-announcement", {
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-announcement`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ announcementId: id }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          ...(token ? { "x-rork-token": token } : {}),
+        },
+        body: JSON.stringify({ announcementId: `a${Date.now()}`, studioId: studio.id }),
       });
     } catch {
-      // Graceful degradation — announcement is shown locally even if delivery fails
+      // Graceful degradation
     }
     setSendState("sent");
     setOpen(false);
-    setForm({ title: "", body: "", scope: "Studio-wide" });
+    setForm({ title: "", body: "", scope: "Studio-wide", targetId: "" });
   }
 
   return (
@@ -85,7 +125,7 @@ ${text}` : text }));
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-display text-3xl font-semibold tracking-tight">Announcements</h2>
-          <p className="text-sm text-muted-foreground">Delivered in-app and by email · push notifications coming soon</p>
+          <p className="text-sm text-muted-foreground">Delivered in-app and by email · targets {students.length} families</p>
         </div>
         <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
           <Plus className="h-4 w-4" /> New message
@@ -94,7 +134,7 @@ ${text}` : text }));
 
       <div className="space-y-4">
         {items.map((a, i) => {
-          const meta = scopeMeta[a.scope];
+          const meta = scopeMeta[a.scope] ?? scopeMeta["Studio-wide"];
           return (
             <div key={a.id} className="animate-float-up rounded-2xl border border-border/70 bg-card p-5 shadow-soft" style={{ animationDelay: `${i * 50}ms` }}>
               <div className="flex items-start gap-4">
@@ -123,7 +163,7 @@ ${text}` : text }));
         open={open}
         onClose={() => setOpen(false)}
         title="Compose announcement"
-        description="Reach the right families instantly."
+        description="Reach the right families with precision targeting."
         footer={
           <div className="flex justify-end gap-2">
             <button onClick={() => setOpen(false)} className="rounded-full border border-border px-4 py-2 text-sm font-semibold transition hover:bg-secondary">Cancel</button>
@@ -150,7 +190,7 @@ ${text}` : text }));
               {SCOPES.map((s) => (
                 <button
                   key={s}
-                  onClick={() => setForm({ ...form, scope: s })}
+                  onClick={() => setForm({ ...form, scope: s, targetId: "" })}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-sm font-medium transition",
                     form.scope === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground/70 hover:bg-secondary",
@@ -161,12 +201,39 @@ ${text}` : text }));
               ))}
             </div>
           </div>
+
+          {/* Targeted selection when Class or Recital scope is chosen */}
+          {targets.length > 0 && (
+            <div>
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {form.scope === "Recital" ? "Select show" : "Target specific class"}
+              </span>
+              <select
+                value={form.targetId}
+                onChange={(e) => setForm({ ...form, targetId: e.target.value })}
+                className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
+              >
+                <option value="">{form.scope === "Recital" ? "All recital classes" : "All classes"}</option>
+                {targets.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.targetId && (
+            <div className="rounded-xl border border-teal/20 bg-teal/5 px-4 py-2.5 text-sm text-teal">
+              <Target className="mr-1.5 inline h-4 w-4" />
+              Targeting: <span className="font-semibold">{buildAudience(form.scope, form.targetId, classes, teachers)}</span>
+            </div>
+          )}
+
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Title</span>
             <input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. Recital rehearsal on May 25th"
+              placeholder={form.scope === "Emergency" ? "URGENT: " : form.scope === "Class" ? "e.g. Tuesday Ballet parents — rehearsal update" : "e.g. Recital rehearsal on May 25th"}
               className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
             />
           </label>

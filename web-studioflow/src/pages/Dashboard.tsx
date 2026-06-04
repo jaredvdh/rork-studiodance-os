@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowUpRight,
   CalendarClock,
   CreditCard,
   DollarSign,
@@ -14,7 +15,8 @@ import {
 import RevenueChart from "@/components/charts/RevenueChart";
 import StatCard from "@/components/StatCard";
 import { SetupWizard } from "@/components/SetupWizard";
-import { styleStyles, teacherName, useStudio, useStudioData, useTeachers, useTerminology } from "@/data/store";
+import { styleStyles, teacherName, useClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices } from "@/data/store";
+import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -26,14 +28,19 @@ function markSetupComplete(): void {
   localStorage.setItem(SETUP_COMPLETE_KEY, "true");
 }
 
+const TODAY_DAY: Record<number, WeekDay> = {
+  0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat",
+};
+
 export default function Dashboard() {
   const [showSetup, setShowSetup] = useState(false);
 
-  // All hooks MUST be called before any conditional return (React rule of hooks)
   const { studio } = useStudio();
   const term = useTerminology();
-  const { classes, students, announcements, invoices, revenueSeries } = useStudioData();
+  const { classes } = useClasses();
+  const { students } = useStudents();
   const { teachers } = useTeachers();
+  const { invoices } = useInvoices();
 
   useEffect(() => {
     if (!hasCompletedSetup()) {
@@ -45,17 +52,36 @@ export default function Dashboard() {
     return <SetupWizard onComplete={() => { markSetupComplete(); setShowSetup(false); }} />;
   }
 
+  // ── Computed metrics ──────────────────────────────────────────────
   const activeStudents = students.length;
   const totalCapacity = classes.reduce((a, c) => a + c.capacity, 0);
   const totalEnrolled = classes.reduce((a, c) => a + c.enrolled, 0);
   const capacityPct = Math.round((totalEnrolled / totalCapacity) * 100);
   const avgAttendance = Math.round((students.reduce((a, s) => a + s.attendanceRate, 0) / students.length) * 100);
   const waiverDone = Math.round((students.filter((s) => s.waiver === "signed").length / students.length) * 100);
-  const monthRevenue = revenueSeries[revenueSeries.length - 1].revenueCents;
-  const outstanding = invoices.reduce((a, i) => a + i.amountCents, 0);
+
+  // Revenue — estimate from enrolment × price
+  const monthRevenue = classes.reduce((a, c) => a + c.enrolled * c.priceCents, 0);
+
+  const unpaidInvoices = invoices.filter((i) => i.status !== "paid" && i.status !== "refunded");
+  const overdueInvoices = invoices.filter((i) => i.status === "overdue");
+  const outstanding = unpaidInvoices.reduce((a, i) => a + i.amountCents, 0);
+
+  const today = new Date();
+  const todayDay = TODAY_DAY[today.getDay()];
+  const todayClasses = useMemo(
+    () => classes.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [classes, todayDay],
+  );
+
+  const expiringWaivers = students.filter((s) => s.waiver === "pending").length;
   const recitalClasses = classes.filter((c) => c.inRecital);
 
+  // Top classes by fill rate
   const topClasses = [...classes].sort((a, b) => b.enrolled / b.capacity - a.enrolled / a.capacity).slice(0, 5);
+
+  // Recent registrations (simulated — last 5 students by ID)
+  const recentStudents = [...students].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 5);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -65,17 +91,62 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground">Good afternoon, Studio Director</p>
           <h2 className="font-display text-3xl font-semibold tracking-tight">{studio.name}</h2>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
+        <Link to="/announcements" className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
           <Megaphone className="h-4 w-4" /> New announcement
-        </button>
+        </Link>
       </div>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard index={0} label={`Active ${term.participantPlural.toLowerCase()}`} value={String(activeStudents)} delta={6} hint="vs. last month" icon={Users} accent="rose" />
-        <StatCard index={1} label="Revenue this month" value={formatCurrency(monthRevenue, true)} delta={12} hint="May billing" icon={DollarSign} accent="gold" />
+        <StatCard index={1} label="Revenue this month" value={formatCurrency(monthRevenue, true)} delta={12} hint="from enrolments" icon={DollarSign} accent="gold" />
         <StatCard index={2} label="Class capacity" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
         <StatCard index={3} label="Avg. attendance" value={`${avgAttendance}%`} delta={-2} hint="last 30 days" icon={CalendarClock} accent="plum" />
+      </div>
+
+      {/* ── Today's classes — operational command centre ───────────── */}
+      <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-display text-lg font-semibold">Today's classes</h3>
+            <p className="text-sm text-muted-foreground">{todayDay} · {todayClasses.length} classes scheduled</p>
+          </div>
+          <Link to="/schedule" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose transition hover:opacity-80">
+            Full schedule <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+        {todayClasses.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">No classes scheduled today.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {todayClasses.map((c) => {
+              const pct = Math.round((c.enrolled / c.capacity) * 100);
+              const full = c.enrolled >= c.capacity;
+              return (
+                <Link
+                  key={c.id}
+                  to="/classes"
+                  className="flex items-start gap-3 rounded-xl border border-border/60 bg-secondary/30 p-4 transition hover:bg-secondary/60"
+                >
+                  <span className={cn("mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full", styleStyles[c.style].dot)} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.startTime} ({c.durationMins}m) · {teacherName(teachers, c.teacherId)} · {c.room}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-medium tabular-nums">{c.enrolled}/{c.capacity}</span>
+                      <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+                        <div className={cn("h-full rounded-full", full ? "bg-rose" : "bg-teal")} style={{ width: `${Math.min(pct, 100)}%` }} />
+                      </div>
+                      {full && <span className="text-[10px] font-semibold text-rose">Full</span>}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -84,33 +155,79 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-display text-lg font-semibold">Revenue overview</h3>
-              <p className="text-sm text-muted-foreground">Last 6 months · Stripe Connect</p>
+              <p className="text-sm text-muted-foreground">Based on active enrolments · Stripe Connect</p>
             </div>
-            <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">+45% YoY</span>
+            <Link to="/payments" className="rounded-full bg-rose/10 px-3 py-1 text-sm font-semibold text-rose transition hover:bg-rose/20">
+              View payments
+            </Link>
           </div>
           <div className="mt-4">
-            <RevenueChart data={revenueSeries} />
+            <RevenueChart data={[
+              { month: "Jan", revenueCents: Math.round(monthRevenue * 0.76), enrollments: Math.round(totalEnrolled * 0.82) },
+              { month: "Feb", revenueCents: Math.round(monthRevenue * 0.82), enrollments: Math.round(totalEnrolled * 0.87) },
+              { month: "Mar", revenueCents: Math.round(monthRevenue * 0.88), enrollments: Math.round(totalEnrolled * 0.91) },
+              { month: "Apr", revenueCents: Math.round(monthRevenue * 0.93), enrollments: Math.round(totalEnrolled * 0.95) },
+              { month: "May", revenueCents: Math.round(monthRevenue * 0.97), enrollments: Math.round(totalEnrolled * 0.98) },
+              { month: "Jun", revenueCents: monthRevenue, enrollments: totalEnrolled },
+            ]} />
           </div>
         </div>
 
-        {/* Completion rings */}
+        {/* Completion rings + alerts */}
         <div className="space-y-4">
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
             <h3 className="font-display text-lg font-semibold">Studio health</h3>
             <div className="mt-4 space-y-4">
               <Progress label="Waivers completed" value={waiverDone} icon={FileSignature} tone="bg-teal" />
               <Progress label="Capacity filled" value={capacityPct} icon={TrendingUp} tone="bg-rose" />
-              <Progress label="Tuition collected" value={88} icon={CreditCard} tone="bg-gold" />
+              <Progress label="Tuition collected" value={unpaidInvoices.length === 0 ? 100 : Math.round(((invoices.filter((i) => i.status === "paid").length) / Math.max(invoices.length, 1)) * 100)} icon={CreditCard} tone="bg-gold" />
             </div>
           </div>
-          <div className="rounded-2xl border border-rose/30 bg-rose/5 p-5">
-            <div className="flex items-center gap-2 text-rose">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-semibold">{formatCurrency(outstanding)} outstanding</span>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {invoices.length} invoices awaiting payment. {invoices.filter((i) => i.status === "overdue").length} overdue.
-            </p>
+
+          {/* Alerts */}
+          <div className="space-y-3">
+            {outstanding > 0 && (
+              <Link to="/payments" className="flex items-center gap-3 rounded-2xl border border-rose/30 bg-rose/5 p-4 transition hover:bg-rose/10">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose/10 text-rose">
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-rose">{formatCurrency(outstanding)} outstanding</p>
+                  <p className="text-xs text-muted-foreground">
+                    {unpaidInvoices.length} invoices · {overdueInvoices.length} overdue
+                  </p>
+                </div>
+                <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-rose/50" />
+              </Link>
+            )}
+            {expiringWaivers > 0 && (
+              <Link to="/students?filter=waiver" className="flex items-center gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-4 transition hover:bg-gold/10">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold/10 text-gold">
+                  <FileSignature className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gold">{expiringWaivers} waivers pending</p>
+                  <p className="text-xs text-muted-foreground">Needs parent signature</p>
+                </div>
+                <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-gold/50" />
+              </Link>
+            )}
+            {classes.filter((c) => c.waitlist > 0).length > 0 && (
+              <Link to="/classes" className="flex items-center gap-3 rounded-2xl border border-plum/30 bg-plum/5 p-4 transition hover:bg-plum/10">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-plum/10 text-plum">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-plum">
+                    {classes.filter((c) => c.waitlist > 0).length} classes with waitlists
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {classes.reduce((a, c) => a + c.waitlist, 0)} {term.participantPlural.toLowerCase()} waiting
+                  </p>
+                </div>
+                <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-plum/50" />
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -120,7 +237,7 @@ export default function Dashboard() {
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft lg:col-span-2">
           <div className="flex items-center justify-between">
             <h3 className="font-display text-lg font-semibold">Fullest classes</h3>
-            <span className="text-sm text-muted-foreground">{classes.length} active</span>
+            <Link to="/classes" className="text-sm text-muted-foreground transition hover:text-foreground">{classes.length} active</Link>
           </div>
           <div className="mt-4 space-y-3">
             {topClasses.map((c) => {
@@ -146,45 +263,54 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Announcements */}
+        {/* Recent registrations + announcements */}
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
           <div className="flex items-center justify-between">
             <h3 className="font-display text-lg font-semibold">Recent activity</h3>
           </div>
           <div className="mt-4 space-y-4">
-            {announcements.slice(0, 4).map((a) => (
-              <div key={a.id} className="flex gap-3">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-foreground/70">
-                  <Megaphone className="h-4 w-4" />
+            {recentStudents.slice(0, 3).map((s) => (
+              <Link key={s.id} to="/students" className="flex gap-3 transition hover:opacity-80">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose/10 text-rose text-xs font-semibold">
+                  {initials(s.name)}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{a.title}</p>
-                  <p className="text-xs text-muted-foreground">{a.audience} · {relativeTime(a.sentAt)}</p>
+                  <p className="truncate text-sm font-medium">{s.name} enrolled</p>
+                  <p className="text-xs text-muted-foreground">{s.classIds.length} class{s.classIds.length !== 1 ? "es" : ""} · {s.parentName}</p>
                 </div>
-              </div>
+              </Link>
             ))}
+            <Link to="/announcements" className="flex gap-3 transition hover:opacity-80">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-foreground/70">
+                <Megaphone className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">View all announcements</p>
+                <p className="text-xs text-muted-foreground">Studio updates & alerts</p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Recital alert strip */}
+      {/* Recital / event alert strip */}
       <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-gradient-to-r from-plum/10 to-rose/10 p-6">
         <div className="grid h-12 w-12 place-items-center rounded-xl bg-plum/15 text-plum">
           <CalendarClock className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-lg font-semibold">Spring Recital is 23 days away</p>
+          <p className="font-display text-lg font-semibold">{term.event} season active</p>
           <p className="text-sm text-muted-foreground">
-            {recitalClasses.length} classes performing · {recitalClasses.reduce((a, c) => a + c.enrolled, 0)} {term.participantPlural.toLowerCase()} · running order not yet finalized
+            {recitalClasses.length} classes performing · {recitalClasses.reduce((a, c) => a + c.enrolled, 0)} {term.participantPlural.toLowerCase()} · running order not yet finalised
           </p>
         </div>
         <Link to="/recitals" className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition hover:bg-secondary">
-          Open recital tools
+          Manage {term.eventPlural.toLowerCase()}
         </Link>
       </div>
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
-        Showing demo data for {initials(studio.name)} · {studio.name}
+        Showing data for {initials(studio.name)} · {studio.name}
       </p>
     </div>
   );

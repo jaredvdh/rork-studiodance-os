@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  Clock,
   Mail,
   Pencil,
   Plus,
   Sparkles,
   Trash2,
   UserRound,
+  Users,
 } from "lucide-react";
 
 import Modal from "@/components/Modal";
-import { styleStyles, useTeachers, useTerminology } from "@/data/store";
-import type { ClassStyle } from "@/data/types";
+import { styleStyles, useClasses, useTeachers, useTerminology } from "@/data/store";
+import type { ClassStyle, Teacher } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 const ALL_STYLES: ClassStyle[] = [
@@ -23,21 +25,37 @@ const ALL_STYLES: ClassStyle[] = [
   "Acro",
 ];
 
+/** Weekly teaching hours for an instructor derived from their assigned classes. */
+function weeklyHours(teacherId: string, classes: { teacherId: string; durationMins: number }[]): number {
+  return classes
+    .filter((c) => c.teacherId === teacherId)
+    .reduce((a, c) => a + c.durationMins, 0) / 60;
+}
+
+/** Payroll estimate (pre-tax) based on hourly rate and weekly hours. */
+function payrollEstimate(teacher: Teacher, hours: number): number | null {
+  if (!teacher.hourlyRateCents) return null;
+  return Math.round(teacher.hourlyRateCents * hours * 4.33); // monthly
+}
+
 export default function Instructors() {
   const { teachers, addTeacher, removeTeacher, updateTeacher } = useTeachers();
+  const { classes } = useClasses();
   const term = useTerminology();
   const [open, setOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     styles: [] as ClassStyle[],
+    hourlyRateCents: undefined as number | undefined,
   });
 
   function resetForm() {
-    setForm({ name: "", email: "", styles: [] });
+    setForm({ name: "", email: "", styles: [], hourlyRateCents: undefined });
     setEditingId(null);
   }
 
@@ -49,7 +67,12 @@ export default function Instructors() {
   function openEdit(id: string) {
     const t = teachers.find((t) => t.id === id);
     if (!t) return;
-    setForm({ name: t.name, email: t.email, styles: [...t.styles] });
+    setForm({
+      name: t.name,
+      email: t.email,
+      styles: [...t.styles],
+      hourlyRateCents: t.hourlyRateCents,
+    });
     setEditingId(id);
     setOpen(true);
   }
@@ -70,12 +93,14 @@ export default function Instructors() {
         name: form.name.trim(),
         email: form.email.trim(),
         styles: form.styles,
+        hourlyRateCents: form.hourlyRateCents,
       });
     } else {
       addTeacher({
         name: form.name.trim(),
         email: form.email.trim(),
         styles: form.styles,
+        hourlyRateCents: form.hourlyRateCents,
       });
     }
     setOpen(false);
@@ -127,62 +152,116 @@ export default function Instructors() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {teachers.map((t, i) => (
-            <div
-              key={t.id}
-              className="animate-float-up rounded-2xl border border-border/70 bg-card p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <div className="flex items-start justify-between">
-                <div className="grid h-12 w-12 place-items-center rounded-xl bg-plum/10 text-plum">
-                  <span className="font-display text-lg font-semibold">
-                    {t.name
-                      .split(" ")
-                      .map((w) => w[0])
-                      .join("")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => openEdit(t.id)}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-                    aria-label={`Edit ${t.name}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteId(t.id)}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-rose/10 hover:text-rose"
-                    aria-label={`Remove ${t.name}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+          {teachers.map((t, i) => {
+            const assignedClasses = classes.filter((c) => c.teacherId === t.id);
+            const hours = weeklyHours(t.id, classes);
+            const payroll = payrollEstimate(t, hours);
+            const isExpanded = expandedId === t.id;
 
-              <h3 className="mt-3 font-display text-lg font-semibold">
-                {t.name}
-              </h3>
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Mail className="h-3.5 w-3.5" />
-                {t.email}
-              </p>
+            return (
+              <div
+                key={t.id}
+                className="animate-float-up rounded-2xl border border-border/70 bg-card p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-plum/10 text-plum">
+                    <span className="font-display text-lg font-semibold">
+                      {t.name
+                        .split(" ")
+                        .map((w) => w[0])
+                        .join("")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEdit(t.id)}
+                      className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                      aria-label={`Edit ${t.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(t.id)}
+                      className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-rose/10 hover:text-rose"
+                      aria-label={`Remove ${t.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
 
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {t.styles.map((s) => (
-                  <span
-                    key={s}
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                      styleStyles[s].chip,
+                <h3 className="mt-3 font-display text-lg font-semibold">
+                  {t.name}
+                </h3>
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Mail className="h-3.5 w-3.5" />
+                  {t.email}
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {t.styles.map((s) => (
+                    <span
+                      key={s}
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                        styleStyles[s].chip,
+                      )}
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Teaching load summary */}
+                <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-secondary/30 p-3">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Assigned</p>
+                    <p className="mt-0.5 font-display text-lg font-semibold tabular-nums">
+                      {assignedClasses.length}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">classes</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Weekly</p>
+                    <p className="mt-0.5 font-display text-lg font-semibold tabular-nums">
+                      {hours.toFixed(1)}h
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {payroll ? `~$${(payroll / 100).toFixed(0)}/mo est.` : "no rate set"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Expandable class list */}
+                {assignedClasses.length > 0 && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : t.id)}
+                      className="w-full text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+                    >
+                      {isExpanded ? "Hide" : "Show"} assigned classes ({assignedClasses.length})
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-2 space-y-1.5">
+                        {assignedClasses.map((c) => (
+                          <div key={c.id} className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn("h-2 w-2 shrink-0 rounded-full", styleStyles[c.style].dot)} />
+                              <span className="truncate font-medium">{c.name}</span>
+                            </div>
+                            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                              {c.day} {c.startTime} · {c.durationMins}m
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  >
-                    {s}
-                  </span>
-                ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -196,7 +275,7 @@ export default function Instructors() {
         title={editingId ? `Edit ${term.instructor.toLowerCase()}` : `Add ${term.instructor.toLowerCase()}`}
         description={
           editingId
-            ? `Update this ${term.instructor.toLowerCase()}'s profile and ${term.classStyle.toLowerCase()}s.`
+            ? `Update this ${term.instructor.toLowerCase()}'s profile, ${term.classStyle.toLowerCase()}s, and pay rate.`
             : `Add a new ${term.instructor.toLowerCase()} to your studio.`
         }
         footer={
@@ -260,6 +339,20 @@ export default function Instructors() {
               })}
             </div>
           </Field>
+          <Field label="Hourly rate ($)">
+            <input
+              type="number"
+              value={form.hourlyRateCents !== undefined ? (form.hourlyRateCents / 100).toFixed(2) : ""}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  hourlyRateCents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined,
+                })
+              }
+              placeholder="e.g. 45.00"
+              className="w-full max-w-[160px] rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-rose focus:ring-2 focus:ring-rose/20"
+            />
+          </Field>
         </div>
       </Modal>
 
@@ -287,7 +380,7 @@ export default function Instructors() {
         }
       >
         <p className="text-sm text-muted-foreground">
-          This action cannot be undone. Classes currently taught by this
+          This action cannot be undone. Classes currently taught by this{" "}
           {term.instructor.toLowerCase()} will need to be reassigned.
         </p>
       </Modal>

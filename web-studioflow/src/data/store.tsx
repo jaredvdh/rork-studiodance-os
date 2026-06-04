@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { announcements, classes, invoices, revenueSeries, students, studio as defaultStudio, teachers as demoT, parentAccounts as demoParents } from "./demo";
+import { announcements, classes as demoClasses, invoices as demoInvoices, revenueSeries, students as demoStudents, studio as defaultStudio, teachers as demoT, parentAccounts as demoParents } from "./demo";
 import { getTerminology } from "./terminology";
 import type { VerticalTerminology } from "./terminology";
-import type { ClassStyle, Studio, Teacher, Student, Class, ParentAccount } from "./types";
+import type { Announcement, ClassStyle, Studio, Teacher, Student, Class, Invoice, ParentAccount } from "./types";
 import { useOptionalMigration } from "./migrationStore";
 
 /* ── Studio branding (persisted to localStorage) ──────────────────── */
@@ -105,12 +105,213 @@ export function useTeachers() {
   return ctx;
 }
 
+/* ── Shared classes state ────────────────────────────────────────────── */
+
+interface ClassesCtx {
+  classes: Class[];
+  addClass: (c: Omit<Class, "id" | "studioId">) => void;
+  removeClass: (id: string) => void;
+  updateClass: (id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => void;
+  /** Enrol a student, incrementing enrolled count */
+  enrolStudent: (classId: string) => void;
+  /** Withdraw a student, decrementing enrolled count */
+  withdrawStudent: (classId: string) => void;
+}
+
+const ClassesContext = createContext<ClassesCtx | null>(null);
+
+export function ClassesProvider({ children }: { children: React.ReactNode }) {
+  const [classes, setClasses] = useState<Class[]>(demoClasses);
+
+  const addClass = useCallback((c: Omit<Class, "id" | "studioId">) => {
+    const next: Class = { ...c, id: `c${Date.now()}`, studioId: defaultStudio.id };
+    setClasses((prev) => [next, ...prev]);
+  }, []);
+
+  const removeClass = useCallback((id: string) => {
+    setClasses((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const updateClass = useCallback((id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => {
+    setClasses((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }, []);
+
+  const enrolStudent = useCallback((classId: string) => {
+    setClasses((prev) =>
+      prev.map((c) =>
+        c.id === classId
+          ? { ...c, enrolled: c.enrolled + 1, waitlist: Math.max(0, c.waitlist - 1) }
+          : c,
+      ),
+    );
+  }, []);
+
+  const withdrawStudent = useCallback((classId: string) => {
+    setClasses((prev) =>
+      prev.map((c) =>
+        c.id === classId
+          ? { ...c, enrolled: Math.max(0, c.enrolled - 1) }
+          : c,
+      ),
+    );
+  }, []);
+
+  return (
+    <ClassesContext.Provider value={{ classes, addClass, removeClass, updateClass, enrolStudent, withdrawStudent }}>
+      {children}
+    </ClassesContext.Provider>
+  );
+}
+
+export function useClasses() {
+  const ctx = useContext(ClassesContext);
+  if (!ctx) throw new Error("useClasses must be used within ClassesProvider");
+  return ctx;
+}
+
+/* ── Shared students state ───────────────────────────────────────────── */
+
+interface StudentsCtx {
+  students: Student[];
+  addStudent: (s: Omit<Student, "id" | "studioId">) => void;
+  updateStudent: (id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => void;
+  /** Enrol a student into a class — updates both student.classIds and class.enrolled */
+  enrolStudentInClass: (studentId: string, classId: string) => void;
+  /** Withdraw a student from a class */
+  withdrawStudentFromClass: (studentId: string, classId: string) => void;
+}
+
+const StudentsContext = createContext<StudentsCtx | null>(null);
+
+export function StudentsProvider({ children }: { children: React.ReactNode }) {
+  const [students, setStudents] = useState<Student[]>(demoStudents);
+  const { enrolStudent: incEnrolled, withdrawStudent: decEnrolled } = useClasses();
+
+  const addStudent = useCallback((s: Omit<Student, "id" | "studioId">) => {
+    const next: Student = { ...s, id: `s${Date.now()}`, studioId: defaultStudio.id };
+    setStudents((prev) => [...prev, next]);
+  }, []);
+
+  const updateStudent = useCallback((id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => {
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  }, []);
+
+  const enrolStudentInClass = useCallback((studentId: string, classId: string) => {
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === studentId && !s.classIds.includes(classId)
+          ? { ...s, classIds: [...s.classIds, classId] }
+          : s,
+      ),
+    );
+    incEnrolled(classId);
+  }, [incEnrolled]);
+
+  const withdrawStudentFromClass = useCallback((studentId: string, classId: string) => {
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === studentId
+          ? { ...s, classIds: s.classIds.filter((id) => id !== classId) }
+          : s,
+      ),
+    );
+    decEnrolled(classId);
+  }, [decEnrolled]);
+
+  return (
+    <StudentsContext.Provider value={{ students, addStudent, updateStudent, enrolStudentInClass, withdrawStudentFromClass }}>
+      {children}
+    </StudentsContext.Provider>
+  );
+}
+
+export function useStudents() {
+  const ctx = useContext(StudentsContext);
+  if (!ctx) throw new Error("useStudents must be used within StudentsProvider");
+  return ctx;
+}
+
+/* ── Shared announcements state ──────────────────────────────────────── */
+
+interface AnnouncementsCtx {
+  announcements: Announcement[];
+  addAnnouncement: (a: Omit<Announcement, "id" | "studioId" | "sentAt" | "reach">) => void;
+}
+
+const AnnouncementsContext = createContext<AnnouncementsCtx | null>(null);
+
+export function AnnouncementsProvider({ children }: { children: React.ReactNode }) {
+  const [anns, setAnns] = useState<Announcement[]>(announcements);
+
+  const addAnnouncement = useCallback((a: Omit<Announcement, "id" | "studioId" | "sentAt" | "reach">) => {
+    const next: Announcement = {
+      ...a,
+      id: `a${Date.now()}`,
+      studioId: defaultStudio.id,
+      sentAt: new Date().toISOString(),
+      reach: 0,
+    };
+    setAnns((prev) => [next, ...prev]);
+  }, []);
+
+  return (
+    <AnnouncementsContext.Provider value={{ announcements: anns, addAnnouncement }}>
+      {children}
+    </AnnouncementsContext.Provider>
+  );
+}
+
+export function useAnnouncements() {
+  const ctx = useContext(AnnouncementsContext);
+  if (!ctx) throw new Error("useAnnouncements must be used within AnnouncementsProvider");
+  return ctx;
+}
+
+/* ── Shared invoices state ───────────────────────────────────────────── */
+
+interface InvoicesCtx {
+  invoices: Invoice[];
+  addInvoice: (inv: Omit<Invoice, "id" | "studioId">) => void;
+  updateInvoice: (id: string, patch: Partial<Omit<Invoice, "id" | "studioId">>) => void;
+}
+
+const InvoicesContext = createContext<InvoicesCtx | null>(null);
+
+export function InvoicesProvider({ children }: { children: React.ReactNode }) {
+  const [invoices, setInvoices] = useState<Invoice[]>(demoInvoices);
+
+  const addInvoice = useCallback((inv: Omit<Invoice, "id" | "studioId">) => {
+    const next: Invoice = { ...inv, id: `inv${Date.now()}`, studioId: defaultStudio.id };
+    setInvoices((prev) => [next, ...prev]);
+  }, []);
+
+  const updateInvoice = useCallback((id: string, patch: Partial<Omit<Invoice, "id" | "studioId">>) => {
+    setInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  }, []);
+
+  return (
+    <InvoicesContext.Provider value={{ invoices, addInvoice, updateInvoice }}>
+      {children}
+    </InvoicesContext.Provider>
+  );
+}
+
+export function useInvoices() {
+  const ctx = useContext(InvoicesContext);
+  if (!ctx) throw new Error("useInvoices must be used within InvoicesProvider");
+  return ctx;
+}
+
 /* ── Static helpers ──────────────────────────────────────────────────── */
 
 /** Central read access to the active studio's data. Merges demo data with
- * any imported records from the Migration Assistant. */
+ * any imported records from the Migration Assistant, and shared context state. */
 export function useStudioData() {
   const { teachers } = useTeachers();
+  const { classes } = useClasses();
+  const { students } = useStudents();
+  const { announcements: anns } = useAnnouncements();
+  const { invoices: invs } = useInvoices();
   const migration = useOptionalMigration();
   return useMemo(() => {
     const mergedStudents: Student[] = migration
@@ -131,11 +332,11 @@ export function useStudioData() {
       teachers: mergedTeachers,
       students: mergedStudents,
       parents: mergedParents,
-      announcements,
-      invoices,
+      announcements: anns,
+      invoices: invs,
       revenueSeries,
     };
-  }, [teachers, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedParents]);
+  }, [teachers, classes, students, anns, invs, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedParents]);
 }
 
 export function teacherName(teachers: Teacher[], id: string): string {
