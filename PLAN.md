@@ -478,3 +478,180 @@ Complete costume planning, measurement tracking, vendor ordering, distribution, 
 - [x] All providers in correct nesting order
 - [x] No circular dependencies
 - [x] Build passes cleanly
+
+---
+
+# StudioFlow — Costume Management Enhancement Sprint (Phases 13-20)
+
+Transform the existing Costume Management Suite into the first AI-powered costume and recital management platform built specifically for modern dance studios. This sprint adds unit-system intelligence, parent measurement wizards, AI sizing-chart parsing, bulk ordering exports, deep recital integration, and a tablet-friendly distribution experience.
+
+---
+
+## Phase 13 — Global Unit System & Measurement Intelligence
+
+Studio-level and parent-level unit preferences with automatic conversion. All values stored as metric internally; UI converts at render time.
+
+- [ ] Studio settings → Units preference: Metric (cm/kg) or Imperial (ft-in/lb)
+- [ ] Parent portal → Units display override (Metric / Imperial, independent from studio default)
+- [ ] Unit-conversion utility: cm ↔ ft/in, kg ↔ lb, with proper display formatting
+- [ ] Measurement display always includes units (never unitless values)
+- [ ] Validation rules based on selected units: flag impossible values (e.g., 120 inches as height)
+- [ ] Student measurement fields stored in cm/kg internally; UI converts automatically
+- [ ] `useUnitPreference()` hook — resolves studio default + parent override
+- [ ] Migration `006_unit_system.sql`: add `preferred_units` column to `studio_settings` and `profiles`
+
+---
+
+## Phase 14 — Parent Measurement Wizard
+
+Guided 5-step measurement collection flow replacing the current single-form approach.
+
+- [ ] Step 1 — Select Student: pick which child to measure
+- [ ] Step 2 — Measurement Guide: visual diagrams, tutorial content, and measurement tips
+- [ ] Step 3 — Enter Measurements: form with unit-aware inputs, validation in real time
+- [ ] Step 4 — Review: side-by-side review with previous measurements (growth indicators)
+- [ ] Step 5 — Submit: confirmation screen with submission timestamp
+- [ ] Save draft functionality — resume incomplete measurements later
+- [ ] Progress indicator (5-step visual bar matching waiver signing wizard pattern)
+- [ ] Responsive mobile-first design for parent phone use
+
+---
+
+## Phase 15 — Measurement Status & History System
+
+Measurement freshness tracking with visibility into growth over time.
+
+- [ ] Status colour coding: Green (≤6 months), Yellow (6–12 months), Red (>12 months)
+- [ ] "Last Updated" date displayed prominently on all measurement views
+- [ ] Historical measurement list per student (all prior submissions)
+- [ ] Growth trend indicators: arrow up/down with delta since last measurement
+- [ ] Dashboard alert: "N students require updated measurements" with count
+- [ ] Bulk reminder action: send measurement-update notification to all families with stale data
+- [ ] Measurement approval workflow retained (draft → pending → approved → rejected)
+
+---
+
+## Phase 16 — AI Sizing Chart Engine
+
+Vendor sizing chart upload, parsing, and multi-unit chart support.
+
+- [ ] Sizing chart upload: accept PDF, CSV, Excel files via Supabase Storage
+- [ ] AI parsing: extract structured size-range data from uploaded charts (Rork AI proxy)
+- [ ] Manual chart entry fallback: structured form for hand-entered sizing charts
+- [ ] Support metric, imperial, and mixed-unit sizing charts
+- [ ] Chart preview: rendered table view of extracted size ranges before saving
+- [ ] Enhanced flagging system: borderline sizes, missing measurements for required dimensions, conflicting measurements, unusual growth changes
+- [ ] Alternative-size recommendations with reasoning text
+- [ ] Confidence score calculation refined with per-dimension match analysis
+
+---
+
+## Phase 17 — Vendor Ordering Centre & Exports
+
+Bulk purchase-order generation with export options.
+
+- [ ] Vendor ordering centre: group costumes by vendor, then by size, for bulk PO creation
+- [ ] PO number auto-generation (e.g., PO-2026-0001)
+- [ ] Export to PDF (printable purchase order with studio branding)
+- [ ] Export to CSV (line-item detail for vendor submission)
+- [ ] Export to Excel (structured workbook with summary + line-item sheets)
+- [ ] Track order date, expected arrival, actual delivery, vendor notes
+- [ ] Order status timeline retained from existing implementation
+
+---
+
+## Phase 18 — Parent Notification Pipeline
+
+Automated notifications for costume lifecycle events.
+
+- [ ] Parent notification on costume assignment (costume name, routine, size recommended)
+- [ ] Parent notification on delivery status change (shipped → delivered → ready → distributed)
+- [ ] Parent notification on fee due/overdue
+- [ ] Parent notification when measurements are requested/rejected
+- [ ] Notification centre in ParentShell (bell icon with unread count)
+- [ ] Reuse existing `send-announcement` edge function for email delivery
+- [ ] In-app notification feed stored in a `notifications` table
+
+---
+
+## Phase 19 — Distribution Day & Tablet Mode
+
+Optimised distribution-day experience for tablet use in a busy studio environment.
+
+- [ ] Full-screen distribution checklist mode (large touch targets, minimal chrome)
+- [ ] Per-student checklist: Costume, Headpiece, Tights, Accessories, Shoes
+- [ ] Quick tap to check off items with satisfying micro-interactions
+- [ ] Digital signature capture (drawing canvas for parent/guardian signature)
+- [ ] Missing-items tracking: record what was not received
+- [ ] Distribution receipt auto-generation (PDF with checklist + signature + timestamp)
+- [ ] Receipt stored in student profile documents section
+
+---
+
+## Phase 20 — Recital Integration & Polish
+
+Deep integration between Costume Management and Recital Planner, plus platform polish.
+
+- [ ] Recital routines show assigned costume with thumbnail in recital planner
+- [ ] Quick-change assistant: analyze full recital lineup, detect conflicts, recommend reordering
+- [ ] Estimated change-time configurable per costume (default 5 min)
+- [ ] Conflict resolution: drag to reorder routines, auto-update conflict status
+- [ ] Student Profile → Measurements tab: dedicated tab with full measurement history
+- [ ] Rental agreement auto-generation (PDF with terms, dates, deposit, damage policy)
+- [ ] AI Costume Insights dashboard: reusable-costume savings calculator, bulk-order shipping optimisation, unassigned-costume alerts, measurement-deadline risk scoring
+- [ ] Costume image upload support (multiple images per costume via Supabase Storage)
+- [ ] Alterations photo upload (camera/file picker, stored in storage bucket)
+- [ ] Export costume library to CSV/Excel for audit/sharing
+
+---
+
+## Database (Migration 006)
+
+
+- [ ] `studio_settings.preferred_units` — studio-wide unit default (metric/imperial)
+- [ ] `profiles.preferred_units` — parent-level unit override
+- [ ] `notifications` table — in-app notification feed with read/unread, type, and metadata
+- [ ] `costume_images` table — multiple images per costume with sort order
+- [ ] Updated `sizing_charts.chart_data` to support `unit` field per row
+- [ ] RLS policies for new tables
+
+---
+
+## Backend Setup Checklist Update
+
+- [ ] Run migration `006_unit_system.sql` after `005_costume_management.sql`
+- [ ] Deploy updated `send-announcement` edge function for costume notifications
+- [ ] Configure storage bucket for costume images and alteration photos
+
+---
+
+## Success Criteria
+
+A studio owner can:
+
+- Set studio-wide metric or imperial units
+- Collect measurements from parents via a guided wizard with diagrams
+- See measurement freshness at a glance (green/yellow/red)
+- Upload vendor sizing charts and get AI-parsed structured data
+- Auto-size students with confidence scores and alternative recommendations
+- Generate bulk purchase orders grouped by vendor and size
+- Export POs as PDF, CSV, or Excel
+- Track deliveries through a visual timeline
+- Manage alterations with photo attachments
+- Run tablet-friendly distribution day with digital signatures
+- Identify recital quick-change conflicts with resolution recommendations
+- Search and manage reusable costume inventory across seasons
+- Send automated notifications for costume lifecycle events
+
+Parents can:
+
+- Choose metric or imperial display preference independently
+- Follow a guided measurement wizard with visual instructions
+- Save measurement drafts and submit later
+- View their child's measurement history and growth trends
+- Approve or request changes to AI size recommendations
+- View costume photos, assigned routines, and delivery status
+- Pay costume fees and see outstanding balances
+- Sign distribution forms digitally on distribution day
+
+All without spreadsheets, paper forms, or third-party systems.
