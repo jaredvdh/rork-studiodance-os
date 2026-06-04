@@ -13,6 +13,10 @@ import {
   useSupabaseAnnouncements,
   useSupabaseInvoices,
   useSupabaseEnrolments,
+  useSupabaseWaiverTemplates,
+  useSupabaseWaiverVersions,
+  useSupabaseWaiverSignatures,
+  useSupabaseUploadedDocuments,
   useAddTeacher,
   useUpdateTeacher,
   useRemoveTeacher,
@@ -27,6 +31,12 @@ import {
   useAddAnnouncement,
   useAddInvoice,
   useUpdateInvoice,
+  useAddWaiverTemplate,
+  useUpdateWaiverTemplate,
+  useCreateWaiverVersion,
+  useSignWaiver,
+  useAddUploadedDocument,
+  useVerifyDocument,
 } from "./supabaseHooks";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
