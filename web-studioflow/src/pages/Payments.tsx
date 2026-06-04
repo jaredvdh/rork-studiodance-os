@@ -23,7 +23,6 @@ import StatCard from "@/components/StatCard";
 import { supabase } from "@/lib/supabase";
 import { useClasses, useInvoices, useStudents, useStudio } from "@/data/store";
 import {
-  createInvoice,
   sendInvoice,
   payInvoice,
   markOverdue,
@@ -94,47 +93,31 @@ function CreateInvoiceModal({
     }
   }, []);
 
-  const create = useMutation({
-    mutationFn: async () => {
-      const student = students.find((s) => s.id === studentId);
-      const cls = classId ? classes.find((c) => c.id === classId) : undefined;
-      const due = new Date();
-      due.setDate(due.getDate() + Number(dueDays));
+  function handleCreateInvoice() {
+    const student = students.find((s) => s.id === studentId);
+    const cls = classId ? classes.find((c) => c.id === classId) : undefined;
+    const due = new Date();
+    due.setDate(due.getDate() + Number(dueDays));
 
-      const desc = description || (cls ? `Tuition — ${cls.name}` : "Tuition");
+    const desc = description || (cls ? `Tuition — ${cls.name}` : "Tuition");
 
-      // Add to shared state
-      addInvoice({
-        studentName: student?.name ?? "",
-        parentName: student?.parentName ?? "",
-        description: desc,
-        amountCents: Math.round(Number(amountCents)),
-        status: "draft",
-        dueDate: due.toISOString(),
-      });
+    // addInvoice now persists to Supabase via the shared context mutation
+    addInvoice({
+      studentName: student?.name ?? "",
+      parentName: student?.parentName ?? "",
+      description: desc,
+      amountCents: Math.round(Number(amountCents)),
+      status: "draft",
+      dueDate: due.toISOString(),
+    });
 
-      // Persist to Supabase
-      return createInvoice({
-        studioId: studio.id,
-        studentName: student?.name ?? "",
-        parentName: student?.parentName ?? "",
-        parentEmail: student?.parentEmail,
-        description: desc,
-        amountCents: Math.round(Number(amountCents)),
-        dueDate: due.toISOString(),
-      });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices", studio.id] });
-      toast.success("Draft invoice created");
-      onClose();
-      setDescription("");
-      setAmountCents("9500");
-      setStudentId("");
-      setClassId("");
-    },
-    onError: () => toast.error("Failed to create invoice"),
-  });
+    toast.success("Draft invoice created");
+    onClose();
+    setDescription("");
+    setAmountCents("9500");
+    setStudentId("");
+    setClassId("");
+  }
 
   if (!open) return null;
   return (
@@ -219,11 +202,11 @@ function CreateInvoiceModal({
             </label>
           </div>
           <button
-            onClick={() => create.mutate()}
-            disabled={!studentId || !description || create.isPending}
+            onClick={handleCreateInvoice}
+            disabled={!studentId || !description}
             className="w-full rounded-full bg-rose px-5 py-2.5 text-sm font-semibold text-rose-foreground transition hover:opacity-90 disabled:opacity-40"
           >
-            {create.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Create draft invoice"}
+            Create draft invoice
           </button>
         </div>
       </div>

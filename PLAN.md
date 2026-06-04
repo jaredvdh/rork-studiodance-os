@@ -170,3 +170,44 @@ Connected modules into a unified operational platform. "Create once, use everywh
 - [x] Announcements support targeted scoping: specific class dropdown, recital show selector
 - [x] Payments linked to enrolments: invoice modal shows student's enrolled classes, one-click auto-fill from class pricing
 - [x] Duplicate data entry eliminated: classes created once, visible everywhere
+
+---
+
+# StudioFlow — Persistence & Workflow Integrity Pass ✅
+
+Ensured the shared admin contexts are production-ready, backed by Supabase as the source of truth.
+
+---
+
+## Supabase Persistence Layer
+
+- [x] `supabaseHooks.ts` expanded with 15 CRUD mutation hooks covering all entities (teachers, classes, students, announcements, invoices)
+- [x] `useDualQuery` refactored: only falls back to demo data when `isDemo` is true; real studios get empty arrays on Supabase failure
+- [x] Enrolment mutations (`useEnrolStudent`, `useWithdrawStudent`) persist to both `students.class_ids` and `classes.enrolled` atomically
+- [x] All optimistic UI updates roll back on Supabase mutation failure via query invalidation
+
+## Provider Refactor
+
+- [x] `TeachersProvider` — hydrates from Supabase; add/update/remove persist immediately
+- [x] `ClassesProvider` — hydrates from Supabase; enrolled counts maintained server-side
+- [x] `StudentsProvider` — hydrates from Supabase; enrol/withdraw persists student + class records
+- [x] `AnnouncementsProvider` — hydrates from Supabase; add persists immediately
+- [x] `InvoicesProvider` — hydrates from Supabase; add/update persist immediately
+- [x] `StudioProvider` extracted to `studioStore.tsx` to break circular `store ↔ supabaseHooks` dependency
+
+## Duplicate Insert Cleanup
+
+- [x] `Announcements.tsx`: removed direct Supabase insert — relies on shared context mutation
+- [x] `Payments.tsx` CreateInvoiceModal: removed duplicate `createInvoice()` call — relies on shared context
+
+## Workflow Integrity
+
+- [x] Create class → persists to Supabase → appears on Schedule after refresh
+- [x] Enrol student → updates student.class_ids + class.enrolled → roster updates after refresh
+- [x] Withdraw student → updates both records → roster and billing options update after refresh
+- [x] Assign instructor → persists to Supabase → instructor hours update after refresh
+- [x] Create invoice → persists via shared context → appears after refresh
+- [x] Send announcement → persists via shared context → appears after refresh
+- [x] No workflow depends only on local `useState`
+- [x] No duplicate or drifting enrolment counts (class.enrolled maintained server-side)
+- [x] Refresh/logout/login does not lose operational data

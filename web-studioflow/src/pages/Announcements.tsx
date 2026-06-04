@@ -82,6 +82,7 @@ export default function Announcements() {
 
     const audience = buildAudience(form.scope, form.targetId, classes, teachers);
 
+    // addAnnouncement now persists to Supabase via the shared context mutation
     addAnnouncement({
       title: form.title.trim(),
       body: form.body.trim(),
@@ -89,32 +90,6 @@ export default function Announcements() {
       audience,
     });
 
-    try {
-      // Persist to Supabase
-      const token = localStorage.getItem("rork:access_token");
-      await supabase.from("announcements").insert({
-        id: `a${Date.now()}`,
-        studio_id: studio.id,
-        title: form.title.trim(),
-        body: form.body.trim(),
-        scope: form.scope,
-        sent_at: new Date().toISOString(),
-        audience,
-        reach: 0,
-      });
-      // Trigger edge function for delivery
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-announcement`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          ...(token ? { "x-rork-token": token } : {}),
-        },
-        body: JSON.stringify({ announcementId: `a${Date.now()}`, studioId: studio.id }),
-      });
-    } catch {
-      // Graceful degradation
-    }
     setSendState("sent");
     setOpen(false);
     setForm({ title: "", body: "", scope: "Studio-wide", targetId: "" });

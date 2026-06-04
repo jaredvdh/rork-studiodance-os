@@ -1,69 +1,35 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { announcements, classes as demoClasses, invoices as demoInvoices, revenueSeries, students as demoStudents, studio as defaultStudio, teachers as demoT, parentAccounts as demoParents } from "./demo";
-import { getTerminology } from "./terminology";
-import type { VerticalTerminology } from "./terminology";
-import type { Announcement, ClassStyle, Studio, Teacher, Student, Class, Invoice, ParentAccount } from "./types";
+import { useAuth } from "@/hooks/useAuth";
+import { useStudio } from "./studioStore";
+import { classes as demoClasses } from "./demo";
+import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount } from "./types";
 import { useOptionalMigration } from "./migrationStore";
+import {
+  useSupabaseTeachers,
+  useSupabaseClasses,
+  useSupabaseStudents,
+  useSupabaseAnnouncements,
+  useSupabaseInvoices,
+  useAddTeacher,
+  useUpdateTeacher,
+  useRemoveTeacher,
+  useAddClass,
+  useUpdateClass,
+  useRemoveClass,
+  useAddStudent,
+  useUpdateStudent,
+  useRemoveStudent,
+  useEnrolStudent,
+  useWithdrawStudent,
+  useAddAnnouncement,
+  useAddInvoice,
+  useUpdateInvoice,
+} from "./supabaseHooks";
 
-/* ── Studio branding (persisted to localStorage) ──────────────────── */
+/* ── Helpers ──────────────────────────────────────────────────── */
 
-const STUDIO_KEY = "studioflow_studio";
-
-function loadStudio(): Studio {
-  try {
-    const raw = localStorage.getItem(STUDIO_KEY);
-    if (raw) return JSON.parse(raw) as Studio;
-  } catch { /* ignore corrupt data */ }
-  return { ...defaultStudio };
-}
-
-function saveStudio(s: Studio) {
-  localStorage.setItem(STUDIO_KEY, JSON.stringify(s));
-}
-
-interface StudioCtx {
-  studio: Studio;
-  updateStudio: (patch: Partial<Omit<Studio, "id">>) => void;
-}
-
-const StudioContext = createContext<StudioCtx | null>(null);
-
-export function StudioProvider({ children }: { children: React.ReactNode }) {
-  const [studio, setStudio] = useState<Studio>(loadStudio);
-
-  const updateStudio = useCallback((patch: Partial<Omit<Studio, "id">>) => {
-    setStudio((prev) => {
-      const next = { ...prev, ...patch };
-      saveStudio(next);
-      return next;
-    });
-  }, []);
-
-  // Apply studio brandColor as a CSS custom property on mount / change
-  useEffect(() => {
-    document.documentElement.style.setProperty("--studio-brand", studio.brandColor);
-  }, [studio.brandColor]);
-
-  return (
-    <StudioContext.Provider value={{ studio, updateStudio }}>
-      {children}
-    </StudioContext.Provider>
-  );
-}
-
-export function useStudio() {
-  const ctx = useContext(StudioContext);
-  if (!ctx) throw new Error("useStudio must be used within StudioProvider");
-  return ctx;
-}
-
-/** Returns the user-facing terminology for the current studio's vertical.
- * Labels like "Students"/"Athletes"/"Members" adjust automatically. */
-export function useTerminology(): VerticalTerminology {
-  const { studio } = useStudio();
-  return getTerminology(studio.vertical);
-}
 
 /* ── Shared teachers state ───────────────────────────────────────────── */
 
@@ -77,20 +43,46 @@ interface TeachersCtx {
 const TeachersContext = createContext<TeachersCtx | null>(null);
 
 export function TeachersProvider({ children }: { children: React.ReactNode }) {
-  const [teachers, setTeachers] = useState<Teacher[]>(demoT);
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseTeachers = [] } = useSupabaseTeachers(isDemo);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const queryClient = useQueryClient();
+
+  // Sync from Supabase when data loads
+  useEffect(() => {
+    setTeachers(supabaseTeachers);
+  }, [supabaseTeachers]);
+
+  const addTeacherMut = useAddTeacher();
+  const updateTeacherMut = useUpdateTeacher();
+  const removeTeacherMut = useRemoveTeacher();
 
   const addTeacher = useCallback((t: Omit<Teacher, "id" | "studioId">) => {
-    const next: Teacher = { ...t, id: `t${Date.now()}`, studioId: defaultStudio.id };
-    setTeachers((prev) => [...prev, next]);
-  }, []);
+    const tempId = `t${Date.now()}`;
+    const optimistic: Teacher = { ...t, id: tempId, studioId: "" };
+    setTeachers((prev) => [...prev, optimistic]);
+    addTeacherMut.mutate(t, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
+      onError: () => {
+        setTeachers((prev) => prev.filter((x) => x.id !== tempId));
+      },
+    });
+  }, [addTeacherMut, queryClient]);
 
   const removeTeacher = useCallback((id: string) => {
     setTeachers((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+    removeTeacherMut.mutate(id, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
+    });
+  }, [removeTeacherMut, queryClient]);
 
   const updateTeacher = useCallback((id: string, patch: Partial<Omit<Teacher, "id" | "studioId">>) => {
     setTeachers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  }, []);
+    updateTeacherMut.mutate({ id, patch }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
+    });
+  }, [updateTeacherMut, queryClient]);
 
   return (
     <TeachersContext.Provider value={{ teachers, addTeacher, removeTeacher, updateTeacher }}>
@@ -121,20 +113,46 @@ interface ClassesCtx {
 const ClassesContext = createContext<ClassesCtx | null>(null);
 
 export function ClassesProvider({ children }: { children: React.ReactNode }) {
-  const [classes, setClasses] = useState<Class[]>(demoClasses);
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseClasses = [] } = useSupabaseClasses(isDemo);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const queryClient = useQueryClient();
+
+  // Sync from Supabase — enrolled counts are maintained server-side via enrolment mutations
+  useEffect(() => {
+    setClasses(supabaseClasses);
+  }, [supabaseClasses]);
+
+  const addClassMut = useAddClass();
+  const updateClassMut = useUpdateClass();
+  const removeClassMut = useRemoveClass();
 
   const addClass = useCallback((c: Omit<Class, "id" | "studioId">) => {
-    const next: Class = { ...c, id: `c${Date.now()}`, studioId: defaultStudio.id };
-    setClasses((prev) => [next, ...prev]);
-  }, []);
+    const tempId = `c${Date.now()}`;
+    const optimistic: Class = { ...c, id: tempId, studioId: "" };
+    setClasses((prev) => [optimistic, ...prev]);
+    addClassMut.mutate(c, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
+      onError: () => {
+        setClasses((prev) => prev.filter((x) => x.id !== tempId));
+      },
+    });
+  }, [addClassMut, queryClient]);
 
   const removeClass = useCallback((id: string) => {
     setClasses((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+    removeClassMut.mutate(id, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
+    });
+  }, [removeClassMut, queryClient]);
 
   const updateClass = useCallback((id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => {
     setClasses((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  }, []);
+    updateClassMut.mutate({ id, patch }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
+    });
+  }, [updateClassMut, queryClient]);
 
   const enrolStudent = useCallback((classId: string) => {
     setClasses((prev) =>
@@ -184,19 +202,49 @@ interface StudentsCtx {
 const StudentsContext = createContext<StudentsCtx | null>(null);
 
 export function StudentsProvider({ children }: { children: React.ReactNode }) {
-  const [students, setStudents] = useState<Student[]>(demoStudents);
-  const { enrolStudent: incEnrolled, withdrawStudent: decEnrolled } = useClasses();
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseStudents = [] } = useSupabaseStudents(isDemo);
+  const [students, setStudents] = useState<Student[]>([]);
+  const queryClient = useQueryClient();
+
+  // Sync from Supabase
+  useEffect(() => {
+    setStudents(supabaseStudents);
+  }, [supabaseStudents]);
+
+  // We need to update class enrolled counts, so we access the ClassesContext
+  const classesCtx = useContext(ClassesContext);
+  const incEnrolled = classesCtx?.enrolStudent;
+  const decEnrolled = classesCtx?.withdrawStudent;
+
+  const addStudentMut = useAddStudent();
+  const updateStudentMut = useUpdateStudent();
+  const removeStudentMut = useRemoveStudent();
+  const enrolMut = useEnrolStudent();
+  const withdrawMut = useWithdrawStudent();
 
   const addStudent = useCallback((s: Omit<Student, "id" | "studioId">) => {
-    const next: Student = { ...s, id: `s${Date.now()}`, studioId: defaultStudio.id };
-    setStudents((prev) => [...prev, next]);
-  }, []);
+    const tempId = `s${Date.now()}`;
+    const optimistic: Student = { ...s, id: tempId, studioId: "" };
+    setStudents((prev) => [...prev, optimistic]);
+    addStudentMut.mutate(s, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+      onError: () => {
+        setStudents((prev) => prev.filter((x) => x.id !== tempId));
+      },
+    });
+  }, [addStudentMut, queryClient]);
 
   const updateStudent = useCallback((id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => {
     setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  }, []);
+    updateStudentMut.mutate({ id, patch }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+    });
+  }, [updateStudentMut, queryClient]);
 
   const enrolStudentInClass = useCallback((studentId: string, classId: string) => {
+    // Optimistic UI
     setStudents((prev) =>
       prev.map((s) =>
         s.id === studentId && !s.classIds.includes(classId)
@@ -204,10 +252,20 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
           : s,
       ),
     );
-    incEnrolled(classId);
-  }, [incEnrolled]);
+    incEnrolled?.(classId);
+
+    // Persist to Supabase
+    enrolMut.mutate({ studentId, classId }, {
+      onError: () => {
+        // Rollback
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+        queryClient.invalidateQueries({ queryKey: ["classes"] });
+      },
+    });
+  }, [enrolMut, incEnrolled, queryClient]);
 
   const withdrawStudentFromClass = useCallback((studentId: string, classId: string) => {
+    // Optimistic UI
     setStudents((prev) =>
       prev.map((s) =>
         s.id === studentId
@@ -215,8 +273,17 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
           : s,
       ),
     );
-    decEnrolled(classId);
-  }, [decEnrolled]);
+    decEnrolled?.(classId);
+
+    // Persist to Supabase
+    withdrawMut.mutate({ studentId, classId }, {
+      onError: () => {
+        // Rollback
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+        queryClient.invalidateQueries({ queryKey: ["classes"] });
+      },
+    });
+  }, [withdrawMut, decEnrolled, queryClient]);
 
   return (
     <StudentsContext.Provider value={{ students, addStudent, updateStudent, enrolStudentInClass, withdrawStudentFromClass }}>
@@ -241,18 +308,38 @@ interface AnnouncementsCtx {
 const AnnouncementsContext = createContext<AnnouncementsCtx | null>(null);
 
 export function AnnouncementsProvider({ children }: { children: React.ReactNode }) {
-  const [anns, setAnns] = useState<Announcement[]>(announcements);
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseAnns = [] } = useSupabaseAnnouncements(isDemo);
+  const [anns, setAnns] = useState<Announcement[]>([]);
+  const queryClient = useQueryClient();
+
+  // Sync from Supabase
+  useEffect(() => {
+    setAnns(supabaseAnns);
+  }, [supabaseAnns]);
+
+  const addAnnouncementMut = useAddAnnouncement();
 
   const addAnnouncement = useCallback((a: Omit<Announcement, "id" | "studioId" | "sentAt" | "reach">) => {
-    const next: Announcement = {
+    const sentAt = new Date().toISOString();
+    const tempId = `a${Date.now()}`;
+    const optimistic: Announcement = {
       ...a,
-      id: `a${Date.now()}`,
-      studioId: defaultStudio.id,
-      sentAt: new Date().toISOString(),
+      id: tempId,
+      studioId: "",
+      sentAt,
       reach: 0,
     };
-    setAnns((prev) => [next, ...prev]);
-  }, []);
+    setAnns((prev) => [optimistic, ...prev]);
+
+    addAnnouncementMut.mutate({ ...a, sentAt, reach: 0 } as Announcement & { sentAt: string; reach: number }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
+      onError: () => {
+        setAnns((prev) => prev.filter((x) => x.id !== tempId));
+      },
+    });
+  }, [addAnnouncementMut, queryClient]);
 
   return (
     <AnnouncementsContext.Provider value={{ announcements: anns, addAnnouncement }}>
@@ -278,16 +365,38 @@ interface InvoicesCtx {
 const InvoicesContext = createContext<InvoicesCtx | null>(null);
 
 export function InvoicesProvider({ children }: { children: React.ReactNode }) {
-  const [invoices, setInvoices] = useState<Invoice[]>(demoInvoices);
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseInvs = [] } = useSupabaseInvoices(isDemo);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const queryClient = useQueryClient();
+
+  // Sync from Supabase
+  useEffect(() => {
+    setInvoices(supabaseInvs);
+  }, [supabaseInvs]);
+
+  const addInvoiceMut = useAddInvoice();
+  const updateInvoiceMut = useUpdateInvoice();
 
   const addInvoice = useCallback((inv: Omit<Invoice, "id" | "studioId">) => {
-    const next: Invoice = { ...inv, id: `inv${Date.now()}`, studioId: defaultStudio.id };
-    setInvoices((prev) => [next, ...prev]);
-  }, []);
+    const tempId = `inv${Date.now()}`;
+    const optimistic: Invoice = { ...inv, id: tempId, studioId: "" };
+    setInvoices((prev) => [optimistic, ...prev]);
+    addInvoiceMut.mutate(inv, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+      onError: () => {
+        setInvoices((prev) => prev.filter((x) => x.id !== tempId));
+      },
+    });
+  }, [addInvoiceMut, queryClient]);
 
   const updateInvoice = useCallback((id: string, patch: Partial<Omit<Invoice, "id" | "studioId">>) => {
     setInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
-  }, []);
+    updateInvoiceMut.mutate({ id, patch }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    });
+  }, [updateInvoiceMut, queryClient]);
 
   return (
     <InvoicesContext.Provider value={{ invoices, addInvoice, updateInvoice }}>
@@ -313,6 +422,7 @@ export function useStudioData() {
   const { announcements: anns } = useAnnouncements();
   const { invoices: invs } = useInvoices();
   const migration = useOptionalMigration();
+  const { studio } = useStudio();
   return useMemo(() => {
     const mergedStudents: Student[] = migration
       ? [...students, ...migration.importedStudents]
@@ -324,27 +434,33 @@ export function useStudioData() {
       ? [...teachers, ...migration.importedTeachers]
       : teachers;
     const mergedParents: ParentAccount[] = migration
-      ? [...demoParents, ...migration.importedParents]
-      : demoParents;
+      ? [...([] as ParentAccount[]), ...migration.importedParents]
+      : [];
     return {
-      studio: defaultStudio,
+      studio,
       classes: mergedClasses,
       teachers: mergedTeachers,
       students: mergedStudents,
       parents: mergedParents,
       announcements: anns,
       invoices: invs,
-      revenueSeries,
+      revenueSeries: [] as { month: string; revenueCents: number; enrollments: number }[],
     };
-  }, [teachers, classes, students, anns, invs, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedParents]);
+  }, [studio, teachers, classes, students, anns, invs, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedParents]);
 }
+
+// Re-export StudioProvider, useStudio, useTerminology so existing imports from "@/data/store" keep working
+export { StudioProvider, useStudio, useTerminology } from "./studioStore";
 
 export function teacherName(teachers: Teacher[], id: string): string {
   return teachers.find((t) => t.id === id)?.name ?? "Unassigned";
 }
 
-export function classById(id: string) {
-  return classes.find((c) => c.id === id);
+/** @deprecated Use useClasses() hook to look up classes by ID.
+ * Kept for backward compatibility — resolves from demo data if no context classes available. */
+export function classById(id: string, contextClasses?: Class[]): Class | undefined {
+  const all = contextClasses ?? demoClasses;
+  return all.find((c) => c.id === id);
 }
 
 /** Tailwind-ready accent tokens per class style for chips and visuals. */
