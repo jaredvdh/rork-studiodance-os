@@ -6,8 +6,9 @@ import {
   CalendarClock,
   CreditCard,
   DollarSign,
-  Signature,
   Megaphone,
+  Ruler,
+  Signature,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -15,7 +16,7 @@ import {
 import RevenueChart from "@/components/charts/RevenueChart";
 import StatCard from "@/components/StatCard";
 import { SetupWizard } from "@/components/SetupWizard";
-import { styleStyles, teacherName, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices, useWaivers } from "@/data/store";
+import { styleStyles, teacherName, useCostumes, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices, useWaivers } from "@/data/store";
 import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const { teachers } = useTeachers();
   const { invoices } = useInvoices();
   const { templates: waiverTemplates, signatures: waiverSignatures, hasOutstandingWaivers } = useWaivers();
+  const { studentsMissingMeasurements } = useCostumes();
 
   useEffect(() => {
     if (!hasCompletedSetup()) {
