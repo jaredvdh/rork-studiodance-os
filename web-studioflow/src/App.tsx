@@ -25,9 +25,10 @@ import Payments from "./pages/Payments";
 import Recitals from "./pages/Recitals";
 import Schedule from "./pages/Schedule";
 import Settings from "./pages/Settings";
+import Waivers from "./pages/Waivers";
 import Students from "./pages/Students";
 
-import { StudioProvider, EnrolmentsProvider, TeachersProvider, ClassesProvider, StudentsProvider, AnnouncementsProvider, InvoicesProvider } from "./data/store";
+import { StudioProvider, EnrolmentsProvider, TeachersProvider, ClassesProvider, StudentsProvider, AnnouncementsProvider, InvoicesProvider, WaiversProvider, DocumentsProvider } from "./data/store";
 import { MigrationProvider } from "./data/migrationStore";
 import { ParentProvider } from "./data/parentStore";
 
@@ -41,6 +42,7 @@ import ParentPayments from "./pages/parent/ParentPayments";
 import ParentRegister from "./pages/parent/ParentRegister";
 import ParentSchedule from "./pages/parent/ParentSchedule";
 import ParentWaivers from "./pages/parent/ParentWaivers";
+import ParentDocuments from "./pages/parent/ParentDocuments";
 
 const queryClient = new QueryClient();
 
@@ -52,11 +54,15 @@ const withShell = (Page: React.ComponentType) => (
           <TeachersProvider>
             <AnnouncementsProvider>
               <InvoicesProvider>
-                <MigrationProvider>
-                  <AppShell>
-                    <Page />
-                  </AppShell>
-                </MigrationProvider>
+                <WaiversProvider>
+                  <DocumentsProvider>
+                    <MigrationProvider>
+                      <AppShell>
+                        <Page />
+                      </AppShell>
+                    </MigrationProvider>
+                  </DocumentsProvider>
+                </WaiversProvider>
               </InvoicesProvider>
             </AnnouncementsProvider>
           </TeachersProvider>
@@ -74,11 +80,15 @@ const withParentShell = (Page: React.ComponentType) => (
           <TeachersProvider>
             <AnnouncementsProvider>
               <InvoicesProvider>
-                <ParentProvider>
-                  <ParentShell>
-                    <Page />
-                  </ParentShell>
-                </ParentProvider>
+                <WaiversProvider>
+                  <DocumentsProvider>
+                    <ParentProvider>
+                      <ParentShell>
+                        <Page />
+                      </ParentShell>
+                    </ParentProvider>
+                  </DocumentsProvider>
+                </WaiversProvider>
               </InvoicesProvider>
             </AnnouncementsProvider>
           </TeachersProvider>
@@ -118,6 +128,7 @@ const App = () => (
           <Route path="/recitals" element={<ProtectedRoute><ErrorBoundary>{withShell(Recitals)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructors" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(InstructorPay)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/waivers" element={<ProtectedRoute><ErrorBoundary>{withShell(Waivers)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><ErrorBoundary>{withShell(Settings)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/migration" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationWizard)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/migration-history" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationHistory)}</ErrorBoundary></ProtectedRoute>} />
@@ -136,6 +147,7 @@ const App = () => (
           <Route path="/parent/payments" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentPayments)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/announcements" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentAnnouncements)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/waivers" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentWaivers)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/documents" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentDocuments)}</ErrorBoundary></ProtectedRoute>} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

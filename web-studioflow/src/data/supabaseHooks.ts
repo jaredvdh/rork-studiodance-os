@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/studioStore";
-import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus } from "@/data/types";
+import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument } from "@/data/types";
 import {
   announcements as demoAnnouncements,
   classes as demoClasses,
@@ -11,7 +11,11 @@ import {
   parentAccounts as demoParents,
   studio as defaultStudio,
   invoices as demoInvoices,
+  waiverTemplates as demoWaiverTemplates,
+  waiverVersions as demoWaiverVersions,
+  waiverSignatures as demoWaiverSignatures,
   enrolments as demoEnrolments,
+  uploadedDocuments as demoUploadedDocuments,
 } from "@/data/demo";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
@@ -721,5 +725,303 @@ export function useSyncProfile() {
     },
     enabled: !!user,
     staleTime: 5 * 60_000,
+  });
+}
+
+/* ── Waiver Templates ─────────────────────────────────────────── */
+
+export function useSupabaseWaiverTemplates(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<WaiverTemplate>(
+    ["waiver_templates", studioId],
+    async () => {
+      const { data, error } = await supabase.from("waiver_templates").select("*").eq("studio_id", studioId).order("created_at", { ascending: false });
+      if (error || !data) return { data: null, error };
+      return {
+        data: (data as unknown as Record<string, unknown>[]).map((t) => ({
+          id: t.id as string, studioId: t.studio_id as string, title: t.title as string,
+          description: (t.description as string) ?? undefined,
+          type: (t.type as string) ?? "custom",
+          status: (t.status as string) ?? "draft",
+          currentVersionId: (t.current_version_id as string) ?? undefined,
+          required: (t.required as boolean) ?? false,
+          appliesTo: (t.applies_to as { scope: string; targetIds?: string[] }) ?? { scope: "all" },
+          renewalPeriod: (t.renewal_period as string) ?? "once",
+          createdAt: (t.created_at as string) ?? "",
+          updatedAt: (t.updated_at as string) ?? "",
+        })),
+        error: null,
+      };
+    },
+    demoWaiverTemplates,
+    isDemo,
+  );
+}
+
+export function useSupabaseWaiverVersions(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<WaiverVersion>(
+    ["waiver_versions", studioId],
+    async () => {
+      const { data, error } = await supabase.from("waiver_versions").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return {
+        data: (data as unknown as Record<string, unknown>[]).map((v) => ({
+          id: v.id as string, waiverTemplateId: v.waiver_template_id as string, studioId: v.studio_id as string,
+          versionNumber: (v.version_number as number) ?? 1,
+          bodyHtml: (v.body_html as string) ?? undefined,
+          bodyMarkdown: (v.body_markdown as string) ?? undefined,
+          publishedAt: (v.published_at as string) ?? undefined,
+          createdBy: (v.created_by as string) ?? undefined,
+          archivedAt: (v.archived_at as string) ?? undefined,
+          createdAt: (v.created_at as string) ?? "",
+        })),
+        error: null,
+      };
+    },
+    demoWaiverVersions,
+    isDemo,
+  );
+}
+
+export function useSupabaseWaiverSignatures(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<WaiverSignature>(
+    ["waiver_signatures", studioId],
+    async () => {
+      const { data, error } = await supabase.from("waiver_signatures").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return {
+        data: (data as unknown as Record<string, unknown>[]).map((ws) => ({
+          id: ws.id as string, studioId: ws.studio_id as string,
+          waiverTemplateId: ws.waiver_template_id as string,
+          waiverVersionId: ws.waiver_version_id as string,
+          studentId: (ws.student_id as string) ?? undefined,
+          caregiverId: (ws.caregiver_id as string) ?? undefined,
+          signerName: ws.signer_name as string,
+          signerRelationship: (ws.signer_relationship as string) ?? undefined,
+          signatureType: ((ws.signature_type as string) ?? "typed") as "typed" | "drawn",
+          signatureData: (ws.signature_data as string) ?? undefined,
+          guardianAuthorityConfirmed: (ws.guardian_authority_confirmed as boolean) ?? false,
+          eSignConsent: (ws.e_sign_consent as boolean) ?? false,
+          signedAt: ws.signed_at as string,
+          ipAddress: (ws.ip_address as string) ?? undefined,
+          userAgent: (ws.user_agent as string) ?? undefined,
+          status: ((ws.status as string) ?? "signed") as "signed" | "expired" | "revoked",
+          pdfUrl: (ws.pdf_url as string) ?? undefined,
+          metadata: (ws.metadata as Record<string, unknown>) ?? undefined,
+        })),
+        error: null,
+      };
+    },
+    demoWaiverSignatures,
+    isDemo,
+  );
+}
+
+export function useSupabaseUploadedDocuments(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<UploadedDocument>(
+    ["uploaded_documents", studioId],
+    async () => {
+      const { data, error } = await supabase.from("uploaded_documents").select("*").eq("studio_id", studioId).order("uploaded_at", { ascending: false });
+      if (error || !data) return { data: null, error };
+      return {
+        data: (data as unknown as Record<string, unknown>[]).map((d) => ({
+          id: d.id as string, studioId: d.studio_id as string,
+          familyId: (d.family_id as string) ?? undefined,
+          studentId: (d.student_id as string) ?? undefined,
+          classId: (d.class_id as string) ?? undefined,
+          eventId: (d.event_id as string) ?? undefined,
+          documentType: ((d.document_type as string) ?? "custom") as UploadedDocument["documentType"],
+          title: d.title as string,
+          fileUrl: (d.file_url as string) ?? undefined,
+          fileName: (d.file_name as string) ?? undefined,
+          mimeType: (d.mime_type as string) ?? undefined,
+          fileSizeBytes: (d.file_size_bytes as number) ?? undefined,
+          uploadedBy: (d.uploaded_by as string) ?? undefined,
+          uploadedAt: d.uploaded_at as string,
+          verifiedBy: (d.verified_by as string) ?? undefined,
+          verifiedAt: (d.verified_at as string) ?? undefined,
+          verificationStatus: ((d.verification_status as string) ?? "unverified") as UploadedDocument["verificationStatus"],
+          expiryDate: (d.expiry_date as string) ?? undefined,
+          notes: (d.notes as string) ?? undefined,
+          visibility: ((d.visibility as string) ?? "caregiver_visible") as UploadedDocument["visibility"],
+          createdAt: (d.created_at as string) ?? "",
+          updatedAt: (d.updated_at as string) ?? "",
+        })),
+        error: null,
+      };
+    },
+    demoUploadedDocuments,
+    isDemo,
+  );
+}
+
+/* ── Waiver Template Mutations ────────────────────────────────── */
+
+export function useAddWaiverTemplate() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (t: Omit<WaiverTemplate, "id" | "studioId" | "createdAt" | "updatedAt">) => {
+      const { data, error } = await supabase.from("waiver_templates").insert({
+        studio_id: studioId, title: t.title, description: t.description,
+        type: t.type, status: t.status, required: t.required,
+        applies_to: t.appliesTo as Record<string, unknown>,
+        renewal_period: t.renewalPeriod,
+      }).select().single();
+      if (error) throw error;
+      return { ...t, id: data.id, studioId };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["waiver_templates"] }),
+  });
+}
+
+export function useUpdateWaiverTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<WaiverTemplate> }) => {
+      const updates: Record<string, unknown> = {};
+      if (patch.title !== undefined) updates.title = patch.title;
+      if (patch.description !== undefined) updates.description = patch.description;
+      if (patch.type !== undefined) updates.type = patch.type;
+      if (patch.status !== undefined) updates.status = patch.status;
+      if (patch.required !== undefined) updates.required = patch.required;
+      if (patch.appliesTo !== undefined) updates.applies_to = patch.appliesTo as Record<string, unknown>;
+      if (patch.renewalPeriod !== undefined) updates.renewal_period = patch.renewalPeriod;
+      if (patch.currentVersionId !== undefined) updates.current_version_id = patch.currentVersionId;
+      const { error } = await supabase.from("waiver_templates").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["waiver_templates"] }),
+  });
+}
+
+export function useCreateWaiverVersion() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async ({ templateId, bodyMarkdown, publish }: {
+      templateId: string; bodyMarkdown?: string; publish?: boolean;
+    }) => {
+      const { data: versions } = await supabase
+        .from("waiver_versions")
+        .select("version_number")
+        .eq("waiver_template_id", templateId)
+        .order("version_number", { ascending: false })
+        .limit(1);
+      const nextVersion = ((versions?.[0] as Record<string, unknown> | undefined)?.version_number as number ?? 0) + 1;
+
+      const { data, error } = await supabase.from("waiver_versions").insert({
+        waiver_template_id: templateId,
+        studio_id: studioId,
+        version_number: nextVersion,
+        body_markdown: bodyMarkdown,
+        published_at: publish ? new Date().toISOString() : null,
+      }).select().single();
+      if (error) throw error;
+
+      if (publish) {
+        await supabase.from("waiver_templates").update({
+          current_version_id: (data as Record<string, unknown>).id as string,
+          status: "published",
+        }).eq("id", templateId);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["waiver_templates"] });
+      queryClient.invalidateQueries({ queryKey: ["waiver_versions"] });
+    },
+  });
+}
+
+/* ── Waiver Signature Mutations ────────────────────────────────── */
+
+export function useSignWaiver() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (sig: {
+      waiverTemplateId: string;
+      waiverVersionId: string;
+      studentId?: string;
+      caregiverId?: string;
+      signerName: string;
+      signerRelationship?: string;
+      guardianAuthorityConfirmed: boolean;
+      eSignConsent: boolean;
+    }) => {
+      const { data, error } = await supabase.from("waiver_signatures").insert({
+        studio_id: studioId,
+        waiver_template_id: sig.waiverTemplateId,
+        waiver_version_id: sig.waiverVersionId,
+        student_id: sig.studentId,
+        caregiver_id: sig.caregiverId,
+        signer_name: sig.signerName,
+        signer_relationship: sig.signerRelationship,
+        signature_type: "typed",
+        guardian_authority_confirmed: sig.guardianAuthorityConfirmed,
+        e_sign_consent: sig.eSignConsent,
+        signed_at: new Date().toISOString(),
+        status: "signed",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["waiver_signatures"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+    },
+  });
+}
+
+/* ── Uploaded Document Mutations ──────────────────────────────── */
+
+export function useAddUploadedDocument() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (doc: Omit<UploadedDocument, "id" | "studioId" | "uploadedAt" | "createdAt" | "updatedAt">) => {
+      const { data, error } = await supabase.from("uploaded_documents").insert({
+        studio_id: studioId,
+        family_id: doc.familyId,
+        student_id: doc.studentId,
+        class_id: doc.classId,
+        event_id: doc.eventId,
+        document_type: doc.documentType,
+        title: doc.title,
+        file_url: doc.fileUrl,
+        file_name: doc.fileName,
+        mime_type: doc.mimeType,
+        file_size_bytes: doc.fileSizeBytes,
+        uploaded_by: doc.uploadedBy,
+        uploaded_at: new Date().toISOString(),
+        verification_status: doc.verificationStatus,
+        expiry_date: doc.expiryDate,
+        notes: doc.notes,
+        visibility: doc.visibility,
+      }).select().single();
+      if (error) throw error;
+      return { ...doc, id: data.id, studioId };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["uploaded_documents"] }),
+  });
+}
+
+export function useVerifyDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status, verifiedBy }: { id: string; status: "verified" | "rejected"; verifiedBy?: string }) => {
+      const { error } = await supabase.from("uploaded_documents").update({
+        verification_status: status,
+        verified_by: verifiedBy,
+        verified_at: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["uploaded_documents"] }),
   });
 }

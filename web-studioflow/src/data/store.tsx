@@ -569,3 +569,191 @@ export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
   Lyrical: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Acro: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
 };
+
+/* ── Shared waivers state (templates + signatures) ───────────────────── */
+
+interface WaiversCtx {
+  templates: import("./types").WaiverTemplate[];
+  versions: import("./types").WaiverVersion[];
+  signatures: import("./types").WaiverSignature[];
+  addTemplate: (t: Omit<import("./types").WaiverTemplate, "id" | "studioId" | "createdAt" | "updatedAt">) => void;
+  updateTemplate: (id: string, patch: Partial<import("./types").WaiverTemplate>) => void;
+  /** Create a new version for a template and optionally publish it. */
+  createVersion: (templateId: string, bodyMarkdown: string, publish?: boolean) => void;
+  /** Sign a waiver for a student/caregiver. */
+  signWaiver: (sig: {
+    waiverTemplateId: string;
+    waiverVersionId: string;
+    studentId?: string;
+    caregiverId?: string;
+    signerName: string;
+    signerRelationship?: string;
+    guardianAuthorityConfirmed: boolean;
+  }) => void;
+  /** Get signatures for a specific student. */
+  signaturesForStudent: (studentId: string) => import("./types").WaiverSignature[];
+  /** Check if a student has outstanding required waivers. */
+  hasOutstandingWaivers: (studentId: string) => boolean;
+}
+
+const WaiversContext = createContext<WaiversCtx | null>(null);
+
+export function WaiversProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseTemplates = [] } = useSupabaseWaiverTemplates(isDemo);
+  const { data: supabaseVersions = [] } = useSupabaseWaiverVersions(isDemo);
+  const { data: supabaseSignatures = [] } = useSupabaseWaiverSignatures(isDemo);
+  const [templates, setTemplates] = useState<import("./types").WaiverTemplate[]>([]);
+  const [versions, setVersions] = useState<import("./types").WaiverVersion[]>([]);
+  const [signatures, setSignatures] = useState<import("./types").WaiverSignature[]>([]);
+  const queryClient = useQueryClient();
+
+  useEffect(() => { setTemplates(supabaseTemplates); }, [supabaseTemplates]);
+  useEffect(() => { setVersions(supabaseVersions); }, [supabaseVersions]);
+  useEffect(() => { setSignatures(supabaseSignatures); }, [supabaseSignatures]);
+
+  const addTemplateMut = useAddWaiverTemplate();
+  const updateTemplateMut = useUpdateWaiverTemplate();
+  const createVersionMut = useCreateWaiverVersion();
+  const signWaiverMut = useSignWaiver();
+
+  const addTemplate = useCallback((t: Omit<import("./types").WaiverTemplate, "id" | "studioId" | "createdAt" | "updatedAt">) => {
+    const tempId = `wtmp_${Date.now()}`;
+    const optimistic = { ...t, id: tempId, studioId: "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    setTemplates((prev) => [optimistic, ...prev]);
+    addTemplateMut.mutate(t, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["waiver_templates"] }),
+      onError: () => setTemplates((prev) => prev.filter((x) => x.id !== tempId)),
+    });
+  }, [addTemplateMut, queryClient]);
+
+  const updateTemplate = useCallback((id: string, patch: Partial<import("./types").WaiverTemplate>) => {
+    setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch, updatedAt: new Date().toISOString() } : t)));
+    updateTemplateMut.mutate({ id, patch }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["waiver_templates"] }),
+    });
+  }, [updateTemplateMut, queryClient]);
+
+  const createVersion = useCallback((templateId: string, bodyMarkdown: string, publish?: boolean) => {
+    createVersionMut.mutate({ templateId, bodyMarkdown, publish }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["waiver_versions"] });
+        queryClient.invalidateQueries({ queryKey: ["waiver_templates"] });
+      },
+    });
+  }, [createVersionMut, queryClient]);
+
+  const signWaiver = useCallback((sig: {
+    waiverTemplateId: string; waiverVersionId: string; studentId?: string;
+    caregiverId?: string; signerName: string; signerRelationship?: string;
+    guardianAuthorityConfirmed: boolean;
+  }) => {
+    const optimisticId = `ws_${Date.now()}`;
+    const now = new Date().toISOString();
+    const optimistic: import("./types").WaiverSignature = {
+      id: optimisticId, studioId: "", waiverTemplateId: sig.waiverTemplateId,
+      waiverVersionId: sig.waiverVersionId, studentId: sig.studentId,
+      caregiverId: sig.caregiverId, signerName: sig.signerName,
+      signerRelationship: sig.signerRelationship, signatureType: "typed",
+      guardianAuthorityConfirmed: sig.guardianAuthorityConfirmed,
+      eSignConsent: true, signedAt: now, status: "signed",
+    };
+    setSignatures((prev) => [optimistic, ...prev]);
+    signWaiverMut.mutate({ ...sig, eSignConsent: true }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["waiver_signatures"] });
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+      },
+      onError: () => setSignatures((prev) => prev.filter((x) => x.id !== optimisticId)),
+    });
+  }, [signWaiverMut, queryClient]);
+
+  const signaturesForStudent = useCallback((studentId: string) =>
+    signatures.filter((s) => s.studentId === studentId && s.status === "signed"), [signatures]);
+
+  const hasOutstandingWaivers = useCallback((studentId: string) => {
+    const required = templates.filter((t) => t.status === "published" && t.required);
+    return required.some((t) => !signatures.some(
+      (s) => s.waiverTemplateId === t.id && s.studentId === studentId && s.status === "signed"
+    ));
+  }, [templates, signatures]);
+
+  const ctx = useMemo((): WaiversCtx => ({
+    templates, versions, signatures,
+    addTemplate, updateTemplate, createVersion, signWaiver,
+    signaturesForStudent, hasOutstandingWaivers,
+  }), [templates, versions, signatures, addTemplate, updateTemplate, createVersion, signWaiver, signaturesForStudent, hasOutstandingWaivers]);
+
+  return <WaiversContext.Provider value={ctx}>{children}</WaiversContext.Provider>;
+}
+
+export function useWaivers() {
+  const ctx = useContext(WaiversContext);
+  if (!ctx) throw new Error("useWaivers must be used within WaiversProvider");
+  return ctx;
+}
+
+/* ── Shared uploaded documents state ──────────────────────────────────── */
+
+interface DocumentsCtx {
+  documents: import("./types").UploadedDocument[];
+  addDocument: (doc: Omit<import("./types").UploadedDocument, "id" | "studioId" | "uploadedAt" | "createdAt" | "updatedAt">) => void;
+  verifyDocument: (id: string, status: "verified" | "rejected", verifiedBy?: string) => void;
+  documentsForStudent: (studentId: string) => import("./types").UploadedDocument[];
+  expiringDocuments: () => import("./types").UploadedDocument[];
+}
+
+const DocumentsContext = createContext<DocumentsCtx | null>(null);
+
+export function DocumentsProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseDocs = [] } = useSupabaseUploadedDocuments(isDemo);
+  const [docs, setDocs] = useState<import("./types").UploadedDocument[]>([]);
+  const queryClient = useQueryClient();
+
+  useEffect(() => { setDocs(supabaseDocs); }, [supabaseDocs]);
+
+  const addDocMut = useAddUploadedDocument();
+  const verifyMut = useVerifyDocument();
+
+  const addDocument = useCallback((doc: Omit<import("./types").UploadedDocument, "id" | "studioId" | "uploadedAt" | "createdAt" | "updatedAt">) => {
+    const tempId = `udd_${Date.now()}`;
+    const now = new Date().toISOString();
+    const optimistic = { ...doc, id: tempId, studioId: "", uploadedAt: now, createdAt: now, updatedAt: now };
+    setDocs((prev) => [optimistic, ...prev]);
+    addDocMut.mutate(doc, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["uploaded_documents"] }),
+      onError: () => setDocs((prev) => prev.filter((x) => x.id !== tempId)),
+    });
+  }, [addDocMut, queryClient]);
+
+  const verifyDocument = useCallback((id: string, status: "verified" | "rejected", verifiedBy?: string) => {
+    setDocs((prev) => prev.map((d) => d.id === id ? { ...d, verificationStatus: status, verifiedBy, verifiedAt: new Date().toISOString() } : d));
+    verifyMut.mutate({ id, status, verifiedBy }, {
+      onError: () => queryClient.invalidateQueries({ queryKey: ["uploaded_documents"] }),
+    });
+  }, [verifyMut, queryClient]);
+
+  const documentsForStudent = useCallback((studentId: string) =>
+    docs.filter((d) => d.studentId === studentId), [docs]);
+
+  const expiringDocuments = useCallback(() => {
+    const thirtyDays = new Date();
+    thirtyDays.setDate(thirtyDays.getDate() + 30);
+    return docs.filter((d) => d.expiryDate && new Date(d.expiryDate) < thirtyDays);
+  }, [docs]);
+
+  const ctx = useMemo((): DocumentsCtx => ({
+    documents: docs, addDocument, verifyDocument, documentsForStudent, expiringDocuments,
+  }), [docs, addDocument, verifyDocument, documentsForStudent, expiringDocuments]);
+
+  return <DocumentsContext.Provider value={ctx}>{children}</DocumentsContext.Provider>;
+}
+
+export function useDocuments() {
+  const ctx = useContext(DocumentsContext);
+  if (!ctx) throw new Error("useDocuments must be used within DocumentsProvider");
+  return ctx;
+}

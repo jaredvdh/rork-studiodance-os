@@ -15,7 +15,7 @@ import {
 import RevenueChart from "@/components/charts/RevenueChart";
 import StatCard from "@/components/StatCard";
 import { SetupWizard } from "@/components/SetupWizard";
-import { styleStyles, teacherName, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices } from "@/data/store";
+import { styleStyles, teacherName, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices, useWaivers } from "@/data/store";
 import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,7 @@ export default function Dashboard() {
   const { students } = useStudents();
   const { teachers } = useTeachers();
   const { invoices } = useInvoices();
+  const { templates: waiverTemplates, signatures: waiverSignatures, hasOutstandingWaivers } = useWaivers();
 
   useEffect(() => {
     if (!hasCompletedSetup()) {
@@ -59,6 +60,15 @@ export default function Dashboard() {
   const capacityPct = Math.round((totalEnrolled / totalCapacity) * 100);
   const avgAttendance = Math.round((students.reduce((a, s) => a + s.attendanceRate, 0) / students.length) * 100);
   const waiverDone = Math.round((students.filter((s) => s.waiver === "signed").length / students.length) * 100);
+
+  // Waiver compliance from the waiver system (source of truth)
+  const publishedRequired = waiverTemplates.filter((t) => t.status === "published" && t.required);
+  const studentsWithMissingWaivers = students.filter((s) =>
+    publishedRequired.some((t) =>
+      !waiverSignatures.some((sig) => sig.waiverTemplateId === t.id && sig.studentId === s.id && sig.status === "signed")
+    )
+  ).length;
+  const wCompliancePct = students.length > 0 ? Math.round(((students.length - studentsWithMissingWaivers) / students.length) * 100) : 100;
 
   // Revenue — estimate from enrolment × price
   const monthRevenue = classes.reduce((a, c) => a + c.enrolled * c.priceCents, 0);
@@ -103,6 +113,25 @@ export default function Dashboard() {
         <StatCard index={2} label="Class capacity" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
         <StatCard index={3} label="Avg. attendance" value={`${avgAttendance}%`} delta={-2} hint="last 30 days" icon={CalendarClock} accent="plum" />
       </div>
+
+      {/* ── Waiver compliance & alerts ───────────────────────────── */}
+      {studentsWithMissingWaivers > 0 && (
+        <Link
+          to="/waivers"
+          className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-soft animate-float-up hover:bg-amber-100/50 transition"
+        >
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-600">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Waiver compliance alert</p>
+            <p className="text-sm text-muted-foreground">
+              {studentsWithMissingWaivers} {term.participant.toLowerCase()}{studentsWithMissingWaivers !== 1 ? "s" : ""} {studentsWithMissingWaivers !== 1 ? "have" : "has"} missing required waivers — {wCompliancePct}% compliance
+            </p>
+          </div>
+          <ArrowUpRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+      )}
 
       {/* ── Today's classes — operational command centre ───────────── */}
       <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">

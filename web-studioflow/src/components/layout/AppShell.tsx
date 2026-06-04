@@ -46,7 +46,7 @@ import type { VerticalTerminology } from "@/data/terminology";
 import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 
-type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "instructors" | "instructorPay" | "announcements" | "payments" | "migration";
+type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "instructors" | "instructorPay" | "announcements" | "payments" | "waivers" | "migration";
 
 interface NavItem {
   to: string;
@@ -64,6 +64,7 @@ const navItems: NavItem[] = [
   { to: "/instructor-pay", key: "instructorPay", icon: DollarSign },
   { to: "/announcements", key: "announcements", icon: Megaphone },
   { to: "/payments", key: "payments", icon: CreditCard },
+  { to: "/waivers", key: "waivers", icon: FileSignature },
   { to: "/migration", key: "migration", icon: Upload },
 ];
 
@@ -78,6 +79,7 @@ function navLabel(key: NavKey, term: VerticalTerminology): string {
     case "instructorPay": return `${term.instructor} Pay`;
     case "announcements": return "Announcements";
     case "payments": return "Payments";
+    case "waivers": return "Waivers & Docs";
     case "migration": return "Migration Assistant";
   }
 }

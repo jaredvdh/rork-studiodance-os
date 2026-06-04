@@ -410,3 +410,150 @@ export interface RecitalEvent {
   performances: RecitalPerformance[];
   costumeDeadline?: string; // ISO
 }
+
+/* ── Waiver & Document Compliance Types ──────────────────────────── */
+
+export type WaiverTemplateType =
+  | "liability"
+  | "medical_consent"
+  | "photo_video"
+  | "code_of_conduct"
+  | "privacy_data"
+  | "payment_auth"
+  | "travel_consent"
+  | "event_release"
+  | "custom";
+
+export const WAIVER_TYPE_LABELS: Record<WaiverTemplateType, string> = {
+  liability: "Liability Waiver",
+  medical_consent: "Emergency Medical Consent",
+  photo_video: "Photo/Video Consent",
+  code_of_conduct: "Code of Conduct",
+  privacy_data: "Privacy/Data Consent",
+  payment_auth: "Payment Authorization",
+  travel_consent: "Travel Consent",
+  event_release: "Event/Competition Release",
+  custom: "Custom Form",
+};
+
+export type TemplateStatus = "draft" | "published" | "archived";
+export type RenewalPeriod = "once" | "annual" | "per_season" | "per_event";
+
+export interface WaiverTemplate {
+  id: string;
+  studioId: string;
+  title: string;
+  description?: string;
+  type: WaiverTemplateType;
+  status: TemplateStatus;
+  currentVersionId?: string;
+  required: boolean;
+  appliesTo: {
+    scope: "all" | "class" | "age_group" | "program" | "event";
+    targetIds?: string[];
+  };
+  renewalPeriod: RenewalPeriod;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaiverVersion {
+  id: string;
+  waiverTemplateId: string;
+  studioId: string;
+  versionNumber: number;
+  bodyHtml?: string;
+  bodyMarkdown?: string;
+  publishedAt?: string;
+  createdBy?: string;
+  archivedAt?: string;
+  createdAt: string;
+}
+
+export type SignatureType = "typed" | "drawn";
+export type SignatureStatus = "signed" | "expired" | "revoked";
+
+export interface WaiverSignature {
+  id: string;
+  studioId: string;
+  waiverTemplateId: string;
+  waiverVersionId: string;
+  studentId?: string;
+  caregiverId?: string;
+  signerName: string;
+  signerRelationship?: string;
+  signatureType: SignatureType;
+  signatureData?: string;
+  guardianAuthorityConfirmed: boolean;
+  eSignConsent: boolean;
+  signedAt: string;
+  ipAddress?: string;
+  userAgent?: string;
+  status: SignatureStatus;
+  pdfUrl?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type DocumentType =
+  | "scanned_waiver"
+  | "signed_pdf"
+  | "medical_plan"
+  | "allergy_plan"
+  | "custody_court"
+  | "travel_consent"
+  | "competition_release"
+  | "insurance"
+  | "custom";
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  scanned_waiver: "Scanned Paper Waiver",
+  signed_pdf: "Signed PDF",
+  medical_plan: "Medical Plan",
+  allergy_plan: "Allergy/Anaphylaxis Plan",
+  custody_court: "Custody/Court Document",
+  travel_consent: "Travel Consent",
+  competition_release: "Competition Release",
+  insurance: "Insurance Document",
+  custom: "Custom Document",
+};
+
+export type VerificationStatus = "unverified" | "verified" | "rejected";
+export type DocumentVisibility = "admin_only" | "caregiver_visible" | "staff_visible";
+
+export interface UploadedDocument {
+  id: string;
+  studioId: string;
+  familyId?: string;
+  studentId?: string;
+  classId?: string;
+  eventId?: string;
+  documentType: DocumentType;
+  title: string;
+  fileUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  uploadedBy?: string;
+  uploadedAt: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  verificationStatus: VerificationStatus;
+  expiryDate?: string;
+  notes?: string;
+  visibility: DocumentVisibility;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Computed waiver compliance status for a student. */
+export interface WaiverCompliance {
+  studentId: string;
+  outstandingCount: number;
+  signedCount: number;
+  expiredCount: number;
+  templates: {
+    template: WaiverTemplate;
+    signature?: WaiverSignature;
+    status: "pending" | "signed" | "expired" | "not_required";
+  }[];
+}

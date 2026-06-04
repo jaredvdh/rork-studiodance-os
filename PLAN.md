@@ -264,3 +264,86 @@ Moved from array/counter-based enrolment tracking to a normalized production-saf
 - [x] Full classes trigger waitlist status
 - [x] Invoices can reference `enrolment_id`
 - [x] Build passes cleanly
+
+---
+
+# StudioFlow — Waiver & Document Compliance System ✅
+
+Complete waiver, release, and document compliance system supporting digital signing, external document uploads, template versioning, and full portal integration.
+
+---
+
+## Database
+
+- [x] `waiver_templates` table — studio-defined form templates with type, status (draft/published/archived), renewal period, applies-to targeting
+- [x] `waiver_versions` table — versioned body content, published timestamps, archival support
+- [x] `waiver_signatures` table — immutable signed records with typed name, guardian authority confirmation, e-sign consent, IP/user-agent logging
+- [x] `uploaded_documents` table — external scanned/paper documents with verification status, expiry tracking, visibility controls
+- [x] RLS policies for all four tables (studio-scoped)
+- [x] Unique partial index: one active signed record per student per template
+- [x] Delete prevention trigger: signed waiver records cannot be deleted (must use revoke)
+- [x] Storage bucket documentation for waiver-documents, uploaded-family-documents, medical-documents
+- [x] Helper function: `student_has_outstanding_waivers()` for compliance checks
+
+## Frontend Types & Data
+
+- [x] `WaiverTemplate`, `WaiverVersion`, `WaiverSignature`, `UploadedDocument` types in `types.ts`
+- [x] `WaiverCompliance` computed type for per-student compliance status
+- [x] `WAIVER_TYPE_LABELS`, `DOCUMENT_TYPE_LABELS` lookup maps
+- [x] Demo data: 6 waiver templates (5 published, 1 draft), 7 versions, ~118 signatures, 3 uploaded documents
+
+## Supabase Hooks
+
+- [x] Query hooks: `useSupabaseWaiverTemplates`, `useSupabaseWaiverVersions`, `useSupabaseWaiverSignatures`, `useSupabaseUploadedDocuments`
+- [x] Mutation hooks: `useAddWaiverTemplate`, `useUpdateWaiverTemplate`, `useCreateWaiverVersion`, `useSignWaiver`, `useAddUploadedDocument`, `useVerifyDocument`
+- [x] Demo fallback pattern: demo data only for `isDemo` sessions; real studios get empty arrays
+
+## Shared Providers
+
+- [x] `WaiversProvider` — hydrates from Supabase, exposes templates/versions/signatures, add/update template, create version, sign waiver
+- [x] `DocumentsProvider` — hydrates from Supabase, exposes uploaded documents, add/verify document, student/doc filtering
+- [x] Both providers nested in `App.tsx` within `withShell` and `withParentShell` chains
+
+## Admin Portal — Waiver Templates
+
+- [x] `/waivers` admin page with template list, compliance summary cards (published count, signatures, compliance rate, missing)
+- [x] Create/edit template modal (title, description, type dropdown, required toggle)
+- [x] Version editor modal with Markdown body, publish button, "new version" warning for published templates
+- [x] Expand/collapse template cards showing full body content, version info, signature counts
+- [x] Archive/restore actions per template
+- [x] Dashboard waiver compliance alert card — links to /waivers when students have missing required waivers
+
+## Parent Portal — Digital Signing
+
+- [x] `/parent/waivers` rebuilt with real digital signing flow
+- [x] Multi-step signing wizard: View → Sign → Review → Done
+- [x] Step 1: Full waiver text display with "I have read and understood" button
+- [x] Step 2: Typed legal name, relationship to participant, e-sign consent checkbox, guardian authority confirmation checkbox
+- [x] Step 3: Review summary (document, student, signer, consent confirmations)
+- [x] Step 4: Success confirmation with "Digitally signed in StudioFlow" label
+- [x] Progress indicator (4-step visual bar)
+- [x] Student-by-student signing per form (shows Sign now / Signed / Coming soon)
+- [x] Signed documents history section with per-student breakdown
+- [x] Studio disclaimer
+
+## Parent Portal — Documents Tab
+
+- [x] `/parent/documents` page with tabbed interface (All / Signed waivers / Uploaded)
+- [x] Clear source labelling: "Digitally signed in StudioFlow" vs "Uploaded external document"
+- [x] Verification status badges: "Verified by staff", "Rejected", "Uploaded external document"
+- [x] Empty states per tab
+- [x] Legal disclaimer explaining the difference between digital and external documents
+
+## Integration
+
+- [x] Dashboard shows waiver compliance alert when students have missing required waivers
+- [x] AppShell nav includes "Waivers & Docs" item with FileSignature icon
+- [x] `WaiversProvider` + `DocumentsProvider` available in both admin and parent shell contexts
+- [x] All hooks, providers, and pages use consistent terminology
+
+## Build
+
+- [x] TypeScript compilation passes
+- [x] No React hook violations
+- [x] All providers in correct nesting order
+- [x] Build passes cleanly

@@ -12,6 +12,10 @@ import type {
   Student,
   Studio,
   Teacher,
+  WaiverTemplate,
+  WaiverVersion,
+  WaiverSignature,
+  UploadedDocument,
 } from "./types";
 import { SAFE_SECONDARY_DEFAULTS } from "./types";
 
@@ -303,3 +307,199 @@ function daysAhead(n: number): string {
   d.setDate(d.getDate() + n);
   return d.toISOString();
 }
+
+/* ── Waiver Templates ──────────────────────────────────────────── */
+
+export const waiverTemplates: WaiverTemplate[] = [
+  {
+    id: "wt_liability",
+    studioId: studio.id,
+    title: "General Liability Waiver",
+    description: "Standard liability release for dance class participation and studio premises. Covers physical activity risks, equipment use, and general conduct.",
+    type: "liability",
+    status: "published",
+    currentVersionId: "wv_liability_v1",
+    required: true,
+    appliesTo: { scope: "all" },
+    renewalPeriod: "once",
+    createdAt: daysAgo(120),
+    updatedAt: daysAgo(14),
+  },
+  {
+    id: "wt_medical",
+    studioId: studio.id,
+    title: "Emergency Medical Consent",
+    description: "Authorizes the studio to seek emergency medical treatment for the participant if a parent/guardian cannot be reached immediately.",
+    type: "medical_consent",
+    status: "published",
+    currentVersionId: "wv_medical_v2",
+    required: true,
+    appliesTo: { scope: "all" },
+    renewalPeriod: "annual",
+    createdAt: daysAgo(110),
+    updatedAt: daysAgo(7),
+  },
+  {
+    id: "wt_photo",
+    studioId: studio.id,
+    title: "Media & Photo Release",
+    description: "Permission for the studio to use photos and videos of the participant for promotional purposes, social media, and website content.",
+    type: "photo_video",
+    status: "published",
+    currentVersionId: "wv_photo_v1",
+    required: false,
+    appliesTo: { scope: "all" },
+    renewalPeriod: "once",
+    createdAt: daysAgo(100),
+    updatedAt: daysAgo(30),
+  },
+  {
+    id: "wt_conduct",
+    studioId: studio.id,
+    title: "Code of Conduct",
+    description: "Studio behaviour expectations for participants and families, including attendance policies, dress code, and respectful conduct guidelines.",
+    type: "code_of_conduct",
+    status: "published",
+    currentVersionId: "wv_conduct_v1",
+    required: true,
+    appliesTo: { scope: "all" },
+    renewalPeriod: "once",
+    createdAt: daysAgo(95),
+    updatedAt: daysAgo(45),
+  },
+  {
+    id: "wt_privacy",
+    studioId: studio.id,
+    title: "Privacy & Data Consent",
+    description: "Consent for collection and use of personal data including contact information, attendance records, and payment history in accordance with our privacy policy.",
+    type: "privacy_data",
+    status: "published",
+    currentVersionId: "wv_privacy_v1",
+    required: true,
+    appliesTo: { scope: "all" },
+    renewalPeriod: "once",
+    createdAt: daysAgo(90),
+    updatedAt: daysAgo(30),
+  },
+  {
+    id: "wt_recital",
+    studioId: studio.id,
+    title: "Recital Participation Agreement",
+    description: "Terms for recital participation including costume purchase/costs, mandatory rehearsals, and performance expectations.",
+    type: "event_release",
+    status: "draft",
+    required: false,
+    appliesTo: { scope: "event", targetIds: ["r1"] },
+    renewalPeriod: "per_event",
+    createdAt: daysAgo(20),
+    updatedAt: daysAgo(2),
+  },
+];
+
+/* ── Waiver Versions ──────────────────────────────────────────── */
+
+export const waiverVersions: WaiverVersion[] = [
+  { id: "wv_liability_v1", waiverTemplateId: "wt_liability", studioId: studio.id, versionNumber: 1, bodyMarkdown: `# Aurora Dance Academy — General Liability Waiver\n\n## Assumption of Risk\n\nI understand and acknowledge that participation in dance classes, rehearsals, performances, and related activities at Aurora Dance Academy ("the Studio") involves inherent risks, including but not limited to physical injury, illness, and property damage.\n\nI voluntarily assume all risks associated with participation in Studio activities.\n\n## Release of Liability\n\nI hereby release, waive, and discharge Aurora Dance Academy, its owners, employees, instructors, and volunteers from any and all liability, claims, demands, or causes of action arising from or related to participation in Studio activities.\n\n## Medical Authorization\n\nIn the event of an emergency, I authorize the Studio to obtain medical treatment for the participant named below. I understand the Studio will make reasonable efforts to contact me before taking action.\n\n## Agreement\n\nI have read this waiver and understand its contents. I sign this document voluntarily and with full knowledge of its significance.`, publishedAt: daysAgo(100), createdBy: undefined, createdAt: daysAgo(100) },
+  { id: "wv_medical_v1", waiverTemplateId: "wt_medical", studioId: studio.id, versionNumber: 1, bodyMarkdown: `# Emergency Medical Treatment Consent\n\nI hereby authorize Aurora Dance Academy staff to consent to any x-ray examination, anesthetic, medical, dental, or surgical diagnosis or treatment, and hospital care deemed necessary by a licensed physician, dentist, or surgeon.\n\nThis authorization is effective when I cannot be reached immediately by phone.\n\nI agree to assume all financial responsibility for any medical treatment provided.`, publishedAt: daysAgo(90), createdBy: undefined, createdAt: daysAgo(90), archivedAt: daysAgo(7) },
+  { id: "wv_medical_v2", waiverTemplateId: "wt_medical", studioId: studio.id, versionNumber: 2, bodyMarkdown: `# Emergency Medical Treatment Consent (v2)\n\nI hereby authorize Aurora Dance Academy staff to consent to any x-ray examination, anesthetic, medical, dental, or surgical diagnosis or treatment, and hospital care deemed necessary by a licensed physician, dentist, or surgeon.\n\nThis authorization is effective when I cannot be reached immediately by phone. The Studio will attempt to contact all emergency contacts on file before authorizing non-urgent treatment.\n\n## Insurance Information\n\nI understand that the Studio does not carry medical insurance for participants. I agree to assume all financial responsibility for any medical treatment provided and represent that the participant is covered by personal/family health insurance.\n\n## Medication Administration\n\nIf the participant requires medication during Studio activities, I will provide written instructions and the medication in its original container.`, publishedAt: daysAgo(7), createdBy: undefined, createdAt: daysAgo(7) },
+  { id: "wv_photo_v1", waiverTemplateId: "wt_photo", studioId: studio.id, versionNumber: 1, bodyMarkdown: `# Media & Photo Release\n\nI grant Aurora Dance Academy permission to use photographs, video recordings, and/or audio recordings of the participant taken during Studio activities for promotional purposes including:\n\n- Studio website and social media accounts\n- Printed marketing materials and brochures\n- Local news and community publications\n- Studio recital programs and materials\n\nI understand that participants will not be identified by full name in public-facing materials without separate written consent.\n\n## Opt-out\n\nI may revoke this consent in writing at any time. Revocation will apply to future use only and will not affect materials already published.`, publishedAt: daysAgo(80), createdBy: undefined, createdAt: daysAgo(80) },
+  { id: "wv_conduct_v1", waiverTemplateId: "wt_conduct", studioId: studio.id, versionNumber: 1, bodyMarkdown: `# Aurora Dance Academy — Code of Conduct\n\n## Participant Expectations\n\n- Arrive on time for all classes and rehearsals\n- Wear appropriate dance attire and footwear as specified by instructors\n- Treat instructors, staff, and fellow participants with respect at all times\n- No food, gum, or drinks (except water) in the studio spaces\n- No phones or electronic devices during class time\n\n## Parent/Guardian Expectations\n\n- Communicate absences to the Studio in advance when possible\n- Pick up participants promptly after classes conclude\n- Address concerns directly with instructors or studio management\n- Keep contact and medical information current in the parent portal\n\n## Attendance Policy\n\nRegular attendance is essential for participant progress and group cohesion. Excessive unexcused absences may affect recital participation eligibility.\n\n## Agreement\n\nI have read, understand, and agree to abide by the Aurora Dance Academy Code of Conduct. I understand that violations may result in disciplinary action including dismissal from the program.`, publishedAt: daysAgo(75), createdBy: undefined, createdAt: daysAgo(75) },
+  { id: "wv_privacy_v1", waiverTemplateId: "wt_privacy", studioId: studio.id, versionNumber: 1, bodyMarkdown: `# Privacy & Data Consent\n\nAurora Dance Academy collects and processes personal data to provide dance instruction and related services. This includes:\n\n- Contact information (names, email, phone, address)\n- Participant information (age, medical details, attendance)\n- Payment and billing information\n- Emergency contact details\n\n## Data Usage\n\nYour data is used exclusively for:\n- Studio operations and class management\n- Communication about classes, events, and studio announcements\n- Billing and payment processing\n- Emergency situations\n\n## Data Sharing\n\nWe do not sell personal data. Data may be shared with:\n- Instructors and staff (as needed for instruction)\n- Payment processors (for billing only)\n- Emergency services (as required)\n\n## Your Rights\n\nYou may request access to, correction of, or deletion of your personal data by contacting the studio directly.`, publishedAt: daysAgo(70), createdBy: undefined, createdAt: daysAgo(70) },
+];
+
+/* ── Waiver Signatures ─────────────────────────────────────────── */
+
+// Generate demo signatures: ~70% of students have signed the liability waiver
+const SIGNED_FORMS = ["wt_liability", "wt_medical", "wt_conduct", "wt_privacy"];
+
+export const waiverSignatures: WaiverSignature[] = students
+  .filter((s, i) => {
+    const w = (i * 7) % 10;
+    return w < 7; // 70% have signed
+  })
+  .flatMap((s) =>
+    SIGNED_FORMS.map((templateId, fi) => {
+      const version = waiverVersions.find((v) => v.waiverTemplateId === templateId && !v.archivedAt);
+      const signedDays = 60 - fi * 15 - (parseInt(s.id.slice(1)) % 20);
+      return {
+        id: `ws_${s.id}_${templateId}`,
+        studioId: studio.id,
+        waiverTemplateId: templateId,
+        waiverVersionId: version?.id ?? `wv_${templateId.replace("wt_", "")}_v1`,
+        studentId: s.id,
+        caregiverId: `cg_primary_${s.parentId}`,
+        signerName: s.parentName,
+        signerRelationship: "Parent",
+        signatureType: "typed" as const,
+        guardianAuthorityConfirmed: true,
+        eSignConsent: true,
+        signedAt: daysAgo(signedDays),
+        ipAddress: "192.168.1.1",
+        userAgent: "StudioFlow Demo",
+        status: "signed" as const,
+        metadata: { signed_via: "parent_portal", platform: "web" },
+      } satisfies WaiverSignature;
+    }),
+  );
+
+/* ── Uploaded External Documents ────────────────────────────────── */
+
+export const uploadedDocuments: UploadedDocument[] = [
+  {
+    id: "ud_p1_custody",
+    studioId: studio.id,
+    familyId: "p1",
+    studentId: "s1",
+    documentType: "custody_court",
+    title: "Custody Agreement — Walsh Family",
+    fileName: "walsh_custody_2024.pdf",
+    mimeType: "application/pdf",
+    fileSizeBytes: 245760,
+    uploadedBy: undefined,
+    uploadedAt: daysAgo(80),
+    verificationStatus: "verified",
+    verifiedBy: undefined,
+    verifiedAt: daysAgo(78),
+    visibility: "admin_only",
+    notes: "Court-ordered custody agreement. Admin access only per family request.",
+    createdAt: daysAgo(80),
+    updatedAt: daysAgo(78),
+  },
+  {
+    id: "ud_s3_medical",
+    studioId: studio.id,
+    studentId: "s3",
+    documentType: "allergy_plan",
+    title: "Anaphylaxis Emergency Plan — Sofia Patel",
+    fileName: "sofia_anaphylaxis_plan.pdf",
+    mimeType: "application/pdf",
+    fileSizeBytes: 122880,
+    uploadedBy: undefined,
+    uploadedAt: daysAgo(45),
+    verificationStatus: "verified",
+    verifiedBy: undefined,
+    verifiedAt: daysAgo(44),
+    expiryDate: daysAhead(180),
+    visibility: "caregiver_visible",
+    notes: "EpiPen required. Updated plan from pediatrician.",
+    createdAt: daysAgo(45),
+    updatedAt: daysAgo(44),
+  },
+  {
+    id: "ud_s7_waiver",
+    studioId: studio.id,
+    studentId: "s7",
+    documentType: "scanned_waiver",
+    title: "Signed Liability Waiver — Scanned",
+    fileName: "s7_liability_signed.pdf",
+    mimeType: "application/pdf",
+    fileSizeBytes: 180224,
+    uploadedBy: undefined,
+    uploadedAt: daysAgo(10),
+    verificationStatus: "unverified",
+    visibility: "caregiver_visible",
+    notes: "Paper waiver signed at front desk. Needs staff verification.",
+    createdAt: daysAgo(10),
+    updatedAt: daysAgo(10),
+  },
+];
