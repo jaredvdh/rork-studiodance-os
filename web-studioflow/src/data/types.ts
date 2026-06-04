@@ -557,3 +557,313 @@ export interface WaiverCompliance {
     status: "pending" | "signed" | "expired" | "not_required";
   }[];
 }
+
+/* ── Costume Management Types ──────────────────────────────────── */
+
+export type CostumeCategory =
+  | "ballet"
+  | "jazz"
+  | "tap"
+  | "contemporary"
+  | "lyrical"
+  | "acro"
+  | "hip_hop"
+  | "musical_theatre"
+  | "other";
+
+export const COSTUME_CATEGORY_LABELS: Record<CostumeCategory, string> = {
+  ballet: "Ballet",
+  jazz: "Jazz",
+  tap: "Tap",
+  contemporary: "Contemporary",
+  lyrical: "Lyrical",
+  acro: "Acro",
+  hip_hop: "Hip Hop",
+  musical_theatre: "Musical Theatre",
+  other: "Other",
+};
+
+export interface Costume {
+  id: string;
+  studioId: string;
+  name: string;
+  sku?: string;
+  vendor?: string;
+  season?: string;
+  category: CostumeCategory;
+  colour?: string;
+  description?: string;
+  images: string[];
+  vendorPdfUrl?: string;
+  sizingChartPdfUrl?: string;
+  careInstructions?: string;
+  wholesaleCostCents: number;
+  shippingAllocationCents: number;
+  markupPct: number;
+  retailCostCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostumeAssignment {
+  id: string;
+  studioId: string;
+  costumeId: string;
+  classId?: string;
+  studentId?: string;
+  recitalPerformanceId?: string;
+  routineName?: string;
+  assignedCount: number;
+  createdAt: string;
+}
+
+export type MeasurementStatus = "draft" | "pending" | "approved" | "rejected";
+
+export interface StudentMeasurement {
+  id: string;
+  studioId: string;
+  studentId: string;
+  heightCm?: number;
+  weightKg?: number;
+  chestCm?: number;
+  waistCm?: number;
+  hipsCm?: number;
+  girthCm?: number;
+  inseamCm?: number;
+  shoeSize?: string;
+  measuredBy?: string;
+  measuredAt?: string;
+  submittedBy?: string;
+  status: MeasurementStatus;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface SizingChart {
+  id: string;
+  studioId: string;
+  costumeId?: string;
+  vendor: string;
+  chartName: string;
+  chartData: SizingChartRow[];
+  fileUrl?: string;
+  fileType?: "pdf" | "csv" | "excel" | "manual";
+  createdAt: string;
+}
+
+export interface SizingChartRow {
+  size: string;
+  chestMin?: number;
+  chestMax?: number;
+  waistMin?: number;
+  waistMax?: number;
+  hipsMin?: number;
+  hipsMax?: number;
+  girthMin?: number;
+  girthMax?: number;
+  heightMin?: number;
+  heightMax?: number;
+  weightMin?: number;
+  weightMax?: number;
+}
+
+export interface SizeRecommendation {
+  id: string;
+  studioId: string;
+  studentId: string;
+  costumeId: string;
+  sizingChartId?: string;
+  recommendedSize?: string;
+  confidencePct?: number;
+  alternativeSize?: string;
+  reason?: string;
+  flags: string[];
+  approvedBy?: string;
+  approvedAt?: string;
+  parentApproved: boolean;
+  parentNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CostumeFeeType = "included_in_tuition" | "full" | "deposit_balance" | "installment";
+export type CostumeFeeStatus = "unpaid" | "partial" | "paid" | "waived";
+
+export const COSTUME_FEE_TYPE_LABELS: Record<CostumeFeeType, string> = {
+  included_in_tuition: "Included in Tuition",
+  full: "Full Payment",
+  deposit_balance: "Deposit + Balance",
+  installment: "Installment Plan",
+};
+
+export interface CostumeFee {
+  id: string;
+  studioId: string;
+  studentId: string;
+  costumeId: string;
+  feeType: CostumeFeeType;
+  totalCents: number;
+  paidCents: number;
+  invoiceId?: string;
+  status: CostumeFeeStatus;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type VendorOrderStatus =
+  | "draft"
+  | "ordered"
+  | "shipped"
+  | "delivered"
+  | "quality_checked"
+  | "ready"
+  | "distributed"
+  | "cancelled";
+
+export const VENDOR_ORDER_STATUS_LABELS: Record<VendorOrderStatus, string> = {
+  draft: "Draft",
+  ordered: "Ordered",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  quality_checked: "Quality Checked",
+  ready: "Ready for Distribution",
+  distributed: "Distributed",
+  cancelled: "Cancelled",
+};
+
+export interface VendorOrder {
+  id: string;
+  studioId: string;
+  vendor: string;
+  poNumber?: string;
+  orderDate?: string;
+  expectedDelivery?: string;
+  actualDelivery?: string;
+  status: VendorOrderStatus;
+  vendorNotes?: string;
+  shippingCostCents: number;
+  items: VendorOrderItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorOrderItem {
+  id: string;
+  vendorOrderId: string;
+  costumeId: string;
+  size: string;
+  quantity: number;
+  unitCostCents: number;
+  createdAt: string;
+}
+
+export type AlterationStatus = "not_started" | "in_progress" | "complete" | "delivered";
+
+export const ALTERATION_STATUS_LABELS: Record<AlterationStatus, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  complete: "Complete",
+  delivered: "Delivered",
+};
+
+export interface Alteration {
+  id: string;
+  studioId: string;
+  studentId: string;
+  costumeId: string;
+  alterationType: string;
+  assignedTo?: string;
+  dueDate?: string;
+  status: AlterationStatus;
+  notes?: string;
+  photos: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostumeDistribution {
+  id: string;
+  studioId: string;
+  studentId: string;
+  costumeId: string;
+  itemsChecklist: { label: string; checked: boolean }[];
+  signatureData?: string;
+  signedBy?: string;
+  signedAt?: string;
+  missingItems: string[];
+  notes?: string;
+  receiptPdfUrl?: string;
+  distributedBy?: string;
+  createdAt: string;
+}
+
+export type InventoryCondition = "excellent" | "good" | "fair" | "damaged" | "retired";
+export type InventoryStatus = "available" | "reserved" | "damaged" | "retired";
+
+export const INVENTORY_CONDITION_LABELS: Record<InventoryCondition, string> = {
+  excellent: "Excellent",
+  good: "Good",
+  fair: "Fair",
+  damaged: "Damaged",
+  retired: "Retired",
+};
+
+export interface ReusableCostume {
+  id: string;
+  studioId: string;
+  costumeId: string;
+  size: string;
+  condition: InventoryCondition;
+  purchaseDate?: string;
+  lastUsed?: string;
+  storageBin?: string;
+  rackNumber?: string;
+  status: InventoryStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RentalStatus = "active" | "returned" | "overdue" | "damaged" | "lost";
+
+export const RENTAL_STATUS_LABELS: Record<RentalStatus, string> = {
+  active: "Active",
+  returned: "Returned",
+  overdue: "Overdue",
+  damaged: "Damaged",
+  lost: "Lost",
+};
+
+export interface CostumeRental {
+  id: string;
+  studioId: string;
+  studentId: string;
+  inventoryId?: string;
+  costumeId: string;
+  rentalFeeCents: number;
+  depositCents: number;
+  returnDate?: string;
+  returnedAt?: string;
+  damageFeeCents: number;
+  status: RentalStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuickChangeConflict {
+  id: string;
+  studioId: string;
+  recitalEventId?: string;
+  studentId: string;
+  routineA?: string;
+  routineAEndTime?: string;
+  routineB?: string;
+  routineBStartTime?: string;
+  estimatedChangeMinutes?: number;
+  conflictDetected: boolean;
+  recommendation?: string;
+  resolved: boolean;
+  createdAt: string;
+}

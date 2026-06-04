@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/studioStore";
-import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument } from "@/data/types";
+import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument, Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, VendorOrderItem, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict } from "@/data/types";
 import {
   announcements as demoAnnouncements,
   classes as demoClasses,
@@ -16,6 +16,18 @@ import {
   waiverSignatures as demoWaiverSignatures,
   enrolments as demoEnrolments,
   uploadedDocuments as demoUploadedDocuments,
+  costumes as demoCostumes,
+  costumeAssignments as demoCostumeAssignments,
+  studentMeasurements as demoStudentMeasurements,
+  sizingCharts as demoSizingCharts,
+  sizeRecommendations as demoSizeRecommendations,
+  costumeFees as demoCostumeFees,
+  vendorOrders as demoVendorOrders,
+  alterations as demoAlterations,
+  costumeDistributions as demoCostumeDistributions,
+  reusableCostumes as demoReusableCostumes,
+  costumeRentals as demoCostumeRentals,
+  quickChangeConflicts as demoQuickChangeConflicts,
 } from "@/data/demo";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
@@ -1024,4 +1036,301 @@ export function useVerifyDocument() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["uploaded_documents"] }),
   });
+}
+
+/* ── Costumes ──────────────────────────────────────────────────── */
+
+export function useSupabaseCostumes(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<Costume>(
+    ["costumes", studioId],
+    async () => {
+      const { data, error } = await supabase.from("costumes").select("*").eq("studio_id", studioId).order("created_at", { ascending: false });
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((c) => ({
+        id: c.id as string, studioId: c.studio_id as string, name: c.name as string,
+        sku: (c.sku as string) ?? undefined, vendor: (c.vendor as string) ?? undefined,
+        season: (c.season as string) ?? undefined, category: (c.category as string) ?? "other",
+        colour: (c.colour as string) ?? undefined, description: (c.description as string) ?? undefined,
+        images: (c.images as string[]) ?? [], vendorPdfUrl: (c.vendor_pdf_url as string) ?? undefined,
+        sizingChartPdfUrl: (c.sizing_chart_pdf_url as string) ?? undefined,
+        careInstructions: (c.care_instructions as string) ?? undefined,
+        wholesaleCostCents: (c.wholesale_cost_cents as number) ?? 0,
+        shippingAllocationCents: (c.shipping_allocation_cents as number) ?? 0,
+        markupPct: (c.markup_pct as number) ?? 30,
+        retailCostCents: (c.retail_cost_cents as number) ?? 0,
+        createdAt: (c.created_at as string) ?? "", updatedAt: (c.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoCostumes,
+    isDemo,
+  );
+}
+
+export function useSupabaseCostumeAssignments(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<CostumeAssignment>(
+    ["costume_assignments", studioId],
+    async () => {
+      const { data, error } = await supabase.from("costume_assignments").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((a) => ({
+        id: a.id as string, studioId: a.studio_id as string, costumeId: a.costume_id as string,
+        classId: (a.class_id as string) ?? undefined, studentId: (a.student_id as string) ?? undefined,
+        recitalPerformanceId: (a.recital_performance_id as string) ?? undefined,
+        routineName: (a.routine_name as string) ?? undefined,
+        assignedCount: (a.assigned_count as number) ?? 1,
+        createdAt: (a.created_at as string) ?? "",
+      })), error: null };
+    },
+    demoCostumeAssignments,
+    isDemo,
+  );
+}
+
+export function useSupabaseStudentMeasurements(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<StudentMeasurement>(
+    ["student_measurements", studioId],
+    async () => {
+      const { data, error } = await supabase.from("student_measurements").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((m) => ({
+        id: m.id as string, studioId: m.studio_id as string, studentId: m.student_id as string,
+        heightCm: (m.height_cm as number) ?? undefined, weightKg: (m.weight_kg as number) ?? undefined,
+        chestCm: (m.chest_cm as number) ?? undefined, waistCm: (m.waist_cm as number) ?? undefined,
+        hipsCm: (m.hips_cm as number) ?? undefined, girthCm: (m.girth_cm as number) ?? undefined,
+        inseamCm: (m.inseam_cm as number) ?? undefined, shoeSize: (m.shoe_size as string) ?? undefined,
+        measuredBy: (m.measured_by as string) ?? undefined, measuredAt: (m.measured_at as string) ?? undefined,
+        submittedBy: (m.submitted_by as string) ?? undefined,
+        status: ((m.status as string) ?? "pending") as StudentMeasurement["status"],
+        notes: (m.notes as string) ?? undefined,
+        createdAt: (m.created_at as string) ?? "",
+      })), error: null };
+    },
+    demoStudentMeasurements,
+    isDemo,
+  );
+}
+
+export function useSupabaseSizingCharts(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<SizingChart>(
+    ["sizing_charts", studioId],
+    async () => {
+      const { data, error } = await supabase.from("sizing_charts").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((c) => ({
+        id: c.id as string, studioId: c.studio_id as string,
+        costumeId: (c.costume_id as string) ?? undefined,
+        vendor: c.vendor as string, chartName: c.chart_name as string,
+        chartData: (c.chart_data as SizingChart["chartData"]) ?? [],
+        fileUrl: (c.file_url as string) ?? undefined,
+        fileType: (c.file_type as SizingChart["fileType"]) ?? undefined,
+        createdAt: (c.created_at as string) ?? "",
+      })), error: null };
+    },
+    demoSizingCharts,
+    isDemo,
+  );
+}
+
+export function useSupabaseSizeRecommendations(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<SizeRecommendation>(
+    ["size_recommendations", studioId],
+    async () => {
+      const { data, error } = await supabase.from("size_recommendations").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: r.id as string, studioId: r.studio_id as string, studentId: r.student_id as string,
+        costumeId: r.costume_id as string, sizingChartId: (r.sizing_chart_id as string) ?? undefined,
+        recommendedSize: (r.recommended_size as string) ?? undefined,
+        confidencePct: (r.confidence_pct as number) ?? undefined,
+        alternativeSize: (r.alternative_size as string) ?? undefined,
+        reason: (r.reason as string) ?? undefined, flags: (r.flags as string[]) ?? [],
+        approvedBy: (r.approved_by as string) ?? undefined, approvedAt: (r.approved_at as string) ?? undefined,
+        parentApproved: (r.parent_approved as boolean) ?? false,
+        parentNotes: (r.parent_notes as string) ?? undefined,
+        createdAt: (r.created_at as string) ?? "", updatedAt: (r.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoSizeRecommendations,
+    isDemo,
+  );
+}
+
+export function useSupabaseCostumeFees(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<CostumeFee>(
+    ["costume_fees", studioId],
+    async () => {
+      const { data, error } = await supabase.from("costume_fees").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((f) => ({
+        id: f.id as string, studioId: f.studio_id as string, studentId: f.student_id as string,
+        costumeId: f.costume_id as string,
+        feeType: ((f.fee_type as string) ?? "full") as CostumeFee["feeType"],
+        totalCents: (f.total_cents as number) ?? 0, paidCents: (f.paid_cents as number) ?? 0,
+        invoiceId: (f.invoice_id as string) ?? undefined,
+        status: ((f.status as string) ?? "unpaid") as CostumeFee["status"],
+        dueDate: (f.due_date as string) ?? undefined,
+        createdAt: (f.created_at as string) ?? "", updatedAt: (f.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoCostumeFees,
+    isDemo,
+  );
+}
+
+export function useSupabaseVendorOrders(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<VendorOrder>(
+    ["vendor_orders", studioId],
+    async () => {
+      const { data, error } = await supabase.from("vendor_orders").select("*, vendor_order_items(*)").eq("studio_id", studioId).order("created_at", { ascending: false });
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((o) => ({
+        id: o.id as string, studioId: o.studio_id as string, vendor: o.vendor as string,
+        poNumber: (o.po_number as string) ?? undefined,
+        orderDate: (o.order_date as string) ?? undefined,
+        expectedDelivery: (o.expected_delivery as string) ?? undefined,
+        actualDelivery: (o.actual_delivery as string) ?? undefined,
+        status: ((o.status as string) ?? "draft") as VendorOrder["status"],
+        vendorNotes: (o.vendor_notes as string) ?? undefined,
+        shippingCostCents: (o.shipping_cost_cents as number) ?? 0,
+        items: ((o.vendor_order_items as unknown as Record<string, unknown>[]) ?? []).map((i: Record<string, unknown>) => ({
+          id: i.id as string, vendorOrderId: i.vendor_order_id as string,
+          costumeId: i.costume_id as string, size: i.size as string,
+          quantity: (i.quantity as number) ?? 1, unitCostCents: (i.unit_cost_cents as number) ?? 0,
+          createdAt: (i.created_at as string) ?? "",
+        })),
+        createdAt: (o.created_at as string) ?? "", updatedAt: (o.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoVendorOrders,
+    isDemo,
+  );
+}
+
+export function useSupabaseAlterations(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<Alteration>(
+    ["alterations", studioId],
+    async () => {
+      const { data, error } = await supabase.from("alterations").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((a) => ({
+        id: a.id as string, studioId: a.studio_id as string, studentId: a.student_id as string,
+        costumeId: a.costume_id as string, alterationType: a.alteration_type as string,
+        assignedTo: (a.assigned_to as string) ?? undefined, dueDate: (a.due_date as string) ?? undefined,
+        status: ((a.status as string) ?? "not_started") as Alteration["status"],
+        notes: (a.notes as string) ?? undefined, photos: (a.photos as string[]) ?? [],
+        createdAt: (a.created_at as string) ?? "", updatedAt: (a.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoAlterations,
+    isDemo,
+  );
+}
+
+export function useSupabaseCostumeDistributions(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<CostumeDistribution>(
+    ["costume_distributions", studioId],
+    async () => {
+      const { data, error } = await supabase.from("costume_distributions").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((d) => ({
+        id: d.id as string, studioId: d.studio_id as string, studentId: d.student_id as string,
+        costumeId: d.costume_id as string,
+        itemsChecklist: (d.items_checklist as CostumeDistribution["itemsChecklist"]) ?? [],
+        signatureData: (d.signature_data as string) ?? undefined,
+        signedBy: (d.signed_by as string) ?? undefined, signedAt: (d.signed_at as string) ?? undefined,
+        missingItems: (d.missing_items as string[]) ?? [], notes: (d.notes as string) ?? undefined,
+        receiptPdfUrl: (d.receipt_pdf_url as string) ?? undefined,
+        distributedBy: (d.distributed_by as string) ?? undefined,
+        createdAt: (d.created_at as string) ?? "",
+      })), error: null };
+    },
+    demoCostumeDistributions,
+    isDemo,
+  );
+}
+
+export function useSupabaseReusableCostumes(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<ReusableCostume>(
+    ["reusable_costumes", studioId],
+    async () => {
+      const { data, error } = await supabase.from("reusable_costumes").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: r.id as string, studioId: r.studio_id as string, costumeId: r.costume_id as string,
+        size: r.size as string,
+        condition: ((r.condition as string) ?? "good") as ReusableCostume["condition"],
+        purchaseDate: (r.purchase_date as string) ?? undefined,
+        lastUsed: (r.last_used as string) ?? undefined,
+        storageBin: (r.storage_bin as string) ?? undefined,
+        rackNumber: (r.rack_number as string) ?? undefined,
+        status: ((r.status as string) ?? "available") as ReusableCostume["status"],
+        notes: (r.notes as string) ?? undefined,
+        createdAt: (r.created_at as string) ?? "", updatedAt: (r.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoReusableCostumes,
+    isDemo,
+  );
+}
+
+export function useSupabaseCostumeRentals(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<CostumeRental>(
+    ["costume_rentals", studioId],
+    async () => {
+      const { data, error } = await supabase.from("costume_rentals").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: r.id as string, studioId: r.studio_id as string, studentId: r.student_id as string,
+        inventoryId: (r.inventory_id as string) ?? undefined, costumeId: r.costume_id as string,
+        rentalFeeCents: (r.rental_fee_cents as number) ?? 0,
+        depositCents: (r.deposit_cents as number) ?? 0,
+        returnDate: (r.return_date as string) ?? undefined,
+        returnedAt: (r.returned_at as string) ?? undefined,
+        damageFeeCents: (r.damage_fee_cents as number) ?? 0,
+        status: ((r.status as string) ?? "active") as CostumeRental["status"],
+        notes: (r.notes as string) ?? undefined,
+        createdAt: (r.created_at as string) ?? "", updatedAt: (r.updated_at as string) ?? "",
+      })), error: null };
+    },
+    demoCostumeRentals,
+    isDemo,
+  );
+}
+
+export function useSupabaseQuickChangeConflicts(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<QuickChangeConflict>(
+    ["quick_change_analyses", studioId],
+    async () => {
+      const { data, error } = await supabase.from("quick_change_analyses").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((q) => ({
+        id: q.id as string, studioId: q.studio_id as string,
+        recitalEventId: (q.recital_event_id as string) ?? undefined,
+        studentId: q.student_id as string,
+        routineA: (q.routine_a as string) ?? undefined,
+        routineAEndTime: (q.routine_a_end_time as string) ?? undefined,
+        routineB: (q.routine_b as string) ?? undefined,
+        routineBStartTime: (q.routine_b_start_time as string) ?? undefined,
+        estimatedChangeMinutes: (q.estimated_change_minutes as number) ?? undefined,
+        conflictDetected: (q.conflict_detected as boolean) ?? false,
+        recommendation: (q.recommendation as string) ?? undefined,
+        resolved: (q.resolved as boolean) ?? false,
+        createdAt: (q.created_at as string) ?? "",
+      })), error: null };
+    },
+    demoQuickChangeConflicts,
+    isDemo,
+  );
 }

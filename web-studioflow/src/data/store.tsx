@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "./studioStore";
 import { classes as demoClasses } from "./demo";
-import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount, Enrolment } from "./types";
+import type { Announcement, ClassStyle, Teacher, Student, Class, Invoice, ParentAccount, Enrolment, Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict } from "./types";
 import { useOptionalMigration } from "./migrationStore";
 import {
   useSupabaseTeachers,
@@ -17,6 +17,18 @@ import {
   useSupabaseWaiverVersions,
   useSupabaseWaiverSignatures,
   useSupabaseUploadedDocuments,
+  useSupabaseCostumes,
+  useSupabaseCostumeAssignments,
+  useSupabaseStudentMeasurements,
+  useSupabaseSizingCharts,
+  useSupabaseSizeRecommendations,
+  useSupabaseCostumeFees,
+  useSupabaseVendorOrders,
+  useSupabaseAlterations,
+  useSupabaseCostumeDistributions,
+  useSupabaseReusableCostumes,
+  useSupabaseCostumeRentals,
+  useSupabaseQuickChangeConflicts,
   useAddTeacher,
   useUpdateTeacher,
   useRemoveTeacher,
@@ -765,5 +777,146 @@ export function DocumentsProvider({ children }: { children: React.ReactNode }) {
 export function useDocuments() {
   const ctx = useContext(DocumentsContext);
   if (!ctx) throw new Error("useDocuments must be used within DocumentsProvider");
+  return ctx;
+}
+
+/* ── Shared costumes state ──────────────────────────────────────────────── */
+
+interface CostumesCtx {
+  costumes: Costume[];
+  assignments: CostumeAssignment[];
+  measurements: StudentMeasurement[];
+  sizingCharts: SizingChart[];
+  sizeRecommendations: SizeRecommendation[];
+  costumeFees: CostumeFee[];
+  vendorOrders: VendorOrder[];
+  alterations: Alteration[];
+  distributions: CostumeDistribution[];
+  reusableInventory: ReusableCostume[];
+  rentals: CostumeRental[];
+  quickChangeConflicts: QuickChangeConflict[];
+  /** Get all costumes assigned to a specific class. */
+  costumesForClass: (classId: string) => Costume[];
+  /** Get all costumes assigned to a specific student. */
+  costumesForStudent: (studentId: string) => Costume[];
+  /** Get the size recommendation for a student+costume pair. */
+  sizeRecForStudentCostume: (studentId: string, costumeId: string) => SizeRecommendation | undefined;
+  /** Get measurement for a student. */
+  measurementForStudent: (studentId: string) => StudentMeasurement | undefined;
+  /** Get fees for a student. */
+  feesForStudent: (studentId: string) => CostumeFee[];
+  /** Get alteration count by status. */
+  alterationCountByStatus: (status: Alteration["status"]) => number;
+  /** Get students missing measurements. */
+  studentsMissingMeasurements: (allStudentIds: string[]) => string[];
+  /** Get outstanding costume fee totals by status. */
+  outstandingFeeTotal: () => number;
+  /** Get number of costumes with quick-change conflicts. */
+  quickChangeConflictCount: () => number;
+  /** Get orders by status. */
+  ordersByStatus: (status: VendorOrder["status"]) => VendorOrder[];
+}
+
+const CostumesContext = createContext<CostumesCtx | null>(null);
+
+export function CostumesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
+  const { data: supabaseCostumes = [] } = useSupabaseCostumes(isDemo);
+  const { data: supabaseAssignments = [] } = useSupabaseCostumeAssignments(isDemo);
+  const { data: supabaseMeasurements = [] } = useSupabaseStudentMeasurements(isDemo);
+  const { data: supabaseSizingCharts = [] } = useSupabaseSizingCharts(isDemo);
+  const { data: supabaseSizeRecs = [] } = useSupabaseSizeRecommendations(isDemo);
+  const { data: supabaseFees = [] } = useSupabaseCostumeFees(isDemo);
+  const { data: supabaseOrders = [] } = useSupabaseVendorOrders(isDemo);
+  const { data: supabaseAlterations = [] } = useSupabaseAlterations(isDemo);
+  const { data: supabaseDistributions = [] } = useSupabaseCostumeDistributions(isDemo);
+  const { data: supabaseReusable = [] } = useSupabaseReusableCostumes(isDemo);
+  const { data: supabaseRentals = [] } = useSupabaseCostumeRentals(isDemo);
+  const { data: supabaseQuickChange = [] } = useSupabaseQuickChangeConflicts(isDemo);
+
+  const [costumes, setCostumes] = useState<Costume[]>([]);
+  const [assignments, setAssignments] = useState<CostumeAssignment[]>([]);
+  const [measurements, setMeasurements] = useState<StudentMeasurement[]>([]);
+  const [sizingCharts] = useState<SizingChart[]>(supabaseSizingCharts);
+  const [sizeRecommendations] = useState<SizeRecommendation[]>(supabaseSizeRecs);
+  const [costumeFees] = useState<CostumeFee[]>(supabaseFees);
+  const [vendorOrders] = useState<VendorOrder[]>(supabaseOrders);
+  const [alterations] = useState<Alteration[]>(supabaseAlterations);
+  const [distributions] = useState<CostumeDistribution[]>(supabaseDistributions);
+  const [reusableInventory] = useState<ReusableCostume[]>(supabaseReusable);
+  const [rentals] = useState<CostumeRental[]>(supabaseRentals);
+  const [quickChangeConflicts] = useState<QuickChangeConflict[]>(supabaseQuickChange);
+
+  useEffect(() => { setCostumes(supabaseCostumes); }, [supabaseCostumes]);
+  useEffect(() => { setAssignments(supabaseAssignments); }, [supabaseAssignments]);
+  useEffect(() => { setMeasurements(supabaseMeasurements); }, [supabaseMeasurements]);
+
+  const costumesForClass = useCallback((classId: string) => {
+    const assignmentIds = new Set(assignments.filter((a) => a.classId === classId).map((a) => a.costumeId));
+    return costumes.filter((c) => assignmentIds.has(c.id));
+  }, [costumes, assignments]);
+
+  const costumesForStudent = useCallback((studentId: string) => {
+    const assignmentIds = new Set(assignments.filter((a) => a.studentId === studentId).map((a) => a.costumeId));
+    return costumes.filter((c) => assignmentIds.has(c.id));
+  }, [costumes, assignments]);
+
+  const sizeRecForStudentCostume = useCallback((studentId: string, costumeId: string) =>
+    sizeRecommendations.find((r) => r.studentId === studentId && r.costumeId === costumeId),
+  [sizeRecommendations]);
+
+  const measurementForStudent = useCallback((studentId: string) =>
+    measurements.find((m) => m.studentId === studentId && m.status === "approved"),
+  [measurements]);
+
+  const feesForStudent = useCallback((studentId: string) =>
+    costumeFees.filter((f) => f.studentId === studentId),
+  [costumeFees]);
+
+  const alterationCountByStatus = useCallback((status: Alteration["status"]) =>
+    alterations.filter((a) => a.status === status).length,
+  [alterations]);
+
+  const studentsMissingMeasurements = useCallback((allStudentIds: string[]) => {
+    const measured = new Set(measurements.filter((m) => m.status === "approved").map((m) => m.studentId));
+    return allStudentIds.filter((id) => !measured.has(id));
+  }, [measurements]);
+
+  const outstandingFeeTotal = useCallback(() =>
+    costumeFees.filter((f) => f.status !== "paid" && f.status !== "waived")
+      .reduce((sum, f) => sum + (f.totalCents - f.paidCents), 0),
+  [costumeFees]);
+
+  const quickChangeConflictCount = useCallback(() =>
+    quickChangeConflicts.filter((q) => q.conflictDetected && !q.resolved).length,
+  [quickChangeConflicts]);
+
+  const ordersByStatus = useCallback((status: VendorOrder["status"]) =>
+    vendorOrders.filter((o) => o.status === status),
+  [vendorOrders]);
+
+  const ctx = useMemo((): CostumesCtx => ({
+    costumes, assignments, measurements, sizingCharts, sizeRecommendations,
+    costumeFees, vendorOrders, alterations, distributions, reusableInventory,
+    rentals, quickChangeConflicts,
+    costumesForClass, costumesForStudent, sizeRecForStudentCostume,
+    measurementForStudent, feesForStudent, alterationCountByStatus,
+    studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
+    ordersByStatus,
+  }), [costumes, assignments, measurements, sizingCharts, sizeRecommendations,
+    costumeFees, vendorOrders, alterations, distributions, reusableInventory,
+    rentals, quickChangeConflicts,
+    costumesForClass, costumesForStudent, sizeRecForStudentCostume,
+    measurementForStudent, feesForStudent, alterationCountByStatus,
+    studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount,
+    ordersByStatus]);
+
+  return <CostumesContext.Provider value={ctx}>{children}</CostumesContext.Provider>;
+}
+
+export function useCostumes() {
+  const ctx = useContext(CostumesContext);
+  if (!ctx) throw new Error("useCostumes must be used within CostumesProvider");
   return ctx;
 }

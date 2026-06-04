@@ -111,7 +111,7 @@ export default function Dashboard() {
         <StatCard index={0} label={`Active ${term.participantPlural.toLowerCase()}`} value={String(activeStudents)} delta={6} hint="vs. last month" icon={Users} accent="rose" />
         <StatCard index={1} label="Revenue this month" value={formatCurrency(monthRevenue, true)} delta={12} hint="from enrolments" icon={DollarSign} accent="gold" />
         <StatCard index={2} label="Class capacity" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
-        <StatCard index={3} label="Avg. attendance" value={`${avgAttendance}%`} delta={-2} hint="last 30 days" icon={CalendarClock} accent="plum" />
+        <StatCard index={3} label="Missing Measurements" value={String(studentsMissingMeasurements(students.map((s) => s.id)).length)} delta={-3} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={Ruler} accent="plum" />
       </div>
 
       {/* ── Waiver compliance & alerts ───────────────────────────── */}

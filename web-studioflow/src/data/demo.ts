@@ -1,21 +1,34 @@
 import type {
+  Alteration,
   Announcement,
   Caregiver,
   CaregiverAuditEvent,
   Class,
+  Costume,
+  CostumeAssignment,
+  CostumeDistribution,
+  CostumeFee,
+  CostumeRental,
   Enrolment,
   FamilyContact,
   Invoice,
   ParentAccount,
+  QuickChangeConflict,
   RecitalEvent,
   RevenuePoint,
+  ReusableCostume,
+  SizeRecommendation,
+  SizingChart,
   Student,
+  StudentMeasurement,
   Studio,
   Teacher,
+  UploadedDocument,
+  VendorOrder,
+  VendorOrderItem,
+  WaiverSignature,
   WaiverTemplate,
   WaiverVersion,
-  WaiverSignature,
-  UploadedDocument,
 } from "./types";
 import { SAFE_SECONDARY_DEFAULTS } from "./types";
 
@@ -501,5 +514,324 @@ export const uploadedDocuments: UploadedDocument[] = [
     notes: "Paper waiver signed at front desk. Needs staff verification.",
     createdAt: daysAgo(10),
     updatedAt: daysAgo(10),
+  },
+];
+
+/* ── Costume Library ───────────────────────────────────────────── */
+
+export const costumes: Costume[] = [
+  {
+    id: "cos_pink_tutu",
+    studioId: studio.id,
+    name: "Pink Sequin Tutu Dress",
+    sku: "COS-001-PNK",
+    vendor: "Dancewear Co.",
+    season: "Spring 2026",
+    category: "ballet",
+    colour: "Blush Pink",
+    description: "Professional-grade sequin tutu with 5-layer tulle skirt. Empire waist with crystal embellishment. Includes matching hairpiece.",
+    images: [],
+    wholesaleCostCents: 4200,
+    shippingAllocationCents: 350,
+    markupPct: 30,
+    retailCostCents: 5915,
+    createdAt: daysAgo(90),
+    updatedAt: daysAgo(14),
+  },
+  {
+    id: "cos_neon_crew",
+    studioId: studio.id,
+    name: "Neon Street Crew Set",
+    sku: "COS-002-NEO",
+    vendor: "Urban Groove Supply",
+    season: "Spring 2026",
+    category: "hip_hop",
+    colour: "Electric Green / Black",
+    description: "Oversized neon hoodie with reflective strips, black joggers, and white high-tops. Breathable performance fabric.",
+    images: [],
+    wholesaleCostCents: 5600,
+    shippingAllocationCents: 420,
+    markupPct: 25,
+    retailCostCents: 7525,
+    createdAt: daysAgo(85),
+    updatedAt: daysAgo(20),
+  },
+  {
+    id: "cos_earth_flow",
+    studioId: studio.id,
+    name: "Earth-Tone Flow Dress",
+    sku: "COS-003-ERT",
+    vendor: "Dancewear Co.",
+    season: "Spring 2026",
+    category: "contemporary",
+    colour: "Terracotta / Sand",
+    description: "Flowing georgette dress in layered earth tones. Adjustable straps, built-in brief. Side slit for freedom of movement.",
+    images: [],
+    wholesaleCostCents: 3800,
+    shippingAllocationCents: 300,
+    markupPct: 35,
+    retailCostCents: 5535,
+    createdAt: daysAgo(82),
+    updatedAt: daysAgo(10),
+  },
+  {
+    id: "cos_gold_formal",
+    studioId: studio.id,
+    name: "Black & Gold Formal Attire",
+    sku: "COS-004-BLK",
+    vendor: "Premiere Dance Apparel",
+    season: "Spring 2026",
+    category: "jazz",
+    colour: "Black / Gold",
+    description: "Black sequin leotard with gold lamé overlay. Long sleeves, open back detail. Includes matching gold headpiece.",
+    images: [],
+    wholesaleCostCents: 6500,
+    shippingAllocationCents: 480,
+    markupPct: 28,
+    retailCostCents: 8934,
+    createdAt: daysAgo(80),
+    updatedAt: daysAgo(15),
+  },
+  {
+    id: "cos_lilac_lyrical",
+    studioId: studio.id,
+    name: "Lilac Dream Lyrical Dress",
+    sku: "COS-005-LIL",
+    vendor: "Dancewear Co.",
+    season: "Spring 2026",
+    category: "lyrical",
+    colour: "Soft Lilac",
+    description: "Ethereal chiffon dress with handkerchief hem. Empire waist, flutter sleeves. Lightweight and breathable for lyrical routines.",
+    images: [],
+    wholesaleCostCents: 3400,
+    shippingAllocationCents: 280,
+    markupPct: 32,
+    retailCostCents: 4858,
+    createdAt: daysAgo(78),
+    updatedAt: daysAgo(8),
+  },
+  {
+    id: "cos_tap_tux",
+    studioId: studio.id,
+    name: "Classic Tap Tuxedo Set",
+    sku: "COS-006-TAP",
+    vendor: "Premiere Dance Apparel",
+    season: "Spring 2026",
+    category: "tap",
+    colour: "Black / White",
+    description: "Tailored black bodysuit with white satin bow detail. Faux tailcoat overlay. Includes tap shoe ribbon ties.",
+    images: [],
+    wholesaleCostCents: 4900,
+    shippingAllocationCents: 380,
+    markupPct: 30,
+    retailCostCents: 6864,
+    createdAt: daysAgo(75),
+    updatedAt: daysAgo(25),
+  },
+  {
+    id: "cos_acro_unitard",
+    studioId: studio.id,
+    name: "Flex Acro Unitard",
+    sku: "COS-007-ACR",
+    vendor: "Urban Groove Supply",
+    season: "Spring 2026",
+    category: "acro",
+    colour: "Navy / Teal",
+    description: "Full-coverage unitard with colour-block design. 4-way stretch fabric, reinforced seams. Grip panels on feet.",
+    images: [],
+    wholesaleCostCents: 3100,
+    shippingAllocationCents: 250,
+    markupPct: 35,
+    retailCostCents: 4523,
+    createdAt: daysAgo(70),
+    updatedAt: daysAgo(30),
+  },
+];
+
+/* ── Costume Assignments — link costumes to classes/routines ────── */
+
+export const costumeAssignments: CostumeAssignment[] = [
+  { id: "ca_c1", studioId: studio.id, costumeId: "cos_pink_tutu", classId: "c1", routineName: "Act I — Little Stars", assignedCount: 11, createdAt: daysAgo(60) },
+  { id: "ca_c2_neon", studioId: studio.id, costumeId: "cos_neon_crew", classId: "c2", routineName: "Act II — Rising Energy", assignedCount: 18, createdAt: daysAgo(55) },
+  { id: "ca_c6_lilac", studioId: studio.id, costumeId: "cos_lilac_lyrical", classId: "c6", routineName: "Act II — Rising Energy", assignedCount: 15, createdAt: daysAgo(50) },
+  { id: "ca_c10_jazz", studioId: studio.id, costumeId: "cos_gold_formal", classId: "c10", routineName: "Act II — Rising Energy", assignedCount: 16, createdAt: daysAgo(48) },
+  { id: "ca_c3_earth", studioId: studio.id, costumeId: "cos_earth_flow", classId: "c3", routineName: "Act III — Grace & Flow", assignedCount: 13, createdAt: daysAgo(45) },
+  { id: "ca_c4_jazz", studioId: studio.id, costumeId: "cos_tap_tux", classId: "c4", routineName: "Act III — Grace & Flow", assignedCount: 14, createdAt: daysAgo(42) },
+  { id: "ca_c7_gold", studioId: studio.id, costumeId: "cos_gold_formal", classId: "c7", routineName: "Finale — Senior Spotlight", assignedCount: 19, createdAt: daysAgo(40) },
+  { id: "ca_c9_ballet", studioId: studio.id, costumeId: "cos_pink_tutu", classId: "c9", routineName: "Finale — Senior Spotlight", assignedCount: 14, createdAt: daysAgo(38) },
+  { id: "ca_c8_acro", studioId: studio.id, costumeId: "cos_acro_unitard", classId: "c8", assignedCount: 8, createdAt: daysAgo(35) },
+];
+
+/* ── Student Measurements — sample measurement profiles ─────────── */
+
+export const studentMeasurements: StudentMeasurement[] = [
+  { id: "sm_s1", studioId: studio.id, studentId: "s1", heightCm: 132.5, weightKg: 28.0, chestCm: 64.0, waistCm: 56.0, hipsCm: 68.0, girthCm: 118.0, inseamCm: 58.0, shoeSize: "1", status: "approved", measuredAt: daysAgo(30), createdAt: daysAgo(30) },
+  { id: "sm_s2", studioId: studio.id, studentId: "s2", heightCm: 145.0, weightKg: 35.0, chestCm: 72.0, waistCm: 62.0, hipsCm: 76.0, girthCm: 132.0, inseamCm: 64.0, shoeSize: "3", status: "approved", measuredAt: daysAgo(25), createdAt: daysAgo(25) },
+  { id: "sm_s3", studioId: studio.id, studentId: "s3", heightCm: 128.0, weightKg: 25.0, chestCm: 60.0, waistCm: 52.0, hipsCm: 64.0, girthCm: 112.0, inseamCm: 54.0, shoeSize: "13", status: "pending", submittedBy: "cg_primary_p3", createdAt: daysAgo(3) },
+  { id: "sm_s5", studioId: studio.id, studentId: "s5", heightCm: 160.0, weightKg: 48.0, chestCm: 82.0, waistCm: 68.0, hipsCm: 88.0, girthCm: 148.0, inseamCm: 72.0, shoeSize: "6", status: "approved", measuredAt: daysAgo(20), createdAt: daysAgo(20) },
+  { id: "sm_s7", studioId: studio.id, studentId: "s7", heightCm: 140.0, weightKg: 32.0, chestCm: 68.0, waistCm: 58.0, hipsCm: 72.0, girthCm: 126.0, inseamCm: 60.0, shoeSize: "2", status: "draft", createdAt: daysAgo(1) },
+  { id: "sm_s10", studioId: studio.id, studentId: "s10", heightCm: 155.0, weightKg: 42.0, chestCm: 78.0, waistCm: 65.0, hipsCm: 84.0, girthCm: 140.0, inseamCm: 68.0, shoeSize: "5", status: "approved", measuredAt: daysAgo(15), createdAt: daysAgo(15) },
+];
+
+/* ── Sizing Charts — vendor size references ─────────────────────── */
+
+export const sizingCharts: SizingChart[] = [
+  {
+    id: "sc_dancewear_co",
+    studioId: studio.id,
+    vendor: "Dancewear Co.",
+    chartName: "Dancewear Co. Child Sizing — Tutus & Dresses",
+    chartData: [
+      { size: "Child X-Small", chestMin: 56, chestMax: 62, waistMin: 48, waistMax: 54, girthMin: 108, girthMax: 118, heightMin: 115, heightMax: 130 },
+      { size: "Child Small", chestMin: 62, chestMax: 68, waistMin: 54, waistMax: 60, girthMin: 118, girthMax: 128, heightMin: 125, heightMax: 140 },
+      { size: "Child Medium", chestMin: 68, chestMax: 76, waistMin: 60, waistMax: 66, girthMin: 128, girthMax: 140, heightMin: 135, heightMax: 150 },
+      { size: "Child Large", chestMin: 76, chestMax: 84, waistMin: 66, waistMax: 72, girthMin: 140, girthMax: 152, heightMin: 145, heightMax: 160 },
+      { size: "Adult Small", chestMin: 82, chestMax: 90, waistMin: 68, waistMax: 76, girthMin: 150, girthMax: 162, heightMin: 155, heightMax: 170 },
+    ],
+    createdAt: daysAgo(60),
+  },
+  {
+    id: "sc_urban_groove",
+    studioId: studio.id,
+    vendor: "Urban Groove Supply",
+    chartName: "Urban Groove Unisex Sizing — Streetwear",
+    chartData: [
+      { size: "Youth Small", chestMin: 60, chestMax: 68, waistMin: 52, waistMax: 60, heightMin: 120, heightMax: 140 },
+      { size: "Youth Medium", chestMin: 68, chestMax: 78, waistMin: 60, waistMax: 68, heightMin: 135, heightMax: 155 },
+      { size: "Youth Large", chestMin: 78, chestMax: 88, waistMin: 68, waistMax: 76, heightMin: 150, heightMax: 168 },
+      { size: "Adult Small", chestMin: 86, chestMax: 96, waistMin: 74, waistMax: 84, heightMin: 165, heightMax: 178 },
+    ],
+    createdAt: daysAgo(55),
+  },
+];
+
+/* ── Size Recommendations — AI/manual suggestions ───────────────── */
+
+export const sizeRecommendations: SizeRecommendation[] = [
+  { id: "sr_s1_tutu", studioId: studio.id, studentId: "s1", costumeId: "cos_pink_tutu", sizingChartId: "sc_dancewear_co", recommendedSize: "Child Small", confidencePct: 94, alternativeSize: "Child Medium", reason: "Girth measurement near upper range threshold.", flags: ["borderline_girth"], parentApproved: true, createdAt: daysAgo(28), updatedAt: daysAgo(20) },
+  { id: "sr_s2_neon", studioId: studio.id, studentId: "s2", costumeId: "cos_neon_crew", sizingChartId: "sc_urban_groove", recommendedSize: "Youth Medium", confidencePct: 96, flags: [], parentApproved: true, createdAt: daysAgo(22), updatedAt: daysAgo(18) },
+  { id: "sr_s3_lilac", studioId: studio.id, studentId: "s3", costumeId: "cos_lilac_lyrical", sizingChartId: "sc_dancewear_co", recommendedSize: "Child X-Small", confidencePct: 88, alternativeSize: "Child Small", reason: "Measurements pending approval. Based on parent-submitted data.", flags: ["pending_measurements"], parentApproved: false, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+  { id: "sr_s5_earth", studioId: studio.id, studentId: "s5", costumeId: "cos_earth_flow", sizingChartId: "sc_dancewear_co", recommendedSize: "Adult Small", confidencePct: 92, flags: [], parentApproved: true, createdAt: daysAgo(18), updatedAt: daysAgo(14) },
+  { id: "sr_s10_gold", studioId: studio.id, studentId: "s10", costumeId: "cos_gold_formal", sizingChartId: "sc_dancewear_co", recommendedSize: "Child Large", confidencePct: 85, alternativeSize: "Adult Small", reason: "Chest and waist measurements fall between size ranges.", flags: ["borderline_chest", "borderline_waist"], parentApproved: false, createdAt: daysAgo(12), updatedAt: daysAgo(5) },
+];
+
+/* ── Costume Fees — billing integration ─────────────────────────── */
+
+export const costumeFees: CostumeFee[] = [
+  { id: "cf_s1_tutu", studioId: studio.id, studentId: "s1", costumeId: "cos_pink_tutu", feeType: "full", totalCents: 5915, paidCents: 5915, status: "paid", dueDate: daysAgo(30), createdAt: daysAgo(60), updatedAt: daysAgo(30) },
+  { id: "cf_s2_neon", studioId: studio.id, studentId: "s2", costumeId: "cos_neon_crew", feeType: "deposit_balance", totalCents: 7525, paidCents: 4000, status: "partial", dueDate: daysAhead(10), createdAt: daysAgo(50), updatedAt: daysAgo(15) },
+  { id: "cf_s5_earth", studioId: studio.id, studentId: "s5", costumeId: "cos_earth_flow", feeType: "full", totalCents: 5535, paidCents: 0, status: "unpaid", dueDate: daysAhead(14), createdAt: daysAgo(40), updatedAt: daysAgo(40) },
+  { id: "cf_s10_gold", studioId: studio.id, studentId: "s10", costumeId: "cos_gold_formal", feeType: "installment", totalCents: 8934, paidCents: 3000, status: "partial", dueDate: daysAhead(21), createdAt: daysAgo(45), updatedAt: daysAgo(5) },
+];
+
+/* ── Vendor Orders ─────────────────────────────────────────────── */
+
+const orderItems_dc: VendorOrderItem[] = [
+  { id: "voi_dc_cs", vendorOrderId: "vo_dancewear_co", costumeId: "cos_pink_tutu", size: "Child Small", quantity: 12, unitCostCents: 4200, createdAt: daysAgo(28) },
+  { id: "voi_dc_cm", vendorOrderId: "vo_dancewear_co", costumeId: "cos_pink_tutu", size: "Child Medium", quantity: 6, unitCostCents: 4200, createdAt: daysAgo(28) },
+  { id: "voi_dc_cl", vendorOrderId: "vo_dancewear_co", costumeId: "cos_pink_tutu", size: "Child Large", quantity: 3, unitCostCents: 4200, createdAt: daysAgo(28) },
+  { id: "voi_dc_earth_sm", vendorOrderId: "vo_dancewear_co", costumeId: "cos_earth_flow", size: "Adult Small", quantity: 8, unitCostCents: 3800, createdAt: daysAgo(28) },
+  { id: "voi_dc_earth_med", vendorOrderId: "vo_dancewear_co", costumeId: "cos_earth_flow", size: "Child Large", quantity: 5, unitCostCents: 3800, createdAt: daysAgo(28) },
+];
+
+const orderItems_ug: VendorOrderItem[] = [
+  { id: "voi_ug_ym", vendorOrderId: "vo_urban_groove", costumeId: "cos_neon_crew", size: "Youth Medium", quantity: 18, unitCostCents: 5600, createdAt: daysAgo(20) },
+  { id: "voi_ug_yl", vendorOrderId: "vo_urban_groove", costumeId: "cos_neon_crew", size: "Youth Large", quantity: 4, unitCostCents: 5600, createdAt: daysAgo(20) },
+];
+
+export const vendorOrders: VendorOrder[] = [
+  {
+    id: "vo_dancewear_co",
+    studioId: studio.id,
+    vendor: "Dancewear Co.",
+    poNumber: "PO-2026-001",
+    orderDate: daysAgo(28),
+    expectedDelivery: daysAhead(5),
+    status: "shipped",
+    vendorNotes: "Partial shipment — pink tutus en route. Earth-tones shipping next week.",
+    shippingCostCents: 2500,
+    items: orderItems_dc,
+    createdAt: daysAgo(28),
+    updatedAt: daysAgo(3),
+  },
+  {
+    id: "vo_urban_groove",
+    studioId: studio.id,
+    vendor: "Urban Groove Supply",
+    poNumber: "PO-2026-002",
+    orderDate: daysAgo(20),
+    expectedDelivery: daysAhead(10),
+    status: "ordered",
+    shippingCostCents: 1800,
+    items: orderItems_ug,
+    createdAt: daysAgo(20),
+    updatedAt: daysAgo(2),
+  },
+];
+
+/* ── Alterations ───────────────────────────────────────────────── */
+
+export const alterations: Alteration[] = [
+  { id: "alt_s1_hem", studioId: studio.id, studentId: "s1", costumeId: "cos_pink_tutu", alterationType: "Hem shortening", assignedTo: "Sarah (Seamstress)", dueDate: daysAhead(7), status: "in_progress", notes: "Remove 2 inches from tulle layers only.", photos: [], createdAt: daysAgo(10), updatedAt: daysAgo(2) },
+  { id: "alt_s5_strap", studioId: studio.id, studentId: "s5", costumeId: "cos_earth_flow", alterationType: "Strap adjustment", assignedTo: "Sarah (Seamstress)", dueDate: daysAhead(5), status: "not_started", notes: "Shorten straps by 1.5 inches. Adjustable straps already at limit.", photos: [], createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+  { id: "alt_s7_waist", studioId: studio.id, studentId: "s7", costumeId: "cos_gold_formal", alterationType: "Waist take-in", assignedTo: "Studio Staff", dueDate: daysAgo(2), status: "complete", notes: "Taken in 1 inch at side seams.", photos: [], createdAt: daysAgo(14), updatedAt: daysAgo(2) },
+];
+
+/* ── Costume Distributions ──────────────────────────────────────── */
+
+export const costumeDistributions: CostumeDistribution[] = [
+  {
+    id: "cdist_s7",
+    studioId: studio.id,
+    studentId: "s7",
+    costumeId: "cos_gold_formal",
+    itemsChecklist: [
+      { label: "Costume (Black & Gold Leotard)", checked: true },
+      { label: "Gold Headpiece", checked: true },
+      { label: "Tights (Convertible)", checked: true },
+      { label: "Accessories", checked: true },
+      { label: "Shoes", checked: true },
+    ],
+    signedBy: "Diane Walsh",
+    signedAt: daysAgo(2),
+    missingItems: [],
+    notes: "All items accounted for.",
+    createdAt: daysAgo(2),
+  },
+];
+
+/* ── Reusable Inventory ────────────────────────────────────────── */
+
+export const reusableCostumes: ReusableCostume[] = [
+  { id: "rinv_pink_sm_1", studioId: studio.id, costumeId: "cos_pink_tutu", size: "Child Small", condition: "good", purchaseDate: daysAgo(365), lastUsed: daysAgo(180), storageBin: "BIN-A12", rackNumber: "R3", status: "available", createdAt: daysAgo(365), updatedAt: daysAgo(60) },
+  { id: "rinv_pink_sm_2", studioId: studio.id, costumeId: "cos_pink_tutu", size: "Child Small", condition: "excellent", purchaseDate: daysAgo(90), storageBin: "BIN-A12", rackNumber: "R3", status: "reserved", createdAt: daysAgo(90), updatedAt: daysAgo(14) },
+  { id: "rinv_tap_m", studioId: studio.id, costumeId: "cos_tap_tux", size: "Child Medium", condition: "fair", purchaseDate: daysAgo(540), lastUsed: daysAgo(200), storageBin: "BIN-C04", rackNumber: "R7", status: "available", notes: "Some sequin wear on collar. Still performance-ready.", createdAt: daysAgo(540), updatedAt: daysAgo(30) },
+  { id: "rinv_acro_navy", studioId: studio.id, costumeId: "cos_acro_unitard", size: "Child Large", condition: "damaged", purchaseDate: daysAgo(300), lastUsed: daysAgo(100), storageBin: "BIN-F02", rackNumber: "R2", status: "damaged", notes: "Tear at left knee seam. Needs repair before reuse.", createdAt: daysAgo(300), updatedAt: daysAgo(14) },
+];
+
+/* ── Costume Rentals ────────────────────────────────────────────── */
+
+export const costumeRentals: CostumeRental[] = [
+  { id: "rent_s12_lilac", studioId: studio.id, studentId: "s12", costumeId: "cos_lilac_lyrical", rentalFeeCents: 2500, depositCents: 5000, returnDate: daysAhead(14), status: "active", damageFeeCents: 0, createdAt: daysAgo(10), updatedAt: daysAgo(10) },
+  { id: "rent_s8_tap", studioId: studio.id, studentId: "s8", costumeId: "cos_tap_tux", rentalFeeCents: 3000, depositCents: 6000, returnDate: daysAgo(5), returnedAt: daysAgo(5), status: "returned", damageFeeCents: 0, notes: "Returned in good condition.", createdAt: daysAgo(30), updatedAt: daysAgo(5) },
+];
+
+/* ── Quick Change Conflicts ─────────────────────────────────────── */
+
+export const quickChangeConflicts: QuickChangeConflict[] = [
+  {
+    id: "qcc_s5", studioId: studio.id, recitalEventId: "r1", studentId: "s5",
+    routineA: "Act II — Rising Energy", routineAEndTime: "19:42",
+    routineB: "Act III — Grace & Flow", routineBStartTime: "19:50",
+    estimatedChangeMinutes: 5, conflictDetected: true,
+    recommendation: "Pre-position costume change station near stage left wing. Consider moving Act III entry by 2 minutes.",
+    resolved: false, createdAt: daysAgo(7),
+  },
+  {
+    id: "qcc_s10", studioId: studio.id, recitalEventId: "r1", studentId: "s10",
+    routineA: "Act II — Rising Energy", routineAEndTime: "19:42",
+    routineB: "Finale — Senior Spotlight", routineBStartTime: "19:55",
+    estimatedChangeMinutes: 8, conflictDetected: false,
+    resolved: true, createdAt: daysAgo(5),
   },
 ];

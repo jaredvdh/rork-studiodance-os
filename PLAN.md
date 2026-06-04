@@ -400,3 +400,81 @@ These are the only two Supabase values the frontend reads — there are no hardc
 ## 6. Seed demo data
 
 Invoke the `seed-demo-data` edge function once to create the demo tenants (Aurora Dance Academy, Northside CrossFit) with their profiles, classes, students, families, invoices, announcements, recitals, and activity logs. Real/trial studios start empty (no demo fallback).
+
+---
+
+# StudioFlow — Costume Management Suite ✅
+
+Complete costume planning, measurement tracking, vendor ordering, distribution, and recital integration system. Eliminates spreadsheets and paper order forms.
+
+---
+
+## Database (Migration 005)
+
+- [x] `costumes` — central costume library with pricing (wholesale, shipping, markup, auto-calculated retail + margin)
+- [x] `costume_assignments` — link costumes to classes, routines, or individual students
+- [x] `student_measurements` — height, weight, chest, waist, hips, girth, inseam, shoe size with approval workflow
+- [x] `sizing_charts` — vendor sizing references with structured row data for AI auto-sizing
+- [x] `size_recommendations` — AI/manual size suggestions per student-costume with confidence scores and flags
+- [x] `costume_fees` — billing integration (included in tuition, full payment, deposit+balance, installment)
+- [x] `vendor_orders` — bulk purchase orders grouped by vendor with full status workflow (draft → ordered → shipped → delivered → quality_checked → ready → distributed → cancelled)
+- [x] `vendor_order_items` — line items per order with size, quantity, unit cost
+- [x] `alterations` — alteration workflow (not_started → in_progress → complete → delivered)
+- [x] `costume_distributions` — distribution day checklists with digital signatures and missing-item tracking
+- [x] `reusable_costumes` — inventory for reuse across seasons (condition, storage bin, rack number)
+- [x] `costume_rentals` — rental system with fee, deposit, return tracking, damage fees
+- [x] `quick_change_analyses` — recital quick-change conflict detection with recommendations
+- [x] RLS policies for all 13 tables (studio-admin full access, caregivers see their children's data)
+- [x] Updated-at triggers on all mutable tables
+
+## Frontend Types & Demo Data
+
+- [x] 20+ types in `types.ts`: Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, VendorOrderItem, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict
+- [x] Label lookup maps: COSTUME_CATEGORY_LABELS, COSTUME_FEE_TYPE_LABELS, ALTERATION_STATUS_LABELS, VENDOR_ORDER_STATUS_LABELS, INVENTORY_CONDITION_LABELS, RENTAL_STATUS_LABELS
+- [x] Demo data: 7 costumes, 9 assignments, 6 measurements, 2 sizing charts, 5 size recommendations, 4 costume fees, 2 vendor orders with line items, 3 alterations, 1 distribution, 4 reusable inventory items, 2 rentals, 2 quick-change analyses
+
+## Supabase Hooks
+
+- [x] Query hooks: useSupabaseCostumes, useSupabaseCostumeAssignments, useSupabaseStudentMeasurements, useSupabaseSizingCharts, useSupabaseSizeRecommendations, useSupabaseCostumeFees, useSupabaseVendorOrders, useSupabaseAlterations, useSupabaseCostumeDistributions, useSupabaseReusableCostumes, useSupabaseCostumeRentals, useSupabaseQuickChangeConflicts
+- [x] Demo fallback pattern: demo data only for `isDemo` sessions; real studios get empty arrays
+
+## Shared Provider
+
+- [x] `CostumesProvider` in `store.tsx` — hydrates all 11 entity types from Supabase, exposes computed helpers: costumesForClass, costumesForStudent, sizeRecForStudentCostume, measurementForStudent, feesForStudent, alterationCountByStatus, studentsMissingMeasurements, outstandingFeeTotal, quickChangeConflictCount, ordersByStatus
+- [x] Provider nested in `App.tsx` inside `withShell` and `withParentShell` chains (between InvoicesProvider and WaiversProvider)
+
+## Admin Portal — Costumes Page
+
+- [x] `/costumes` with 8 sub-tabs: Overview, Library, Measurements, Orders, Alterations, Distribution, Inventory, Quick Change
+- [x] Overview dashboard: summary cards (total costumes, missing measurements, outstanding fees, quick-change conflicts, orders in transit, ready for distribution, overdue alterations, fee collection %)
+- [x] Upcoming deadlines widget: measurement deadline, ordering deadline, distribution date, recital date
+- [x] AI Insights panel: contextual recommendations (students missing measurements, unpaid fees, conflicts, reusable savings, shipping savings)
+- [x] Recent activity feed: measurement approvals, distributions, fee payments, pending parent approvals
+- [x] Costume Library: card grid with category badges, pricing breakdown (wholesale, shipping, markup, retail, margin), SKU, assigned class chips
+- [x] Measurements tab: student measurement cards with status badges, measurement grid, AI size recommendations with confidence scores, vendor sizing chart tables
+- [x] Vendor Orders tab: order cards with status workflow timeline, date tracking, line-item tables, vendor notes
+- [x] Alterations tab: overdue alert banner, status-coded cards with assignee and due dates
+- [x] Distribution tab: digital signature receipts, checklist with checked/missing items
+- [x] Reusable Inventory tab: status summary pills, condition badges, storage location tracking, active rentals section
+- [x] Quick Change tab: unresolved conflicts with routine timeline, estimated change times, recommendations; resolved section
+
+## Parent Portal — Costumes Page
+
+- [x] `/parent/costumes` with 3 sub-tabs: My Costumes, Measurements, Costume Fees
+- [x] Costumes tab: per-student sections showing costume cards with images, routine names, AI size recommendations with confidence %, parent approval buttons, fee + delivery status
+- [x] Measurements tab: per-student measurement profiles with measurement blocks, size recommendation review cards with approve buttons
+- [x] Fees tab: per-student fee breakdowns with payment progress bars, "Pay Now" buttons for outstanding balances, fee type labels
+
+## Navigation & Integration
+
+- [x] AppShell: "Costumes" nav item with Shirt icon between Recitals and Instructors
+- [x] ParentShell: "Costumes" nav item with Shirt icon between Schedule and Payments (desktop + mobile bottom nav)
+- [x] App.tsx: `/costumes` admin route, `/parent/costumes` parent route
+- [x] Dashboard: costume season alert card, missing-measurements KPI replacing avg. attendance
+
+## Build
+
+- [x] TypeScript compilation passes
+- [x] All providers in correct nesting order
+- [x] No circular dependencies
+- [x] Build passes cleanly
