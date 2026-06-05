@@ -898,10 +898,10 @@ function RelationshipRow({
    ═══════════════════════════════════════════════════════════════════ */
 
 function ChildrenTab() {
-  const { parent, classes } = useStudioData();
+  const { classes } = useStudioData();
   const { teachers } = useTeachers();
-  const { children: myStudents, primaryContact, secondaryContact } = useParent();
-  const householdAddress = parent.householdAddress;
+  const { parent, children: myStudents, primaryContact, secondaryContact } = useParent();
+  const householdAddress = parent?.householdAddress;
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
