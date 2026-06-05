@@ -184,6 +184,7 @@ export default function ChildRegistrationWizard({
 
   const [step, setStep] = useState<StepKey>("child");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Step 1 — Child details
   const [legalFirstName, setLegalFirstName] = useState("");
@@ -213,6 +214,7 @@ export default function ChildRegistrationWizard({
   const [medical, setMedical] = useState<ChildMedicalInfo>(emptyMedicalInfo());
   const [physicianClinic, setPhysicianClinic] = useState("");
   const [medicalInfoConfirmed, setMedicalInfoConfirmed] = useState(false);
+  const [noMedicalIssues, setNoMedicalIssues] = useState(false);
 
   const age = useMemo(() => (dob ? calcAge(dob) : 0), [dob]);
 
@@ -230,12 +232,17 @@ export default function ChildRegistrationWizard({
 
   /* ── Validation per step ────────────────────────────────────── */
   const step1Valid = legalFirstName.trim() !== "" && legalLastName.trim() !== "" && dob !== "";
-  const step2Valid = guardianConfirmed &&
-    (guardianMode === "self" || guardianMode === "existing"
-      ? true
-      : newCaregiver.first_name.trim() !== "" && newCaregiver.last_name.trim() !== "" && newCaregiver.email.trim() !== "");
+  const step2Valid =
+    guardianMode === "self"
+      ? guardianConfirmed
+      : guardianMode === "existing"
+        ? guardianConfirmed && selectedCaregiverId.trim() !== ""
+        : guardianConfirmed &&
+          newCaregiver.first_name.trim() !== "" &&
+          newCaregiver.last_name.trim() !== "" &&
+          newCaregiver.email.trim() !== "";
   const step3Valid = emergency.name.trim() !== "" && emergency.phone.trim() !== "";
-  const step4Valid = medicalInfoConfirmed;
+  const step4Valid = noMedicalIssues || medicalInfoConfirmed;
 
   const canAdvance =
     step === "child" ? step1Valid
@@ -247,94 +254,109 @@ export default function ChildRegistrationWizard({
   /* ── Resolve the effective guardian ID ──────────────────────── */
   const effectiveGuardianId = useMemo(() => {
     if (guardianMode === "self") return pc.id;
-    if (guardianMode === "existing") return selectedCaregiverId;
-    return ""; // new caregiver — handled at submit
+    if (guardianMode === "existing") return selectedCaregiverId || undefined;
+    return undefined; // new caregiver — handled at submit
   }, [guardianMode, pc.id, selectedCaregiverId]);
 
   /* ── Submit ─────────────────────────────────────────────────── */
   const handleSubmit = useCallback(() => {
     if (isSubmitting) return;
+    setSubmitError(null);
     setIsSubmitting(true);
 
     const displayName = `${legalFirstName.trim()} ${legalLastName.trim()}`;
 
-    const caregiverId =
-      guardianMode === "self" ? pc.id
-      : guardianMode === "existing" ? selectedCaregiverId
-      : ""; // new caregiver — ID generated later
+    const caregiverId: string | undefined =
+      guardianMode === "self"
+        ? pc.id
+        : guardianMode === "existing"
+          ? (selectedCaregiverId.trim() || undefined)
+          : undefined; // new caregiver — ID generated later
 
-    addChild({
-      name: displayName,
-      dob: new Date(dob).toISOString(),
-      legalFirstName: legalFirstName.trim(),
-      legalLastName: legalLastName.trim(),
-      preferredName: preferredName.trim() || undefined,
-      ageAtRegistration: age,
-      gender: gender || undefined,
-      pronouns: pronouns.trim() || undefined,
-      schoolGrade: schoolGrade.trim() || undefined,
-      guardianConfirmed,
-      guardianRelationship: guardianRelationship.trim(),
-      guardianId: caregiverId,
-      consentTimestamp: new Date().toISOString(),
-      emergencyContactName: emergency.name.trim(),
-      emergencyContactRelationship: emergency.relationship.trim(),
-      emergencyContactPhone: emergency.phone.trim(),
-      emergencyContactSecondaryPhone: emergency.secondaryPhone?.trim() || undefined,
-      emergencyContactCanPickup: emergency.canPickup,
-      authorizedPickupContacts: pickupContacts,
-      medicalInfo: {
-        ...medical,
-        medicalConditions: [
-          medical.medicalConditions,
-          physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
-        ].filter(Boolean).join("; ") || undefined,
-      },
-      medicalInfoConfirmed,
-      allergies: medical.allergies || undefined,
-      medicalNotes: [
-        medical.medications ? `Medications: ${medical.medications}` : null,
-        medical.medicalConditions || null,
-        physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
-        medical.safetyNotes || null,
-      ].filter(Boolean).join("; ") || undefined,
-      waivers: DEFAULT_CHILD_WAIVERS,
-      waiver: "missing",
-    });
+    try {
+      addChild({
+        name: displayName,
+        dob: new Date(dob).toISOString(),
+        legalFirstName: legalFirstName.trim(),
+        legalLastName: legalLastName.trim(),
+        preferredName: preferredName.trim() || undefined,
+        ageAtRegistration: age,
+        gender: gender || undefined,
+        pronouns: pronouns.trim() || undefined,
+        schoolGrade: schoolGrade.trim() || undefined,
+        guardianConfirmed,
+        guardianRelationship: guardianRelationship.trim(),
+        guardianId: caregiverId,
+        consentTimestamp: new Date().toISOString(),
+        emergencyContactName: emergency.name.trim(),
+        emergencyContactRelationship: emergency.relationship.trim(),
+        emergencyContactPhone: emergency.phone.trim(),
+        emergencyContactSecondaryPhone: emergency.secondaryPhone?.trim() || undefined,
+        emergencyContactCanPickup: emergency.canPickup,
+        authorizedPickupContacts: pickupContacts,
+        medicalInfo: noMedicalIssues
+          ? { hasAsthma: false, hasInhaler: false, hasEpiPen: false }
+          : {
+              ...medical,
+              medicalConditions: [
+                medical.medicalConditions,
+                physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
+              ].filter(Boolean).join("; ") || undefined,
+            },
+        medicalInfoConfirmed: noMedicalIssues || medicalInfoConfirmed,
+        allergies: noMedicalIssues ? undefined : (medical.allergies || undefined),
+        medicalNotes: noMedicalIssues
+          ? undefined
+          : [
+              medical.medications ? `Medications: ${medical.medications}` : null,
+              medical.medicalConditions || null,
+              physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
+              medical.safetyNotes || null,
+            ].filter(Boolean).join("; ") || undefined,
+        waivers: DEFAULT_CHILD_WAIVERS,
+        waiver: "missing",
+      });
 
-    setTimeout(() => {
+      // Success — reset form after brief delay for visual feedback
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setLegalFirstName("");
+        setLegalLastName("");
+        setPreferredName("");
+        setDob("");
+        setGender("");
+        setPronouns("");
+        setSchoolGrade("");
+        setUseSeparateAddress(false);
+        setChildAddress(emptyAddress());
+        setGuardianMode("self");
+        setSelectedCaregiverId("");
+        setGuardianConfirmed(false);
+        setGuardianRelationship("Parent");
+        setNewCaregiver(emptyNewCaregiver());
+        setIsBillingContact(false);
+        setIsPickupContact(true);
+        setEmergency(emptyEmergencyContact());
+        setPickupContacts([]);
+        setMedical(emptyMedicalInfo());
+        setPhysicianClinic("");
+        setMedicalInfoConfirmed(false);
+        setNoMedicalIssues(false);
+        setSubmitError(null);
+        setStep("child");
+        onClose();
+      }, 700);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to register child. Please try again.";
+      setSubmitError(message);
       setIsSubmitting(false);
-      // Reset form
-      setLegalFirstName("");
-      setLegalLastName("");
-      setPreferredName("");
-      setDob("");
-      setGender("");
-      setPronouns("");
-      setSchoolGrade("");
-      setUseSeparateAddress(false);
-      setChildAddress(emptyAddress());
-      setGuardianMode("self");
-      setSelectedCaregiverId("");
-      setGuardianConfirmed(false);
-      setGuardianRelationship("Parent");
-      setNewCaregiver(emptyNewCaregiver());
-      setIsBillingContact(false);
-      setIsPickupContact(true);
-      setEmergency(emptyEmergencyContact());
-      setPickupContacts([]);
-      setMedical(emptyMedicalInfo());
-      setPhysicianClinic("");
-      setMedicalInfoConfirmed(false);
-      setStep("child");
-      onClose();
-    }, 700);
+    }
   }, [
     isSubmitting, legalFirstName, legalLastName, preferredName, dob, gender, pronouns,
     schoolGrade, guardianMode, selectedCaregiverId, guardianConfirmed,
     guardianRelationship, newCaregiver, pc.id, emergency,
     pickupContacts, medical, physicianClinic, medicalInfoConfirmed,
-    age, addChild, onClose,
+    noMedicalIssues, age, addChild, onClose,
   ]);
 
   if (!open) return null;
@@ -489,6 +511,8 @@ export default function ChildRegistrationWizard({
               setPhysicianClinic={setPhysicianClinic}
               medicalInfoConfirmed={medicalInfoConfirmed}
               setMedicalInfoConfirmed={setMedicalInfoConfirmed}
+              noMedicalIssues={noMedicalIssues}
+              setNoMedicalIssues={setNoMedicalIssues}
             />
           )}
 
@@ -517,6 +541,16 @@ export default function ChildRegistrationWizard({
           </StepErrorBoundary>
         </div>
       </div>
+
+      {/* ── Submit error banner ──────────────────────────────────── */}
+      {submitError && (
+        <div className="shrink-0 border-t border-rose/20 bg-rose/5 px-4 py-3">
+          <div className="max-w-lg mx-auto flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose shrink-0 mt-0.5" />
+            <p className="text-sm text-rose font-medium">{submitError}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Bottom nav ──────────────────────────────────────────── */}
       <div className="shrink-0 border-t border-amber-200/40 bg-white/80 backdrop-blur-xl px-4 py-3">
@@ -1138,10 +1172,12 @@ function MedicalStep({
   medical, setMedical,
   physicianClinic, setPhysicianClinic,
   medicalInfoConfirmed, setMedicalInfoConfirmed,
+  noMedicalIssues, setNoMedicalIssues,
 }: {
   medical: ChildMedicalInfo; setMedical: (m: ChildMedicalInfo) => void;
   physicianClinic: string; setPhysicianClinic: (v: string) => void;
   medicalInfoConfirmed: boolean; setMedicalInfoConfirmed: (v: boolean) => void;
+  noMedicalIssues: boolean; setNoMedicalIssues: (v: boolean) => void;
 }) {
   const update = (patch: Partial<ChildMedicalInfo>) => setMedical({ ...medical, ...patch });
 
@@ -1157,6 +1193,36 @@ function MedicalStep({
         </p>
       </div>
 
+      {/* No known medical issues quick-toggle */}
+      <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/60 p-4">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={noMedicalIssues}
+            onChange={(e) => {
+              setNoMedicalIssues(e.target.checked);
+              if (e.target.checked) {
+                setMedical(emptyMedicalInfo());
+                setPhysicianClinic("");
+                setMedicalInfoConfirmed(true);
+              } else {
+                setMedicalInfoConfirmed(false);
+              }
+            }}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-emerald-300 text-emerald-500 accent-emerald-500 focus:ring-emerald-400"
+          />
+          <div>
+            <p className="text-sm font-medium text-emerald-800">
+              No known medical issues
+            </p>
+            <p className="text-xs text-emerald-600/70 mt-0.5">
+              Check this if the child has no allergies, medications, medical conditions, or activity restrictions.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {!noMedicalIssues && (
       <div className="rounded-2xl border border-amber-200/70 bg-white p-5 space-y-4">
         {/* Allergies */}
         <div>
@@ -1238,32 +1304,37 @@ function MedicalStep({
           />
         </div>
       </div>
+      )}
 
-      {/* Medical info confirmation */}
-      <div className="rounded-2xl border border-amber-200/70 bg-white p-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={medicalInfoConfirmed}
-            onChange={(e) => setMedicalInfoConfirmed(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded border-amber-300 text-amber-500 accent-amber-500 focus:ring-amber-400"
-          />
-          <div>
-            <p className="text-sm font-medium">
-              I confirm this information is accurate and will update the studio if it changes.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Inaccurate medical information may put the child at risk. The studio relies on this information for participant safety.
-            </p>
+      {/* Medical info confirmation — only shown when there are issues */}
+      {!noMedicalIssues && (
+        <>
+          <div className="rounded-2xl border border-amber-200/70 bg-white p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={medicalInfoConfirmed}
+                onChange={(e) => setMedicalInfoConfirmed(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-amber-300 text-amber-500 accent-amber-500 focus:ring-amber-400"
+              />
+              <div>
+                <p className="text-sm font-medium">
+                  I confirm this information is accurate and will update the studio if it changes.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Inaccurate medical information may put the child at risk. The studio relies on this information for participant safety.
+                </p>
+              </div>
+            </label>
           </div>
-        </label>
-      </div>
 
-      {!medicalInfoConfirmed && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose/5 border border-rose/10 p-3">
-          <AlertTriangle className="h-4 w-4 text-rose shrink-0 mt-0.5" />
-          <p className="text-sm text-rose">You must confirm the medical information before continuing.</p>
-        </div>
+          {!medicalInfoConfirmed && (
+            <div className="flex items-start gap-2 rounded-xl bg-rose/5 border border-rose/10 p-3">
+              <AlertTriangle className="h-4 w-4 text-rose shrink-0 mt-0.5" />
+              <p className="text-sm text-rose">You must confirm the medical information before continuing.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
