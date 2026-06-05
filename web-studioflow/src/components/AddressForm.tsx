@@ -180,15 +180,6 @@ export default function AddressForm({
         </div>
       </div>
 
-      {/* Country-aware placeholders info */}
-      <div className="rounded-xl bg-amber-50/60 border border-amber-100 p-3 text-xs text-muted-foreground flex items-start gap-2">
-        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-        <span>
-          Address format for {cfg.name}: {cfg.addressLabels.stateOrProvince},{" "}
-          {cfg.addressLabels.postalCode}
-        </span>
-      </div>
-
       {/* Actions */}
       <div className="flex gap-3 pt-1">
         <button

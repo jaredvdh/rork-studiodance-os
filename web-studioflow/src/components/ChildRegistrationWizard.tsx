@@ -6,10 +6,12 @@ import {
   Baby,
   Calendar,
   CheckCircle2,
-  ChevronLeft,
   ClipboardList,
   Signature,
   Heart,
+  Home,
+  Mail,
+  MapPin,
   Phone,
   Plus,
   Shield,
@@ -21,12 +23,16 @@ import {
 
 import { useParent } from "@/data/parentStore";
 import {
+  type Address,
   type AuthorizedPickupContact,
+  type Caregiver,
   type ChildMedicalInfo,
   type ChildRegistrationPayload,
   type EmergencyContact,
   DEFAULT_CHILD_WAIVERS,
+  caregiverFullName,
 } from "@/data/types";
+import { AddressDisplay } from "@/components/AddressForm";
 import { cn } from "@/lib/utils";
 
 /* ── Step definitions ────────────────────────────────────────────── */
@@ -54,7 +60,7 @@ interface ChildRegistrationWizardProps {
   onClose: () => void;
 }
 
-/* ── Initial state ────────────────────────────────────────────────── */
+/* ── Initial state helpers ────────────────────────────────────────── */
 
 function emptyMedicalInfo(): ChildMedicalInfo {
   return {
@@ -76,6 +82,33 @@ function emptyEmergencyContact(): EmergencyContact {
     phone: "",
     secondaryPhone: undefined,
     canPickup: true,
+  };
+}
+
+function emptyAddress(): Address {
+  return {
+    line1: "",
+    line2: undefined,
+    city: "",
+    stateOrProvince: undefined,
+    postalCode: "",
+    country: "US",
+  };
+}
+
+function emptyNewCaregiver(): {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  relationship: string;
+} {
+  return {
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    relationship: "Parent",
   };
 }
 
@@ -101,12 +134,15 @@ export default function ChildRegistrationWizard({
   open,
   onClose,
 }: ChildRegistrationWizardProps) {
-  const { parent, primaryCaregiver, addChild } = useParent();
+  const { parent, primaryCaregiver, additionalCaregivers, addChild } = useParent();
   const pc = primaryCaregiver;
+  const householdAddress = parent?.householdAddress;
+  const activeCaregivers = additionalCaregivers.filter(
+    (a) => a.status === "active",
+  );
 
   const [step, setStep] = useState<StepKey>("child");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   // Step 1 — Child details
   const [legalFirstName, setLegalFirstName] = useState("");
@@ -116,10 +152,17 @@ export default function ChildRegistrationWizard({
   const [gender, setGender] = useState("");
   const [pronouns, setPronouns] = useState("");
   const [schoolGrade, setSchoolGrade] = useState("");
+  const [useSeparateAddress, setUseSeparateAddress] = useState(false);
+  const [childAddress, setChildAddress] = useState<Address>(emptyAddress());
 
   // Step 2 — Guardian
+  const [guardianMode, setGuardianMode] = useState<"self" | "existing" | "new">("self");
+  const [selectedCaregiverId, setSelectedCaregiverId] = useState("");
   const [guardianConfirmed, setGuardianConfirmed] = useState(false);
   const [guardianRelationship, setGuardianRelationship] = useState("Parent");
+  const [newCaregiver, setNewCaregiver] = useState(emptyNewCaregiver());
+  const [isBillingContact, setIsBillingContact] = useState(false);
+  const [isPickupContact, setIsPickupContact] = useState(true);
 
   // Step 3 — Emergency & pickup
   const [emergency, setEmergency] = useState<EmergencyContact>(emptyEmergencyContact());
@@ -127,6 +170,7 @@ export default function ChildRegistrationWizard({
 
   // Step 4 — Medical
   const [medical, setMedical] = useState<ChildMedicalInfo>(emptyMedicalInfo());
+  const [physicianClinic, setPhysicianClinic] = useState("");
   const [medicalInfoConfirmed, setMedicalInfoConfirmed] = useState(false);
 
   const age = useMemo(() => (dob ? calcAge(dob) : 0), [dob]);
@@ -145,73 +189,73 @@ export default function ChildRegistrationWizard({
 
   /* ── Validation per step ────────────────────────────────────── */
   const step1Valid = legalFirstName.trim() !== "" && legalLastName.trim() !== "" && dob !== "";
-  const step2Valid = guardianConfirmed;
+  const step2Valid = guardianConfirmed &&
+    (guardianMode === "self" || guardianMode === "existing"
+      ? true
+      : newCaregiver.first_name.trim() !== "" && newCaregiver.last_name.trim() !== "" && newCaregiver.email.trim() !== "");
   const step3Valid = emergency.name.trim() !== "" && emergency.phone.trim() !== "";
   const step4Valid = medicalInfoConfirmed;
-  const canAdvance = step === "child" ? step1Valid
+
+  const canAdvance =
+    step === "child" ? step1Valid
     : step === "guardian" ? step2Valid
     : step === "emergency" ? step3Valid
     : step === "medical" ? step4Valid
     : true;
+
+  /* ── Resolve the effective guardian ID ──────────────────────── */
+  const effectiveGuardianId = useMemo(() => {
+    if (guardianMode === "self") return pc.id;
+    if (guardianMode === "existing") return selectedCaregiverId;
+    return ""; // new caregiver — handled at submit
+  }, [guardianMode, pc.id, selectedCaregiverId]);
 
   /* ── Submit ─────────────────────────────────────────────────── */
   const handleSubmit = useCallback(() => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const payload: ChildRegistrationPayload = {
+    const displayName = `${legalFirstName.trim()} ${legalLastName.trim()}`;
+
+    const caregiverId =
+      guardianMode === "self" ? pc.id
+      : guardianMode === "existing" ? selectedCaregiverId
+      : ""; // new caregiver — ID generated later
+
+    addChild({
+      name: displayName,
+      dob: new Date(dob).toISOString(),
       legalFirstName: legalFirstName.trim(),
       legalLastName: legalLastName.trim(),
       preferredName: preferredName.trim() || undefined,
-      dob: new Date(dob).toISOString(),
+      ageAtRegistration: age,
       gender: gender || undefined,
       pronouns: pronouns.trim() || undefined,
       schoolGrade: schoolGrade.trim() || undefined,
       guardianConfirmed,
       guardianRelationship: guardianRelationship.trim(),
-      guardianId: pc.id,
-      emergencyContact: {
-        name: emergency.name.trim(),
-        relationship: emergency.relationship.trim(),
-        phone: emergency.phone.trim(),
-        secondaryPhone: emergency.secondaryPhone?.trim() || undefined,
-        canPickup: emergency.canPickup,
-      },
-      authorizedPickupContacts: pickupContacts,
-      medicalInfo: medical,
-      medicalInfoConfirmed,
+      guardianId: caregiverId,
       consentTimestamp: new Date().toISOString(),
-    };
-
-    const displayName = `${payload.legalFirstName} ${payload.legalLastName}`;
-
-    addChild({
-      name: displayName,
-      dob: payload.dob,
-      legalFirstName: payload.legalFirstName,
-      legalLastName: payload.legalLastName,
-      preferredName: payload.preferredName,
-      ageAtRegistration: age,
-      gender: payload.gender,
-      pronouns: payload.pronouns,
-      schoolGrade: payload.schoolGrade,
-      guardianConfirmed: payload.guardianConfirmed,
-      guardianRelationship: payload.guardianRelationship,
-      guardianId: payload.guardianId,
-      consentTimestamp: payload.consentTimestamp,
-      emergencyContactName: payload.emergencyContact.name,
-      emergencyContactRelationship: payload.emergencyContact.relationship,
-      emergencyContactPhone: payload.emergencyContact.phone,
-      emergencyContactSecondaryPhone: payload.emergencyContact.secondaryPhone,
-      emergencyContactCanPickup: payload.emergencyContact.canPickup,
-      authorizedPickupContacts: payload.authorizedPickupContacts,
-      medicalInfo: payload.medicalInfo,
-      medicalInfoConfirmed: payload.medicalInfoConfirmed,
-      allergies: payload.medicalInfo.allergies || undefined,
+      emergencyContactName: emergency.name.trim(),
+      emergencyContactRelationship: emergency.relationship.trim(),
+      emergencyContactPhone: emergency.phone.trim(),
+      emergencyContactSecondaryPhone: emergency.secondaryPhone?.trim() || undefined,
+      emergencyContactCanPickup: emergency.canPickup,
+      authorizedPickupContacts: pickupContacts,
+      medicalInfo: {
+        ...medical,
+        medicalConditions: [
+          medical.medicalConditions,
+          physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
+        ].filter(Boolean).join("; ") || undefined,
+      },
+      medicalInfoConfirmed,
+      allergies: medical.allergies || undefined,
       medicalNotes: [
-        payload.medicalInfo.medications ? `Medications: ${payload.medicalInfo.medications}` : null,
-        payload.medicalInfo.medicalConditions ? `Conditions: ${payload.medicalInfo.medicalConditions}` : null,
-        payload.medicalInfo.safetyNotes || null,
+        medical.medications ? `Medications: ${medical.medications}` : null,
+        medical.medicalConditions || null,
+        physicianClinic.trim() ? `Physician/Clinic: ${physicianClinic.trim()}` : null,
+        medical.safetyNotes || null,
       ].filter(Boolean).join("; ") || undefined,
       waivers: DEFAULT_CHILD_WAIVERS,
       waiver: "missing",
@@ -219,7 +263,6 @@ export default function ChildRegistrationWizard({
 
     setTimeout(() => {
       setIsSubmitting(false);
-      setSubmitted(false);
       // Reset form
       setLegalFirstName("");
       setLegalLastName("");
@@ -228,22 +271,42 @@ export default function ChildRegistrationWizard({
       setGender("");
       setPronouns("");
       setSchoolGrade("");
+      setUseSeparateAddress(false);
+      setChildAddress(emptyAddress());
+      setGuardianMode("self");
+      setSelectedCaregiverId("");
       setGuardianConfirmed(false);
       setGuardianRelationship("Parent");
+      setNewCaregiver(emptyNewCaregiver());
+      setIsBillingContact(false);
+      setIsPickupContact(true);
       setEmergency(emptyEmergencyContact());
       setPickupContacts([]);
       setMedical(emptyMedicalInfo());
+      setPhysicianClinic("");
       setMedicalInfoConfirmed(false);
       setStep("child");
       onClose();
     }, 700);
   }, [
     isSubmitting, legalFirstName, legalLastName, preferredName, dob, gender, pronouns,
-    schoolGrade, guardianConfirmed, guardianRelationship, pc.id, emergency,
-    pickupContacts, medical, medicalInfoConfirmed, age, addChild, onClose,
+    schoolGrade, guardianMode, selectedCaregiverId, guardianConfirmed,
+    guardianRelationship, newCaregiver, pc.id, emergency,
+    pickupContacts, medical, physicianClinic, medicalInfoConfirmed,
+    age, addChild, onClose,
   ]);
 
   if (!open) return null;
+
+  // Resolve the guardian display name for steps
+  const guardianDisplayName =
+    guardianMode === "self"
+      ? caregiverFullName(pc)
+      : guardianMode === "existing"
+        ? (activeCaregivers.find((c) => c.id === selectedCaregiverId)
+          ? caregiverFullName(activeCaregivers.find((c) => c.id === selectedCaregiverId)!)
+          : "Selected caregiver")
+        : `${newCaregiver.first_name} ${newCaregiver.last_name}`.trim() || "New caregiver";
 
   /* ═══════════════════════════════════════════════════════════════
      Render
@@ -337,17 +400,33 @@ export default function ChildRegistrationWizard({
               setPronouns={setPronouns}
               schoolGrade={schoolGrade}
               setSchoolGrade={setSchoolGrade}
+              householdAddress={householdAddress}
+              useSeparateAddress={useSeparateAddress}
+              setUseSeparateAddress={setUseSeparateAddress}
+              childAddress={childAddress}
+              setChildAddress={setChildAddress}
             />
           )}
 
           {step === "guardian" && (
             <GuardianStep
-              parentName={`${pc.first_name} ${pc.last_name}`}
+              parentName={caregiverFullName(pc)}
               parentEmail={pc.email}
+              guardianMode={guardianMode}
+              setGuardianMode={setGuardianMode}
+              activeCaregivers={activeCaregivers}
+              selectedCaregiverId={selectedCaregiverId}
+              setSelectedCaregiverId={setSelectedCaregiverId}
               guardianConfirmed={guardianConfirmed}
               setGuardianConfirmed={setGuardianConfirmed}
               guardianRelationship={guardianRelationship}
               setGuardianRelationship={setGuardianRelationship}
+              newCaregiver={newCaregiver}
+              setNewCaregiver={setNewCaregiver}
+              isBillingContact={isBillingContact}
+              setIsBillingContact={setIsBillingContact}
+              isPickupContact={isPickupContact}
+              setIsPickupContact={setIsPickupContact}
             />
           )}
 
@@ -364,6 +443,8 @@ export default function ChildRegistrationWizard({
             <MedicalStep
               medical={medical}
               setMedical={setMedical}
+              physicianClinic={physicianClinic}
+              setPhysicianClinic={setPhysicianClinic}
               medicalInfoConfirmed={medicalInfoConfirmed}
               setMedicalInfoConfirmed={setMedicalInfoConfirmed}
             />
@@ -381,10 +462,14 @@ export default function ChildRegistrationWizard({
               schoolGrade={schoolGrade}
               guardianConfirmed={guardianConfirmed}
               guardianRelationship={guardianRelationship}
-              parentName={`${pc.first_name} ${pc.last_name}`}
+              guardianDisplayName={guardianDisplayName}
               emergency={emergency}
               pickupContacts={pickupContacts}
               medical={medical}
+              physicianClinic={physicianClinic}
+              medicalInfoConfirmed={medicalInfoConfirmed}
+              childAddress={useSeparateAddress ? childAddress : undefined}
+              householdAddress={!useSeparateAddress ? householdAddress : undefined}
             />
           )}
         </div>
@@ -471,6 +556,9 @@ function ChildDetailsStep({
   gender, setGender,
   pronouns, setPronouns,
   schoolGrade, setSchoolGrade,
+  householdAddress,
+  useSeparateAddress, setUseSeparateAddress,
+  childAddress, setChildAddress,
 }: {
   legalFirstName: string; setLegalFirstName: (v: string) => void;
   legalLastName: string; setLegalLastName: (v: string) => void;
@@ -480,6 +568,9 @@ function ChildDetailsStep({
   gender: string; setGender: (v: string) => void;
   pronouns: string; setPronouns: (v: string) => void;
   schoolGrade: string; setSchoolGrade: (v: string) => void;
+  householdAddress?: Address;
+  useSeparateAddress: boolean; setUseSeparateAddress: (v: boolean) => void;
+  childAddress: Address; setChildAddress: (v: Address) => void;
 }) {
   return (
     <div className="animate-float-up space-y-5">
@@ -544,6 +635,91 @@ function ChildDetailsStep({
         </div>
         <Field label="School grade" value={schoolGrade} onChange={setSchoolGrade} placeholder="e.g. 3rd grade, Kindergarten" optional />
       </div>
+
+      {/* Address inheritance */}
+      <div className="rounded-2xl border border-amber-200/70 bg-white p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Home className="h-4 w-4 text-amber-500" />
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Address</h4>
+        </div>
+
+        {!useSeparateAddress ? (
+          <>
+            <div className="rounded-xl bg-success/5 border border-success/10 p-4">
+              <p className="text-sm font-medium text-success mb-1">Inherits household address</p>
+              {householdAddress ? (
+                <AddressDisplay address={householdAddress} country={householdAddress.country} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No household address on file. {" "}
+                  <span className="text-amber-600">Please add one in Family → Overview.</span>
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setUseSeparateAddress(true)}
+              className="text-xs font-medium text-amber-700 hover:text-amber-900 transition"
+            >
+              + Add a separate address for this child
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl bg-teal/5 border border-teal/10 p-4">
+              <p className="text-sm font-medium text-teal mb-3">Separate child address</p>
+              <ChildAddressForm address={childAddress} setAddress={setChildAddress} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setUseSeparateAddress(false)}
+              className="text-xs font-medium text-amber-700 hover:text-amber-900 transition"
+            >
+              ← Use household address instead
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Inline child address form ────────────────────────────────── */
+
+function ChildAddressForm({
+  address,
+  setAddress,
+}: {
+  address: Address;
+  setAddress: (a: Address) => void;
+}) {
+  const update = (patch: Partial<Address>) => setAddress({ ...address, ...patch });
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground block mb-1">Country</label>
+        <select
+          value={address.country}
+          onChange={(e) => update({ country: e.target.value as Address["country"] })}
+          className="w-full rounded-lg border border-amber-200 bg-white py-2.5 px-3 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+        >
+          <option value="US">United States</option>
+          <option value="CA">Canada</option>
+          <option value="GB">United Kingdom</option>
+          <option value="AU">Australia</option>
+          <option value="NZ">New Zealand</option>
+          <option value="IE">Ireland</option>
+          <option value="EU">European Union</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+      <Field label="Address Line 1" value={address.line1} onChange={(v) => update({ line1: v })} placeholder="Address Line 1" />
+      <Field label="Address Line 2" value={address.line2 ?? ""} onChange={(v) => update({ line2: v || undefined })} placeholder="Address Line 2" optional />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="City / Town" value={address.city} onChange={(v) => update({ city: v })} placeholder="City / Town" />
+        <Field label="State / Province" value={address.stateOrProvince ?? ""} onChange={(v) => update({ stateOrProvince: v || undefined })} placeholder="State / Province" optional />
+      </div>
+      <Field label="Postal Code" value={address.postalCode} onChange={(v) => update({ postalCode: v })} placeholder="Postal Code" />
     </div>
   );
 }
@@ -554,12 +730,25 @@ function ChildDetailsStep({
 
 function GuardianStep({
   parentName, parentEmail,
+  guardianMode, setGuardianMode,
+  activeCaregivers,
+  selectedCaregiverId, setSelectedCaregiverId,
   guardianConfirmed, setGuardianConfirmed,
   guardianRelationship, setGuardianRelationship,
+  newCaregiver, setNewCaregiver,
+  isBillingContact, setIsBillingContact,
+  isPickupContact, setIsPickupContact,
 }: {
   parentName: string; parentEmail: string;
+  guardianMode: "self" | "existing" | "new"; setGuardianMode: (v: "self" | "existing" | "new") => void;
+  activeCaregivers: Caregiver[];
+  selectedCaregiverId: string; setSelectedCaregiverId: (v: string) => void;
   guardianConfirmed: boolean; setGuardianConfirmed: (v: boolean) => void;
   guardianRelationship: string; setGuardianRelationship: (v: string) => void;
+  newCaregiver: { first_name: string; last_name: string; email: string; phone: string; relationship: string };
+  setNewCaregiver: (v: { first_name: string; last_name: string; email: string; phone: string; relationship: string }) => void;
+  isBillingContact: boolean; setIsBillingContact: (v: boolean) => void;
+  isPickupContact: boolean; setIsPickupContact: (v: boolean) => void;
 }) {
   return (
     <div className="animate-float-up space-y-5">
@@ -569,28 +758,124 @@ function GuardianStep({
         </div>
         <h3 className="mt-3 font-display text-xl font-semibold">Guardian confirmation</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Confirm your legal relationship to the child.
+          Select who will be the primary guardian for this child.
         </p>
       </div>
 
-      {/* Current user info */}
-      <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-200 text-amber-700 font-semibold text-sm">
-            {(parentName[0] ?? "") + (parentName.split(" ")[1]?.[0] ?? "")}
-          </div>
-          <div>
-            <p className="font-semibold text-sm">{parentName}</p>
-            <p className="text-xs text-muted-foreground">{parentEmail}</p>
-          </div>
+      {/* Guardian mode selector */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered as</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <GuardianModeBtn
+            mode="self"
+            label="Myself"
+            description="You are the guardian"
+            current={guardianMode}
+            onClick={() => setGuardianMode("self")}
+          />
+          <GuardianModeBtn
+            mode="existing"
+            label="Existing caregiver"
+            description="Select from family"
+            current={guardianMode}
+            onClick={() => setGuardianMode("existing")}
+            disabled={activeCaregivers.length === 0}
+          />
+          <GuardianModeBtn
+            mode="new"
+            label="Add new"
+            description="Register a new caregiver"
+            current={guardianMode}
+            onClick={() => setGuardianMode("new")}
+          />
         </div>
       </div>
+
+      {/* Self mode */}
+      {guardianMode === "self" && (
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-200 text-amber-700 font-semibold text-sm">
+              {(parentName[0] ?? "") + (parentName.split(" ")[1]?.[0] ?? "")}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">{parentName}</p>
+              <p className="text-xs text-muted-foreground">{parentEmail}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Existing caregiver mode */}
+      {guardianMode === "existing" && (
+        <div>
+          <label className="text-sm font-medium text-foreground/80 block mb-1.5">
+            Select caregiver
+          </label>
+          <select
+            value={selectedCaregiverId}
+            onChange={(e) => setSelectedCaregiverId(e.target.value)}
+            className="w-full rounded-xl border border-amber-200 bg-amber-50/50 py-3 px-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-400/20"
+          >
+            <option value="">— Select a caregiver —</option>
+            {activeCaregivers.map((cg) => (
+              <option key={cg.id} value={cg.id}>
+                {caregiverFullName(cg)} ({cg.relationship_to_student})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* New caregiver mode */}
+      {guardianMode === "new" && (
+        <div className="rounded-2xl border border-amber-200/70 bg-white p-5 space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <UserPlus className="h-4 w-4 text-teal" />
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">New caregiver</h4>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="First name *"
+              value={newCaregiver.first_name}
+              onChange={(v) => setNewCaregiver({ ...newCaregiver, first_name: v })}
+              placeholder="First name"
+              required
+            />
+            <Field
+              label="Last name *"
+              value={newCaregiver.last_name}
+              onChange={(v) => setNewCaregiver({ ...newCaregiver, last_name: v })}
+              placeholder="Last name"
+              required
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Email *"
+              value={newCaregiver.email}
+              onChange={(v) => setNewCaregiver({ ...newCaregiver, email: v })}
+              placeholder="email@example.com"
+              type="email"
+              required
+            />
+            <Field
+              label="Phone"
+              value={newCaregiver.phone}
+              onChange={(v) => setNewCaregiver({ ...newCaregiver, phone: v })}
+              placeholder="+1 555 123-4567"
+              type="tel"
+              optional
+            />
+          </div>
+        </div>
+      )}
 
       {/* Relationship */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-1.5">
           <Users className="h-4 w-4 text-amber-500" />
-          Your relationship to the child *
+          Relationship to child *
         </label>
         <select
           value={guardianRelationship}
@@ -606,6 +891,22 @@ function GuardianStep({
         </select>
       </div>
 
+      {/* Toggles */}
+      <div className="rounded-2xl border border-amber-200/70 bg-white p-4 space-y-3">
+        <ToggleRow
+          label="Authorized for pickup"
+          description="This guardian can pick up the child from the studio"
+          checked={isPickupContact}
+          onChange={setIsPickupContact}
+        />
+        <ToggleRow
+          label="Billing contact"
+          description="This guardian receives and can pay invoices"
+          checked={isBillingContact}
+          onChange={setIsBillingContact}
+        />
+      </div>
+
       {/* Consent checkbox */}
       <div className="rounded-2xl border border-amber-200/70 bg-white p-4">
         <label className="flex items-start gap-3 cursor-pointer">
@@ -617,10 +918,10 @@ function GuardianStep({
           />
           <div>
             <p className="text-sm font-medium">
-              I confirm I am the parent, legal guardian, or authorized caregiver for this child.
+              I confirm the guardian information above is correct.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              By checking this box, you attest that you have the legal authority to register this minor participant and make decisions on their behalf. False representation may result in account termination.
+              By checking this box, you attest that the selected guardian has the legal authority for this child.
             </p>
           </div>
         </label>
@@ -629,10 +930,44 @@ function GuardianStep({
       {!guardianConfirmed && (
         <div className="flex items-start gap-2 rounded-xl bg-rose/5 border border-rose/10 p-3">
           <AlertTriangle className="h-4 w-4 text-rose shrink-0 mt-0.5" />
-          <p className="text-sm text-rose">You must confirm your guardianship before continuing.</p>
+          <p className="text-sm text-rose">You must confirm the guardian before continuing.</p>
+        </div>
+      )}
+
+      {guardianMode === "existing" && !selectedCaregiverId && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3">
+          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-700">Please select a caregiver from the dropdown above.</p>
         </div>
       )}
     </div>
+  );
+}
+
+function GuardianModeBtn({
+  mode, label, description, current, onClick, disabled,
+}: {
+  mode: string; label: string; description: string; current: string;
+  onClick: () => void; disabled?: boolean;
+}) {
+  const isActive = current === mode;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "rounded-xl border p-3 text-left transition-all",
+        isActive
+          ? "border-amber-400 bg-amber-50 ring-1 ring-amber-400/30"
+          : "border-amber-200/70 bg-white hover:bg-amber-50/50",
+        disabled && "opacity-50 cursor-not-allowed",
+      )}
+    >
+      <p className={cn("text-sm font-semibold", isActive ? "text-amber-900" : "text-foreground")}>
+        {label}
+      </p>
+      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+    </button>
   );
 }
 
@@ -684,8 +1019,8 @@ function EmergencyStep({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Phone *" value={emergency.phone} onChange={(v) => updateEmergency({ phone: v })} placeholder="(555) 123-4567" type="tel" required />
-          <Field label="Secondary phone" value={emergency.secondaryPhone ?? ""} onChange={(v) => updateEmergency({ secondaryPhone: v || undefined })} placeholder="(555) 987-6543" type="tel" optional />
+          <Field label="Phone *" value={emergency.phone} onChange={(v) => updateEmergency({ phone: v })} placeholder="+1 555 123-4567" type="tel" required />
+          <Field label="Alternate phone" value={emergency.secondaryPhone ?? ""} onChange={(v) => updateEmergency({ secondaryPhone: v || undefined })} placeholder="+1 555 987-6543" type="tel" optional />
         </div>
 
         <label className="flex items-center gap-3 cursor-pointer">
@@ -735,7 +1070,7 @@ function EmergencyStep({
               <Field label="Name" value={c.name} onChange={(v) => updatePickup(idx, { name: v })} placeholder="Full name" />
               <Field label="Relationship" value={c.relationship} onChange={(v) => updatePickup(idx, { relationship: v })} placeholder="e.g. Grandfather, Nanny" />
             </div>
-            <Field label="Phone" value={c.phone} onChange={(v) => updatePickup(idx, { phone: v })} placeholder="(555) 123-4567" type="tel" />
+            <Field label="Phone" value={c.phone} onChange={(v) => updatePickup(idx, { phone: v })} placeholder="+1 555 123-4567" type="tel" />
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -758,9 +1093,11 @@ function EmergencyStep({
 
 function MedicalStep({
   medical, setMedical,
+  physicianClinic, setPhysicianClinic,
   medicalInfoConfirmed, setMedicalInfoConfirmed,
 }: {
   medical: ChildMedicalInfo; setMedical: (m: ChildMedicalInfo) => void;
+  physicianClinic: string; setPhysicianClinic: (v: string) => void;
   medicalInfoConfirmed: boolean; setMedicalInfoConfirmed: (v: boolean) => void;
 }) {
   const update = (patch: Partial<ChildMedicalInfo>) => setMedical({ ...medical, ...patch });
@@ -814,6 +1151,18 @@ function MedicalStep({
           />
         </div>
 
+        {/* Physician / Clinic — NEW */}
+        <div>
+          <label className="text-sm font-medium text-foreground/80 block mb-1.5">Physician / clinic</label>
+          <input
+            type="text"
+            value={physicianClinic}
+            onChange={(e) => setPhysicianClinic(e.target.value)}
+            placeholder="e.g. Dr. Smith, City Medical Clinic"
+            className="w-full rounded-xl border border-amber-200 bg-amber-50/50 py-3 px-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-400/20"
+          />
+        </div>
+
         {/* Toggles */}
         <div className="space-y-2.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Specific conditions</p>
@@ -836,7 +1185,7 @@ function MedicalStep({
 
         {/* Additional safety notes */}
         <div>
-          <label className="text-sm font-medium text-foreground/80 block mb-1.5">Additional safety notes</label>
+          <label className="text-sm font-medium text-foreground/80 block mb-1.5">Emergency notes</label>
           <textarea
             rows={2}
             value={medical.safetyNotes ?? ""}
@@ -866,6 +1215,13 @@ function MedicalStep({
           </div>
         </label>
       </div>
+
+      {!medicalInfoConfirmed && (
+        <div className="flex items-start gap-2 rounded-xl bg-rose/5 border border-rose/10 p-3">
+          <AlertTriangle className="h-4 w-4 text-rose shrink-0 mt-0.5" />
+          <p className="text-sm text-rose">You must confirm the medical information before continuing.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -877,18 +1233,21 @@ function MedicalStep({
 function ReviewStep({
   legalFirstName, legalLastName, preferredName, dob, age,
   gender, pronouns, schoolGrade,
-  guardianConfirmed, guardianRelationship, parentName,
+  guardianConfirmed, guardianRelationship, guardianDisplayName,
   emergency, pickupContacts, medical,
+  physicianClinic, medicalInfoConfirmed,
+  childAddress, householdAddress,
 }: {
   legalFirstName: string; legalLastName: string; preferredName: string;
   dob: string; age: number;
   gender: string; pronouns: string; schoolGrade: string;
-  guardianConfirmed: boolean; guardianRelationship: string; parentName: string;
+  guardianConfirmed: boolean; guardianRelationship: string; guardianDisplayName: string;
   emergency: EmergencyContact; pickupContacts: AuthorizedPickupContact[];
-  medical: ChildMedicalInfo;
+  medical: ChildMedicalInfo; physicianClinic: string; medicalInfoConfirmed: boolean;
+  childAddress?: Address; householdAddress?: Address;
 }) {
   const displayDob = dob ? new Date(dob + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
-  const hasMedicalFlags = !!(medical.allergies || medical.medications || medical.medicalConditions || medical.hasAsthma || medical.hasEpiPen || medical.activityRestrictions);
+  const hasMedicalFlags = !!(medical.allergies || medical.medications || medical.medicalConditions || medical.hasAsthma || medical.hasEpiPen || medical.activityRestrictions || physicianClinic);
 
   return (
     <div className="animate-float-up space-y-5">
@@ -910,11 +1269,21 @@ function ReviewStep({
         {gender && <ReviewRow label="Gender" value={gender} />}
         {pronouns && <ReviewRow label="Pronouns" value={pronouns} />}
         {schoolGrade && <ReviewRow label="School grade" value={schoolGrade} />}
+        {householdAddress && (
+          <div className="mt-2 pt-2 border-t border-amber-100">
+            <ReviewRow label="Address" value="Inherits household address" />
+          </div>
+        )}
+        {childAddress && (
+          <div className="mt-2 pt-2 border-t border-amber-100">
+            <ReviewRow label="Address" value={`${childAddress.line1}, ${childAddress.city} ${childAddress.postalCode}`} />
+          </div>
+        )}
       </ReviewSection>
 
       {/* Guardian summary */}
       <ReviewSection icon={Shield} title="Guardian confirmation">
-        <ReviewRow label="Submitted by" value={parentName} />
+        <ReviewRow label="Guardian" value={guardianDisplayName} />
         <ReviewRow label="Relationship" value={guardianRelationship} />
         <ReviewRow label="Guardianship confirmed" value={guardianConfirmed ? "Yes ✓" : "No ✗"} warn={!guardianConfirmed} />
       </ReviewSection>
@@ -924,7 +1293,7 @@ function ReviewStep({
         <ReviewRow label="Name" value={emergency.name} />
         {emergency.relationship && <ReviewRow label="Relationship" value={emergency.relationship} />}
         <ReviewRow label="Phone" value={emergency.phone} />
-        {emergency.secondaryPhone && <ReviewRow label="Secondary phone" value={emergency.secondaryPhone} />}
+        {emergency.secondaryPhone && <ReviewRow label="Alternate phone" value={emergency.secondaryPhone} />}
         <ReviewRow label="Can pick up child" value={emergency.canPickup ? "Yes" : "No"} />
         {pickupContacts.length > 0 && (
           <div className="mt-2 pt-2 border-t border-amber-100">
@@ -947,18 +1316,19 @@ function ReviewStep({
             {medical.allergies && <ReviewRow label="Allergies" value={medical.allergies} em />}
             {medical.medications && <ReviewRow label="Medications" value={medical.medications} />}
             {medical.medicalConditions && <ReviewRow label="Conditions" value={medical.medicalConditions} />}
+            {physicianClinic && <ReviewRow label="Physician / clinic" value={physicianClinic} />}
             <div className="flex flex-wrap gap-2 pt-1">
               {medical.hasAsthma && <FlagPill label="Asthma" em />}
               {medical.hasInhaler && <FlagPill label="Uses inhaler" em />}
               {medical.hasEpiPen && <FlagPill label="EpiPen required" em />}
             </div>
             {medical.activityRestrictions && <ReviewRow label="Restrictions" value={medical.activityRestrictions} em />}
-            {medical.safetyNotes && <ReviewRow label="Safety notes" value={medical.safetyNotes} />}
+            {medical.safetyNotes && <ReviewRow label="Emergency notes" value={medical.safetyNotes} />}
           </>
         ) : (
           <p className="text-sm text-muted-foreground py-1">No medical conditions reported.</p>
         )}
-        <ReviewRow label="Medical info confirmed" value={medicalInfoConfirmed ? "Yes ✓" : "No ✗"} />
+        <ReviewRow label="Medical info confirmed" value={medicalInfoConfirmed ? "Yes ✓" : "No ✗"} warn={!medicalInfoConfirmed} />
       </ReviewSection>
 
       {/* Waiver notice */}
@@ -1004,18 +1374,21 @@ function Field({
 }
 
 function ToggleRow({
-  label, checked, onChange,
+  label, description, checked, onChange,
 }: {
-  label: string; checked: boolean; onChange: (v: boolean) => void;
+  label: string; description?: string; checked: boolean; onChange: (v: boolean) => void;
 }) {
   return (
     <label className="flex items-center justify-between py-2 px-3 rounded-lg bg-amber-50/60 cursor-pointer hover:bg-amber-50 transition">
-      <span className="text-sm">{label}</span>
+      <div>
+        <span className="text-sm">{label}</span>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+      </div>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-5 w-5 rounded border-amber-300 text-amber-500 accent-amber-500"
+        className="h-5 w-5 rounded border-amber-300 text-amber-500 accent-amber-500 shrink-0 ml-3"
       />
     </label>
   );
