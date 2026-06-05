@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { Component, useCallback, useMemo, useState } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -34,6 +35,46 @@ import {
 } from "@/data/types";
 import { AddressDisplay } from "@/components/AddressForm";
 import { cn } from "@/lib/utils";
+
+/* ── Inline error boundary for step content ─────────────────────── */
+
+class StepErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("StepErrorBoundary caught:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="rounded-2xl border border-rose/30 bg-rose/5 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-rose mb-3" />
+          <p className="text-sm font-medium text-rose">
+            Something went wrong rendering this step.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {this.state.error?.message ?? "Unknown error"}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="mt-4 rounded-full border border-rose/30 bg-white px-4 py-2 text-xs font-semibold text-rose transition hover:bg-rose/10"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /* ── Step definitions ────────────────────────────────────────────── */
 
@@ -382,7 +423,8 @@ export default function ChildRegistrationWizard({
 
       {/* ── Step content (scrollable) ───────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-4 py-6">
+        <div className="max-w-lg mx-auto px-4 py-6 min-h-[300px]">
+          <StepErrorBoundary key={step}>
           {step === "child" && (
             <ChildDetailsStep
               legalFirstName={legalFirstName}
@@ -472,6 +514,7 @@ export default function ChildRegistrationWizard({
               householdAddress={!useSeparateAddress ? householdAddress : undefined}
             />
           )}
+          </StepErrorBoundary>
         </div>
       </div>
 
@@ -573,7 +616,7 @@ function ChildDetailsStep({
   childAddress: Address; setChildAddress: (v: Address) => void;
 }) {
   return (
-    <div className="animate-float-up space-y-5">
+    <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-700">
           <Baby className="h-6 w-6" />
@@ -751,7 +794,7 @@ function GuardianStep({
   isPickupContact: boolean; setIsPickupContact: (v: boolean) => void;
 }) {
   return (
-    <div className="animate-float-up space-y-5">
+    <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-teal/10 text-teal">
           <Shield className="h-6 w-6" />
@@ -998,7 +1041,7 @@ function EmergencyStep({
   };
 
   return (
-    <div className="animate-float-up space-y-5">
+    <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-rose/10 text-rose">
           <Phone className="h-6 w-6" />
@@ -1103,7 +1146,7 @@ function MedicalStep({
   const update = (patch: Partial<ChildMedicalInfo>) => setMedical({ ...medical, ...patch });
 
   return (
-    <div className="animate-float-up space-y-5">
+    <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
           <Stethoscope className="h-6 w-6" />
@@ -1250,7 +1293,7 @@ function ReviewStep({
   const hasMedicalFlags = !!(medical.allergies || medical.medications || medical.medicalConditions || medical.hasAsthma || medical.hasEpiPen || medical.activityRestrictions || physicianClinic);
 
   return (
-    <div className="animate-float-up space-y-5">
+    <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-700">
           <ClipboardList className="h-6 w-6" />
