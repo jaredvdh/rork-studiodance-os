@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import type { SizingChart, SizingChartRow, Costume, StudentMeasurement, SizeRecommendation } from "@/data/types";
-import { parseCsvChart, autoSize } from "@/lib/autoSizing";
+import { parseCsvChart, autoSize, parseChartWithAI, detectChartUnit, normalizeChartRow } from "@/lib/autoSizing";
 import { cn } from "@/lib/utils";
 
 interface SizingChartUploadProps {
@@ -47,6 +47,8 @@ export default function SizingChartUpload({
   const [saving, setSaving] = useState(false);
   const [runAll, setRunAll] = useState(false);
 
+  const [aiParsing, setAiParsing] = useState(false);
+
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -59,15 +61,36 @@ export default function SizingChartUpload({
           toast.error("Could not parse any size rows from this file");
           return;
         }
-        setRows(parsed);
+        // Detect unit system from the data
+        const detectedUnit = detectChartUnit(parsed);
+        const normalized = parsed.map((r) => normalizeChartRow(r, detectedUnit));
+        setRows(normalized);
         setFileType("csv");
         setMode("manual");
-        toast.success(`Parsed ${parsed.length} size rows from CSV`);
+        toast.success(`Parsed ${parsed.length} size rows${detectedUnit === "imperial" ? " (detected as imperial — converted to metric)" : ""}`);
+      } else if (file.name.endsWith(".pdf") || file.name.endsWith(".xlsx") || file.name.endsWith(".txt")) {
+        // Use AI to parse unstructured sizing chart text
+        setAiParsing(true);
+        try {
+          const parsed = await parseChartWithAI(text);
+          if (parsed.length === 0) {
+            toast.error("AI could not extract any size rows from this file");
+            return;
+          }
+          setRows(parsed);
+          setFileType("manual");
+          setMode("manual");
+          toast.success(`AI extracted ${parsed.length} size rows`);
+        } catch {
+          toast.error("AI parsing failed. Try pasting the chart data directly into the manual editor.");
+        } finally {
+          setAiParsing(false);
+        }
       } else {
-        toast.info("PDF/Excel parsing via AI will be available soon. Please use CSV or manual entry for now.");
+        toast.info("Unsupported file format. Please use CSV for structured charts, or PDF/TXT for AI parsing.");
       }
     } catch {
-      toast.error("Failed to parse file. Check format: Size, ChestMin, ChestMax, WaistMin, WaistMax, GirthMin, GirthMax, HeightMin, HeightMax");
+      toast.error("Failed to parse file.");
     } finally {
       setParsing(false);
     }

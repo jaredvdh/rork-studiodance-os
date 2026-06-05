@@ -3,7 +3,11 @@
  * with per-dimension analysis, confidence scoring, flagging, and alternative recommendations.
  */
 
-import type { SizingChart, SizingChartRow, StudentMeasurement } from "@/data/types";
+import type { SizingChart, SizingChartRow, StudentMeasurement, UnitSystem } from "@/data/types";
+import { inToCm } from "@/lib/units";
+
+const TOOLKIT_URL = import.meta.env.EXPO_PUBLIC_TOOLKIT_URL as string;
+const TOOLKIT_KEY = import.meta.env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY as string;
 
 export interface DimensionMatch {
   dimension: string;
@@ -289,4 +293,91 @@ function parseNum(v: string | undefined): number | undefined {
   if (!v || v === "") return undefined;
   const n = Number(v);
   return isNaN(n) ? undefined : n;
+}
+
+/** Detect whether a sizing chart CSV/text is in imperial units. */
+export function detectChartUnit(rows: SizingChartRow[]): UnitSystem {
+  if (rows.length === 0) return "metric";
+  let imperialHits = 0;
+  let totalValues = 0;
+  for (const row of rows) {
+    const vals = [row.chestMin, row.chestMax, row.waistMin, row.waistMax, row.girthMin, row.girthMax, row.heightMin, row.heightMax, row.hipsMin, row.hipsMax];
+    for (const v of vals) {
+      if (v == null) continue;
+      totalValues++;
+      if (v > 100) imperialHits++;
+    }
+  }
+  return totalValues > 0 && imperialHits / totalValues > 0.5 ? "imperial" : "metric";
+}
+
+/** Normalize chart row values to metric (cm/kg) for internal use. */
+export function normalizeChartRow(row: SizingChartRow, unit: UnitSystem): SizingChartRow {
+  if (unit === "metric") return { ...row, unit };
+  const convert = (v: number | undefined) => v != null ? inToCm(v) : undefined;
+  return {
+    ...row, unit,
+    chestMin: convert(row.chestMin), chestMax: convert(row.chestMax),
+    waistMin: convert(row.waistMin), waistMax: convert(row.waistMax),
+    hipsMin: convert(row.hipsMin), hipsMax: convert(row.hipsMax),
+    girthMin: convert(row.girthMin), girthMax: convert(row.girthMax),
+    heightMin: convert(row.heightMin), heightMax: convert(row.heightMax),
+  };
+}
+
+/** Use the Rork AI proxy to parse raw sizing-chart text into structured rows. */
+export async function parseChartWithAI(rawText: string): Promise<SizingChartRow[]> {
+  if (!TOOLKIT_URL || !TOOLKIT_KEY) {
+    throw new Error("AI toolkit not configured");
+  }
+  const prompt = `You are a sizing chart parser for a dance studio costume system.
+Given raw text from a vendor sizing chart, extract structured size-range data.
+For each size provide measurements in CENTIMETRES (cm) and weight in kg:
+- size (name, e.g. "XS", "Child Small", "4-6")
+- chestMin, chestMax
+- waistMin, waistMax
+- hipsMin, hipsMax
+- girthMin, girthMax
+- heightMin, heightMax
+- weightMin, weightMax (kg)
+- unit: "metric" or "imperial" (based on original chart)
+
+IMPORTANT: If the original chart is imperial (inches/lb), CONVERT all values to metric (cm/kg) and set unit to "imperial".
+Return ONLY a JSON array. Example:
+[{"size":"XS","chestMin":56,"chestMax":61,"waistMin":48,"waistMax":53,"girthMin":91,"girthMax":97,"heightMin":102,"heightMax":112,"unit":"imperial"}]
+
+Raw chart text:
+${rawText.substring(0, 4000)}`;
+
+  const response = await fetch(`${TOOLKIT_URL}/v2/vercel/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOOLKIT_KEY}` },
+    body: JSON.stringify({
+      model: "anthropic/claude-sonnet-4.6",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2000,
+    }),
+  });
+  if (!response.ok) throw new Error(`AI request failed: ${response.status}`);
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+  const jsonMatch = text.match(/\[[\s\S]*?\]/);
+  if (!jsonMatch) throw new Error("AI response did not contain valid JSON array");
+  const parsed = JSON.parse(jsonMatch[0]) as Array<Record<string, unknown>>;
+  return parsed.map((item) => ({
+    size: String(item.size ?? ""),
+    chestMin: toNum(item.chestMin), chestMax: toNum(item.chestMax),
+    waistMin: toNum(item.waistMin), waistMax: toNum(item.waistMax),
+    hipsMin: toNum(item.hipsMin), hipsMax: toNum(item.hipsMax),
+    girthMin: toNum(item.girthMin), girthMax: toNum(item.girthMax),
+    heightMin: toNum(item.heightMin), heightMax: toNum(item.heightMax),
+    weightMin: toNum(item.weightMin), weightMax: toNum(item.weightMax),
+    unit: item.unit === "imperial" ? "imperial" as const : "metric" as const,
+  }));
+}
+
+function toNum(v: unknown): number | undefined {
+  if (v == null || v === "") return undefined;
+  const n = Number(v);
+  return isNaN(n) ? undefined : Math.round(n * 10) / 10;
 }

@@ -11,7 +11,7 @@ import {
   Truck,
 } from "lucide-react";
 import type { Costume, VendorOrder, SizeRecommendation } from "@/data/types";
-import { generatePoNumber, groupByVendor, exportOrderToCsv, exportOrderToPdf } from "@/lib/exportOrders";
+import { generatePoNumber, groupByVendor, exportOrderToCsv, exportOrderToPdf, exportOrderToExcel } from "@/lib/exportOrders";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +118,15 @@ export default function VendorOrderingCentre({
     }
     toast.success(`PO ${order.poNumber} exported as ${format.toUpperCase()}`);
   }, [costumes, studioName]);
+
+  const handleExportAllExcel = useCallback(() => {
+    if (existingOrders.length === 0) {
+      toast.error("No orders to export");
+      return;
+    }
+    exportOrderToExcel(existingOrders, costumes, studioName);
+    toast.success(`Exported ${existingOrders.length} orders as Excel workbook`);
+  }, [existingOrders, costumes, studioName]);
 
   // Existing orders display
   const existingByVendor = useMemo(() => {

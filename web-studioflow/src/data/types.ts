@@ -732,6 +732,8 @@ export interface SizingChartRow {
   heightMax?: number;
   weightMin?: number;
   weightMax?: number;
+  /** Unit system used by this chart row. If omitted, assumed metric (cm/kg). */
+  unit?: UnitSystem;
 }
 
 export interface SizeRecommendation {

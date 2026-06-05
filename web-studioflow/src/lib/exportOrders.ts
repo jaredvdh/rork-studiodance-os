@@ -95,6 +95,85 @@ export function exportOrderToCsv(order: VendorOrder, costumes: Costume[]): void 
 }
 
 /**
+ * Export all vendor orders as an Excel workbook (HTML-based .xls format Excel can open).
+ * Generates a multi-sheet workbook: Summary sheet + one sheet per vendor order.
+ */
+export function exportOrderToExcel(
+  orders: VendorOrder[],
+  costumes: Costume[],
+  studioName: string,
+): void {
+  const now = new Date().toLocaleDateString();
+  const lineItemSheets = orders.map((order) => {
+    const itemRows = order.items.map((item) => {
+      const costume = costumes.find((c) => c.id === item.costumeId);
+      const name = costume?.name ?? "Unknown";
+      const sku = costume?.sku ?? "";
+      const unitCost = `${(item.unitCostCents / 100).toFixed(2)}`;
+      const total = `${((item.quantity * item.unitCostCents) / 100).toFixed(2)}`;
+      return { name, sku, size: item.size, qty: item.quantity, unitCost, total };
+    });
+    const poQty = order.items.reduce((s, i) => s + i.quantity, 0);
+    const poSubtotal = order.items.reduce((s, i) => s + i.quantity * i.unitCostCents, 0);
+    const poTotal = poSubtotal + order.shippingCostCents;
+    return { order, itemRows, poQty, poSubtotal, poTotal };
+  });
+
+  const rowsHtml = lineItemSheets.map(({ order, itemRows, poQty, poSubtotal, poTotal }) => {
+    const itemsHtml = itemRows.map((r) => `
+      <tr>
+        <td style="border:1px solid #999;padding:4px 8px;">${r.name}</td>
+        <td style="border:1px solid #999;padding:4px 8px;">${r.sku}</td>
+        <td style="border:1px solid #999;padding:4px 8px;text-align:center;">${r.size}</td>
+        <td style="border:1px solid #999;padding:4px 8px;text-align:center;">${r.qty}</td>
+        <td style="border:1px solid #999;padding:4px 8px;text-align:right;">${r.unitCost}</td>
+        <td style="border:1px solid #999;padding:4px 8px;text-align:right;">${r.total}</td>
+      </tr>`).join("");
+    return `
+    <h3>${order.poNumber ?? "PO"} — ${order.vendor}</h3>
+    <p>Order Date: ${order.orderDate ? new Date(order.orderDate).toLocaleDateString() : "—"} · Status: ${order.status}</p>
+    <table style="border-collapse:collapse;">
+      <thead><tr style="background:#f7f5f3;">
+        <th style="border:1px solid #999;padding:6px 8px;">Costume</th><th style="border:1px solid #999;padding:6px 8px;">SKU</th><th style="border:1px solid #999;padding:6px 8px;">Size</th><th style="border:1px solid #999;padding:6px 8px;">Qty</th><th style="border:1px solid #999;padding:6px 8px;">Unit Cost</th><th style="border:1px solid #999;padding:6px 8px;">Total</th>
+      </tr></thead>
+      <tbody>${itemsHtml}</tbody>
+      <tfoot>
+        <tr><td colspan="3" style="border:1px solid #999;padding:4px 8px;text-align:right;"><strong>Subtotal (${poQty} items)</strong></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;padding:4px 8px;text-align:right;">${(poSubtotal / 100).toFixed(2)}</td></tr>
+        <tr><td colspan="3" style="border:1px solid #999;padding:4px 8px;text-align:right;"><strong>Shipping</strong></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;padding:4px 8px;text-align:right;">${(order.shippingCostCents / 100).toFixed(2)}</td></tr>
+        <tr><td colspan="3" style="border:1px solid #999;padding:4px 8px;text-align:right;"><strong>Grand Total</strong></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;padding:4px 8px;text-align:right;"><strong>${(poTotal / 100).toFixed(2)}</strong></td></tr>
+      </tfoot>
+    </table><br/>`;
+  }).join("");
+
+  const totalItems = orders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.quantity, 0), 0);
+  const totalCost = orders.reduce((s, o) => {
+    const sub = o.items.reduce((ss, i) => ss + i.quantity * i.unitCostCents, 0);
+    return s + sub + o.shippingCostCents;
+  }, 0);
+
+  const html = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+<x:ExcelWorksheet><x:Name>Summary</x:Name><x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions></x:ExcelWorksheet>
+${orders.map((o) => `<x:ExcelWorksheet><x:Name>${(o.poNumber ?? "Order").replace(/[\\/*?\\[\]]/g, "")}</x:Name><x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions></x:ExcelWorksheet>`).join("\n")}
+</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>table{border-collapse:collapse;}td,th{border:1px solid #999;padding:6px 8px;}th{font-weight:600;text-align:left;}</style></head><body>
+<h1>${studioName} — Vendor Orders</h1>
+<p>Generated: ${now} · ${orders.length} orders · ${totalItems} total items · ${(totalCost / 100).toFixed(2)} total value</p>
+${rowsHtml}
+</body></html>`;
+
+  const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${studioName.replace(/\s+/g, "_")}_Vendor_Orders.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Export a vendor order as a printable PDF (HTML-based).
  */
 export function exportOrderToPdf(order: VendorOrder, costumes: Costume[], studioName: string): void {

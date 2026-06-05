@@ -14,9 +14,10 @@ import {
   User,
   X,
 } from "lucide-react";
-import type { Costume, CostumeDistribution, Student } from "@/data/types";
+import type { Costume, CostumeDistribution, Student, UploadedDocument } from "@/data/types";
 import SignatureCanvas from "@/components/SignatureCanvas";
 import { cn } from "@/lib/utils";
+import { useDocuments } from "@/data/store";
 
 interface DistributionModeProps {
   students: Student[];
@@ -68,6 +69,8 @@ export default function DistributionMode({
 
   const allChecked = checklist.every((i) => i.checked);
 
+  const { addDocument } = useDocuments();
+
   const handleSaveDistribution = useCallback(async (signatureData?: string) => {
     if (!selectedStudent || !selectedCostume) {
       toast.error("Select a student and costume first");
@@ -89,6 +92,26 @@ export default function DistributionMode({
         notes: notes || undefined,
         distributedBy: "Staff",
       });
+
+      // Auto-create receipt document in student profile when signed
+      if (signatureData) {
+        const student = students.find((s) => s.id === selectedStudent);
+        const costume = costumes.find((c) => c.id === selectedCostume);
+        addDocument({
+          studentId: selectedStudent,
+          documentType: "custom",
+          title: `Costume Distribution Receipt — ${costume?.name ?? "Costume"}`,
+          fileUrl: signatureData,
+          fileName: `distribution-${selectedStudent}-${Date.now()}.png`,
+          mimeType: "image/png",
+          verificationStatus: "verified",
+          verifiedBy: "System (Distribution Mode)",
+          verifiedAt: new Date().toISOString(),
+          visibility: "admin_only",
+          notes: `Costume: ${costume?.name ?? "N/A"} for ${student?.name ?? "N/A"}. Missing items: ${missing.length > 0 ? missing.join(", ") : "None"}`,
+        });
+      }
+
       setCompleted((prev) => new Set([...prev, selectedStudent]));
       toast.success("Distribution recorded");
       resetForm();
@@ -97,7 +120,7 @@ export default function DistributionMode({
     } finally {
       setSaving(false);
     }
-  }, [selectedStudent, selectedCostume, checklist, notes, onAddDistribution, students]);
+  }, [selectedStudent, selectedCostume, checklist, notes, onAddDistribution, students, costumes, addDocument]);
 
   const resetForm = useCallback(() => {
     setSelectedStudent(null);
