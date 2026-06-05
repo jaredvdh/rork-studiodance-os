@@ -835,6 +835,16 @@ interface CostumesCtx {
   duplicateCostume: (id: string) => Promise<string>;
   /** Submit a measurement (draft or pending for approval). */
   submitMeasurement: (m: Omit<StudentMeasurement, "id" | "studioId" | "createdAt"> & { id?: string }) => Promise<string>;
+  /** Add a sizing chart. */
+  addSizingChart: (c: Omit<SizingChart, "id" | "studioId" | "createdAt">) => Promise<void>;
+  /** Delete a sizing chart. */
+  deleteSizingChart: (id: string) => void;
+  /** Add a size recommendation (from auto-sizing engine). */
+  addSizeRecommendation: (r: Omit<SizeRecommendation, "id" | "studioId" | "createdAt" | "updatedAt">) => Promise<void>;
+  /** Add a vendor order. */
+  addVendorOrder: (o: Omit<VendorOrder, "id" | "studioId" | "createdAt" | "updatedAt">) => Promise<void>;
+  /** Add a costume distribution record. */
+  addDistribution: (d: Omit<CostumeDistribution, "id" | "studioId" | "createdAt">) => Promise<void>;
 }
 
 const CostumesContext = createContext<CostumesCtx | null>(null);
@@ -877,6 +887,11 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
   const deleteCostumeMutation = useDeleteCostume();
   const addMeasurementMutation = useAddMeasurement();
   const updateMeasurementMutation = useUpdateMeasurement();
+  const addSizingChartMutation = useAddSizingChart();
+  const deleteSizingChartMutation = useDeleteSizingChart();
+  const addSizeRecMutation = useAddSizeRecommendation();
+  const addVendorOrderMutation = useAddVendorOrder();
+  const addDistributionMutation = useAddCostumeDistribution();
 
   const addCostume = useCallback(async (c: Omit<Costume, "id" | "studioId" | "createdAt" | "updatedAt" | "retailCostCents">): Promise<string> => {
     if (isDemo) {
@@ -917,6 +932,58 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       sku: source.sku ? `${source.sku}-COPY` : undefined,
     });
   }, [costumes, addCostume]);
+
+  const addSizingChart = useCallback(async (c: Omit<SizingChart, "id" | "studioId" | "createdAt">): Promise<void> => {
+    if (isDemo) {
+      const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const now = new Date().toISOString();
+      const newChart: SizingChart = { ...c, id, studioId: "demo", createdAt: now };
+      (setSizingCharts as (val: React.SetStateAction<SizingChart[]>) => void)((prev: SizingChart[]) => [newChart, ...prev]);
+      return;
+    }
+    await addSizingChartMutation.mutateAsync(c);
+  }, [isDemo, addSizingChartMutation]);
+
+  const deleteSizingChart = useCallback((id: string) => {
+    if (isDemo) {
+      (setSizingCharts as (val: React.SetStateAction<SizingChart[]>) => void)((prev: SizingChart[]) => prev.filter((x: SizingChart) => x.id !== id));
+      return;
+    }
+    deleteSizingChartMutation.mutate(id);
+  }, [isDemo, deleteSizingChartMutation]);
+
+  const addSizeRecommendation = useCallback(async (r: Omit<SizeRecommendation, "id" | "studioId" | "createdAt" | "updatedAt">): Promise<void> => {
+    if (isDemo) {
+      const id = `sr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const now = new Date().toISOString();
+      const newRec: SizeRecommendation = { ...r, id, studioId: "demo", createdAt: now, updatedAt: now };
+      (setSizeRecs as (val: React.SetStateAction<SizeRecommendation[]>) => void)((prev: SizeRecommendation[]) => [newRec, ...prev]);
+      return;
+    }
+    await addSizeRecMutation.mutateAsync(r);
+  }, [isDemo, addSizeRecMutation]);
+
+  const addVendorOrder = useCallback(async (o: Omit<VendorOrder, "id" | "studioId" | "createdAt" | "updatedAt">): Promise<void> => {
+    if (isDemo) {
+      const id = `vo_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const now = new Date().toISOString();
+      const newOrder: VendorOrder = { ...o, id, studioId: "demo", createdAt: now, updatedAt: now };
+      (setVendorOrders as (val: React.SetStateAction<VendorOrder[]>) => void)((prev: VendorOrder[]) => [newOrder, ...prev]);
+      return;
+    }
+    await addVendorOrderMutation.mutateAsync(o);
+  }, [isDemo, addVendorOrderMutation]);
+
+  const addDistribution = useCallback(async (d: Omit<CostumeDistribution, "id" | "studioId" | "createdAt">): Promise<void> => {
+    if (isDemo) {
+      const id = `cd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const now = new Date().toISOString();
+      const newDist: CostumeDistribution = { ...d, id, studioId: "demo", createdAt: now };
+      (setDistributions as (val: React.SetStateAction<CostumeDistribution[]>) => void)((prev: CostumeDistribution[]) => [newDist, ...prev]);
+      return;
+    }
+    await addDistributionMutation.mutateAsync(d);
+  }, [isDemo, addDistributionMutation]);
 
   const submitMeasurement = useCallback(async (
     m: Omit<StudentMeasurement, "id" | "studioId" | "createdAt"> & { id?: string },
@@ -1006,6 +1073,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
     addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement,
+    addSizingChart, deleteSizingChart, addSizeRecommendation, addVendorOrder, addDistribution,
   }), [costumes, assignments, measurements, sizingCharts, sizeRecommendations,
     costumeFees, vendorOrders, alterations, distributions, reusableInventory,
     rentals, quickChangeConflicts,
@@ -1015,7 +1083,8 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
     feesForStudent, alterationCountByStatus,
     outstandingFeeTotal, quickChangeConflictCount,
     ordersByStatus,
-    addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement]);
+    addCostume, updateCostume, deleteCostume, duplicateCostume, submitMeasurement,
+    addSizingChart, deleteSizingChart, addSizeRecommendation, addVendorOrder, addDistribution]);
 
   return <CostumesContext.Provider value={ctx}>{children}</CostumesContext.Provider>;
 }

@@ -542,14 +542,14 @@ Measurement freshness tracking with visibility into growth over time.
 
 Vendor sizing chart upload, parsing, and multi-unit chart support.
 
-- [ ] Sizing chart upload: accept PDF, CSV, Excel files via Supabase Storage
+- [x] Sizing chart upload: accept CSV files via client-side parsing (PDF/Excel via Supabase Storage pending)
 - [ ] AI parsing: extract structured size-range data from uploaded charts (Rork AI proxy)
-- [ ] Manual chart entry fallback: structured form for hand-entered sizing charts
-- [ ] Support metric, imperial, and mixed-unit sizing charts
-- [ ] Chart preview: rendered table view of extracted size ranges before saving
-- [ ] Enhanced flagging system: borderline sizes, missing measurements for required dimensions, conflicting measurements, unusual growth changes
-- [ ] Alternative-size recommendations with reasoning text
-- [ ] Confidence score calculation refined with per-dimension match analysis
+- [x] Manual chart entry fallback: structured form for hand-entered sizing charts
+- [ ] Support metric, imperial, and mixed-unit sizing charts (unit field in chart data needed)
+- [x] Chart preview: rendered table view of extracted size ranges before saving
+- [x] Enhanced flagging system: borderline sizes, missing measurements for required dimensions, conflicting measurements, unusual growth changes
+- [x] Alternative-size recommendations with reasoning text
+- [x] Confidence score calculation refined with per-dimension match analysis
 
 ---
 
@@ -557,13 +557,13 @@ Vendor sizing chart upload, parsing, and multi-unit chart support.
 
 Bulk purchase-order generation with export options.
 
-- [ ] Vendor ordering centre: group costumes by vendor, then by size, for bulk PO creation
-- [ ] PO number auto-generation (e.g., PO-2026-0001)
-- [ ] Export to PDF (printable purchase order with studio branding)
-- [ ] Export to CSV (line-item detail for vendor submission)
+- [x] Vendor ordering centre: group costumes by vendor, then by size, for bulk PO creation
+- [x] PO number auto-generation (e.g., PO-2026-0001)
+- [x] Export to PDF (printable purchase order with studio branding)
+- [x] Export to CSV (line-item detail for vendor submission)
 - [ ] Export to Excel (structured workbook with summary + line-item sheets)
-- [ ] Track order date, expected arrival, actual delivery, vendor notes
-- [ ] Order status timeline retained from existing implementation
+- [x] Track order date, expected arrival, actual delivery, vendor notes
+- [x] Order status timeline retained from existing implementation
 
 ---
 
@@ -571,13 +571,13 @@ Bulk purchase-order generation with export options.
 
 Automated notifications for costume lifecycle events.
 
-- [ ] Parent notification on costume assignment (costume name, routine, size recommended)
-- [ ] Parent notification on delivery status change (shipped → delivered → ready → distributed)
-- [ ] Parent notification on fee due/overdue
-- [ ] Parent notification when measurements are requested/rejected
-- [ ] Notification centre in ParentShell (bell icon with unread count)
-- [ ] Reuse existing `send-announcement` edge function for email delivery
-- [ ] In-app notification feed stored in a `notifications` table
+- [x] Parent notification on costume assignment (costume name, routine, size recommended)
+- [x] Parent notification on delivery status change (shipped → delivered → ready → distributed)
+- [x] Parent notification on fee due/overdue
+- [x] Parent notification when measurements are requested/rejected
+- [x] Notification centre in ParentShell (bell icon with unread count)
+- [x] Reuse existing `send-announcement` edge function for email delivery
+- [x] In-app notification feed stored in a `notifications` table
 
 ---
 
@@ -585,12 +585,12 @@ Automated notifications for costume lifecycle events.
 
 Optimised distribution-day experience for tablet use in a busy studio environment.
 
-- [ ] Full-screen distribution checklist mode (large touch targets, minimal chrome)
-- [ ] Per-student checklist: Costume, Headpiece, Tights, Accessories, Shoes
-- [ ] Quick tap to check off items with satisfying micro-interactions
-- [ ] Digital signature capture (drawing canvas for parent/guardian signature)
-- [ ] Missing-items tracking: record what was not received
-- [ ] Distribution receipt auto-generation (PDF with checklist + signature + timestamp)
+- [x] Full-screen distribution checklist mode (large touch targets, minimal chrome)
+- [x] Per-student checklist: Costume, Headpiece, Tights, Accessories, Shoes
+- [x] Quick tap to check off items with satisfying micro-interactions
+- [x] Digital signature capture (drawing canvas for parent/guardian signature)
+- [x] Missing-items tracking: record what was not received
+- [x] Distribution receipt auto-generation (PDF with checklist + signature + timestamp)
 - [ ] Receipt stored in student profile documents section
 
 ---
@@ -599,16 +599,16 @@ Optimised distribution-day experience for tablet use in a busy studio environmen
 
 Deep integration between Costume Management and Recital Planner, plus platform polish.
 
-- [ ] Recital routines show assigned costume with thumbnail in recital planner
-- [ ] Quick-change assistant: analyze full recital lineup, detect conflicts, recommend reordering
-- [ ] Estimated change-time configurable per costume (default 5 min)
+- [x] Recital routines show assigned costume with thumbnail in recital planner
+- [x] Quick-change assistant: analyze full recital lineup, detect conflicts, recommend reordering
+- [x] Estimated change-time configurable per costume (default 5 min)
 - [ ] Conflict resolution: drag to reorder routines, auto-update conflict status
 - [ ] Student Profile → Measurements tab: dedicated tab with full measurement history
-- [ ] Rental agreement auto-generation (PDF with terms, dates, deposit, damage policy)
-- [ ] AI Costume Insights dashboard: reusable-costume savings calculator, bulk-order shipping optimisation, unassigned-costume alerts, measurement-deadline risk scoring
-- [ ] Costume image upload support (multiple images per costume via Supabase Storage)
-- [ ] Alterations photo upload (camera/file picker, stored in storage bucket)
-- [ ] Export costume library to CSV/Excel for audit/sharing
+- [x] Rental agreement auto-generation (PDF with terms, dates, deposit, damage policy)
+- [x] AI Costume Insights dashboard: reusable-costume savings calculator, bulk-order shipping optimisation, unassigned-costume alerts, measurement-deadline risk scoring
+- [x] Costume image upload support (multiple images per costume via Supabase Storage)
+- [x] Alterations photo upload (camera/file picker, stored in storage bucket)
+- [x] Export costume library to CSV for audit/sharing (Excel pending)
 
 ---
 

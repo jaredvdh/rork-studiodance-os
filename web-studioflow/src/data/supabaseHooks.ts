@@ -1470,6 +1470,134 @@ export function useUpdateMeasurement() {
   });
 }
 
+/* ── Sizing Chart Mutations ──────────────────────────────────── */
+
+export function useAddSizingChart() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (chart: Omit<SizingChart, "id" | "studioId" | "createdAt">) => {
+      const { data, error } = await supabase.from("sizing_charts").insert({
+        studio_id: studioId,
+        costume_id: chart.costumeId ?? null,
+        vendor: chart.vendor,
+        chart_name: chart.chartName,
+        chart_data: chart.chartData as unknown as Record<string, unknown>[],
+        file_url: chart.fileUrl ?? null,
+        file_type: chart.fileType ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sizing_charts"] }),
+  });
+}
+
+export function useDeleteSizingChart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("sizing_charts").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sizing_charts"] }),
+  });
+}
+
+export function useAddSizeRecommendation() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (rec: Omit<SizeRecommendation, "id" | "studioId" | "createdAt" | "updatedAt">) => {
+      const { data, error } = await supabase.from("size_recommendations").insert({
+        studio_id: studioId,
+        student_id: rec.studentId,
+        costume_id: rec.costumeId,
+        sizing_chart_id: rec.sizingChartId ?? null,
+        recommended_size: rec.recommendedSize ?? null,
+        confidence_pct: rec.confidencePct ?? null,
+        alternative_size: rec.alternativeSize ?? null,
+        reason: rec.reason ?? null,
+        flags: rec.flags ?? [],
+        parent_approved: rec.parentApproved,
+        parent_notes: rec.parentNotes ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["size_recommendations"] });
+    },
+  });
+}
+
+/* ── Vendor Order Mutations ──────────────────────────────────── */
+
+export function useAddVendorOrder() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (order: Omit<VendorOrder, "id" | "studioId" | "createdAt" | "updatedAt">) => {
+      const { data: orderData, error } = await supabase.from("vendor_orders").insert({
+        studio_id: studioId,
+        vendor: order.vendor,
+        po_number: order.poNumber ?? null,
+        order_date: order.orderDate ?? null,
+        expected_delivery: order.expectedDelivery ?? null,
+        status: order.status,
+        vendor_notes: order.vendorNotes ?? null,
+        shipping_cost_cents: order.shippingCostCents,
+      }).select().single();
+      if (error) throw error;
+
+      // Insert line items
+      if (order.items.length > 0) {
+        const items = order.items.map((item) => ({
+          vendor_order_id: (orderData as Record<string, unknown>).id as string,
+          costume_id: item.costumeId,
+          size: item.size,
+          quantity: item.quantity,
+          unit_cost_cents: item.unitCostCents,
+        }));
+        const { error: itemError } = await supabase.from("vendor_order_items").insert(items);
+        if (itemError) throw itemError;
+      }
+
+      return orderData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendor_orders"] });
+    },
+  });
+}
+
+/* ── Distribution Mutations ──────────────────────────────────── */
+
+export function useAddCostumeDistribution() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (d: Omit<CostumeDistribution, "id" | "studioId" | "createdAt">) => {
+      const { data, error } = await supabase.from("costume_distributions").insert({
+        studio_id: studioId,
+        student_id: d.studentId,
+        costume_id: d.costumeId,
+        items_checklist: d.itemsChecklist as unknown as Record<string, unknown>[],
+        signature_data: d.signatureData ?? null,
+        signed_by: d.signedBy ?? null,
+        signed_at: d.signedAt ?? null,
+        missing_items: d.missingItems ?? [],
+        notes: d.notes ?? null,
+        receipt_pdf_url: d.receiptPdfUrl ?? null,
+        distributed_by: d.distributedBy ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["costume_distributions"] }),
+  });
+}
+
 export function useSupabaseQuickChangeConflicts(isDemo: boolean) {
   const studioId = useStudioId();
   return useDualQuery<QuickChangeConflict>(

@@ -4,13 +4,16 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  ExternalLink,
   FileDown,
   GripVertical,
+  ImageIcon,
   MapPin,
   Music,
   Plus,
   Printer,
   Search,
+  Shirt,
   Sparkles,
   Trash2,
   Trophy,
@@ -20,8 +23,8 @@ import {
 
 import Modal from "@/components/Modal";
 import { recitalEvents } from "@/data/demo";
-import { classById, styleStyles, teacherName, useStudio, useStudioData, useTeachers, useTerminology } from "@/data/store";
-import type { AgeGroup, Class, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
+import { classById, styleStyles, teacherName, useStudio, useStudioData, useTeachers, useCostumes, useTerminology } from "@/data/store";
+import type { AgeGroup, Class, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
 import type { VerticalTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 
@@ -191,6 +194,7 @@ export default function Recitals() {
   const term = useTerminology();
   const { classes: initial, students } = useStudioData();
   const { teachers } = useTeachers();
+  const ctx = useCostumes();
   const [classes, setClasses] = useState<Class[]>(initial);
   const [events, setEvents] = useState(recitalEvents);
   const [search, setSearch] = useState<string>("");
@@ -478,6 +482,26 @@ export default function Recitals() {
                           {perfClasses.length} class{perfClasses.length !== 1 ? "es" : ""}
                           {perf.costumeNote && <> · {perf.costumeNote}</>}
                         </p>
+                        {/* Costume thumbnails for this routine */}
+                        {perf.classIds.length > 0 && (() => {
+                          const perfCostumeAssignments = ctx.assignments.filter((a) => perf.classIds.includes(a.classId ?? ""));
+                          const perfCostumeIds = new Set(perfCostumeAssignments.map((a) => a.costumeId));
+                          const perfCostumes = ctx.costumes.filter((c) => perfCostumeIds.has(c.id));
+                          if (perfCostumes.length === 0) return null;
+                          return (
+                            <div className="flex items-center gap-2 mt-1">
+                              {perfCostumes.slice(0, 4).map((costume) => (
+                                <div key={costume.id} className="flex items-center gap-1.5 rounded-full bg-rose/10 px-2.5 py-0.5 text-[11px] font-medium text-rose" title={costume.name}>
+                                  <Shirt className="h-3 w-3" />
+                                  <span className="truncate max-w-[80px]">{costume.name}</span>
+                                </div>
+                              ))}
+                              {perfCostumes.length > 4 && (
+                                <span className="text-[10px] text-muted-foreground">+{perfCostumes.length - 4} more</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       {perf.startTime && (
                         <span className="flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">

@@ -4,6 +4,11 @@ import { toast } from "sonner";
 import { formatHeight, formatWeight, formatCm } from "@/lib/units";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import CostumeForm from "@/components/CostumeForm";
+import SizingChartUpload from "@/components/SizingChartUpload";
+import VendorOrderingCentre from "@/components/VendorOrderingCentre";
+import DistributionMode from "@/components/DistributionMode";
+import QuickChangeAssistant from "@/components/QuickChangeAssistant";
+import { autoSize } from "@/lib/autoSizing";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -91,6 +96,7 @@ export default function Costumes() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingCostume, setEditingCostume] = useState<Costume | null>(null);
+  const [distMode, setDistMode] = useState(false);
   const { studio } = useStudio();
   const term = useTerminology();
   const { students } = useStudents();
@@ -216,22 +222,80 @@ export default function Costumes() {
       <CostumeForm open={formOpen} onClose={closeForm} edit={editingCostume} />
 
       {/* ── Tab: Measurements ──────────────────────────────────── */}
-      {tab === "measurements" && <MeasurementsTab measurements={ctx.measurements} students={students} sizingCharts={ctx.sizingCharts} recommendations={ctx.sizeRecommendations} costumes={ctx.costumes} />}
+      {tab === "measurements" && (
+        <div className="space-y-8">
+          <SizingChartUpload
+            costumes={ctx.costumes}
+            charts={ctx.sizingCharts}
+            measurements={ctx.measurements}
+            onAddChart={ctx.addSizingChart}
+            onDeleteChart={ctx.deleteSizingChart}
+            onAddRecommendation={ctx.addSizeRecommendation}
+          />
+          <MeasurementsTab measurements={ctx.measurements} students={students} sizingCharts={ctx.sizingCharts} recommendations={ctx.sizeRecommendations} costumes={ctx.costumes} />
+        </div>
+      )}
 
       {/* ── Tab: Vendor Orders ─────────────────────────────────── */}
-      {tab === "orders" && <OrdersTab orders={ctx.vendorOrders} costumes={ctx.costumes} />}
+      {tab === "orders" && (
+        <div className="space-y-8">
+          <VendorOrderingCentre
+            costumes={ctx.costumes}
+            existingOrders={ctx.vendorOrders}
+            recommendations={ctx.sizeRecommendations}
+            onAddOrder={ctx.addVendorOrder}
+            studioName={studio.name}
+          />
+          <OrdersTab orders={ctx.vendorOrders} costumes={ctx.costumes} />
+        </div>
+      )}
 
       {/* ── Tab: Alterations ───────────────────────────────────── */}
       {tab === "alterations" && <AlterationsTab alterations={ctx.alterations} students={students} costumes={ctx.costumes} />}
 
       {/* ── Tab: Distribution ──────────────────────────────────── */}
-      {tab === "distribution" && <DistributionTab distributions={ctx.distributions} students={students} costumes={ctx.costumes} />}
+      {tab === "distribution" && (
+        <>
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setDistMode(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-rose px-5 py-3 text-sm font-semibold text-white shadow-lift transition hover:opacity-90 active:scale-95"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Open Distribution Mode
+            </button>
+          </div>
+          <DistributionTab distributions={ctx.distributions} students={students} costumes={ctx.costumes} />
+        </>
+      )}
 
       {/* ── Tab: Reusable Inventory ────────────────────────────── */}
       {tab === "inventory" && <InventoryTab inventory={ctx.reusableInventory} costumes={ctx.costumes} rentals={ctx.rentals} students={students} search={search} />}
 
       {/* ── Tab: Quick Change Analysis ─────────────────────────── */}
-      {tab === "quickchange" && <QuickChangeTab conflicts={ctx.quickChangeConflicts} students={students} />}
+      {tab === "quickchange" && (
+        <div className="space-y-8">
+          <QuickChangeAssistant
+            performances={[]}
+            conflicts={ctx.quickChangeConflicts}
+            students={students}
+            onDetectConflicts={() => {}}
+          />
+          <QuickChangeTab conflicts={ctx.quickChangeConflicts} students={students} />
+        </div>
+      )}
+
+      {/* Distribution Mode (full-screen tablet mode) */}
+      {distMode && (
+        <DistributionMode
+          students={students}
+          costumes={ctx.costumes}
+          distributions={ctx.distributions}
+          onAddDistribution={ctx.addDistribution}
+          onClose={() => setDistMode(false)}
+          studioName={studio.name}
+        />
+      )}
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
         StudioFlow Costume Management · {studio.name}
