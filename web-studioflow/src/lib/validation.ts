@@ -19,7 +19,8 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/** Basic phone format check (US-centric, lenient). */
+/** Validate phone format internationally (E.164-compatible, lenient).
+ *  Accepts: +1 formats, local formats, spaces, dashes. */
 function looksLikePhone(phone: string): boolean {
   const digits = phone.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15;
@@ -104,7 +105,7 @@ function validateStudents(ctx: ValidationContext, errors: ImportError[]): void {
       }
     }
 
-    // Optional: phone format
+    // Optional: phone format (international, lenient)
     if (mapped.parentPhone && mapped.parentPhone.trim() !== "") {
       if (!looksLikePhone(mapped.parentPhone.trim())) {
         errors.push({ row: index, field: "parentPhone", message: `"${mapped.parentPhone}" doesn't look like a valid phone number`, severity: "warning" });

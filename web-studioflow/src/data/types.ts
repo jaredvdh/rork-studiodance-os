@@ -133,6 +133,32 @@ export type AgeGroup = "Tiny Tots" | "Junior" | "Intermediate" | "Senior" | "Adu
 export type WeekDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 export type PayType = "employee" | "1099";
 
+/** Regional settings shape stored within Studio.settings. */
+export interface RegionalSettings {
+  country: CountryCode;
+  timezone: string;
+  currency: CurrencyCode;
+  dateFormat: DateFormat;
+  timeFormat: TimeFormat;
+  measurementSystem: MeasurementSystem;
+}
+
+export type CountryCode = "CA" | "US" | "NZ" | "AU" | "GB" | "IE" | "EU" | "OTHER";
+export type CurrencyCode = "CAD" | "USD" | "NZD" | "AUD" | "GBP" | "EUR";
+export type DateFormat = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
+export type TimeFormat = "12h" | "24h";
+export type MeasurementSystem = "metric" | "imperial";
+
+/** Structured international address — replaces single free-text address fields. */
+export interface Address {
+  line1: string;
+  line2?: string;
+  city: string;
+  stateOrProvince: string;
+  postalCode: string;
+  country: CountryCode;
+}
+
 export interface Studio {
   id: string;
   name: string;
@@ -142,8 +168,12 @@ export interface Studio {
   initials: string;
   logoUrl?: string;
   vertical: Vertical;
+  /** Structured studio address (replaces single city string for intl support). */
+  address?: Address;
   settings?: {
     preferredUnits?: "metric" | "imperial";
+    /** Regional settings — becomes the platform-wide source of truth for all locale-dependent formatting. */
+    regional?: RegionalSettings;
   };
 }
 
@@ -202,15 +232,26 @@ export interface EmergencyContact_Teacher {
   phone: string;
 }
 
+/** Instructor skill/qualification — studio-defined categories replacing hardcoded dance styles. */
+export interface Skill {
+  name: string;
+  /** Optional vertical context (e.g., dance styles, CrossFit certs, yoga styles). Stored as free text so any vertical works. */
+  category?: string;
+}
+
 export interface Teacher {
   id: string;
   studioId: string;
   name: string;
   preferredName?: string;
+  /** @deprecated Use skills instead. Kept for backward compatibility. */
   styles: ClassStyle[];
+  /** Studio-defined skills / qualifications — replaces hardcoded dance styles. */
+  skills?: Skill[];
   email: string;
   phone?: string;
-  address?: string;
+  /** Structured international address. */
+  address?: Address | string;
   emergencyContact?: EmergencyContact_Teacher;
   status: InstructorStatus;
   hireDate?: string;
@@ -320,9 +361,13 @@ export interface FamilyContact {
   relationshipToStudent: string;
   email: string;
   phone: string;
-  address?: string;
+  /** Structured international address — replaces address/city/state/zip. */
+  address?: Address | string;
+  /** @deprecated Use address field instead. */
   city?: string;
+  /** @deprecated Use address field instead. */
   state?: string;
+  /** @deprecated Use address field instead. */
   zip?: string;
   householdLabel?: string;
   receivesEmails: boolean;
@@ -377,9 +422,13 @@ export interface Caregiver extends CaregiverPermissions {
   relationship_to_student: string;
   email: string;
   phone: string;
-  address?: string;
+  /** Structured international address — replaces address/city/state/zip. */
+  address?: Address | string;
+  /** @deprecated Use address field instead. */
   city?: string;
+  /** @deprecated Use address field instead. */
   state?: string;
+  /** @deprecated Use address field instead. */
   zip?: string;
   household_label?: string;
   status: CaregiverStatus;
@@ -402,9 +451,6 @@ export function caregiverToContact(c: Caregiver): FamilyContact {
     email: c.email,
     phone: c.phone,
     address: c.address,
-    city: c.city,
-    state: c.state,
-    zip: c.zip,
     householdLabel: c.household_label,
     receivesEmails: c.receives_announcements,
     receivesSMS: c.receives_emergency_messages,

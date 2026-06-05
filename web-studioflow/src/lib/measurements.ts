@@ -1,5 +1,6 @@
 /** Measurement freshness, history, and growth utilities for Phase 15.
- *  All values are stored internally as metric (cm / kg). */
+ *  All values are stored internally as metric (cm / kg).
+ *  Date formatting accepts optional locale for internationalization. */
 
 import type { StudentMeasurement } from "@/data/types";
 
@@ -117,10 +118,11 @@ export function formatLastUpdated(measuredAt?: string): string {
   return `${years} years ago`;
 }
 
-/** Format a date string to a full date (e.g., "Jun 4, 2026"). */
-export function formatDateFull(iso?: string): string {
+/** Format a date string to a full date (e.g., "Jun 4, 2026").
+ *  Accepts optional locale for internationalization (default "en-US"). */
+export function formatDateFull(iso?: string, locale = "en-US"): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

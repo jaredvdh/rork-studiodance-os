@@ -27,11 +27,13 @@ import { classById, styleStyles, teacherName, useStudio, useStudioData, useTeach
 import type { AgeGroup, Class, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
 import type { VerticalTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
+import { resolveRegionalSettings, formatTimeRegional, formatDateRegional } from "@/lib/format";
 
 const AGES: AgeGroup[] = ["Tiny Tots", "Junior", "Intermediate", "Senior", "Adult"];
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+function formatTime(iso: string, settings?: ReturnType<typeof resolveRegionalSettings>): string {
+  if (settings) return formatTimeRegional(iso, settings);
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
 function extractTimeFromISO(iso: string): string {
@@ -46,9 +48,10 @@ function applyTimeToISO(iso: string, hhmm: string): string {
   return d.toISOString();
 }
 
-function formatStartTime(hhmm: string | undefined): string {
+function formatStartTime(hhmm: string | undefined, use24h = false): string {
   if (!hhmm) return "—";
   const [h, m] = hhmm.split(":").map(Number);
+  if (use24h) return `${String(h ?? 0).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`;
   const hour = (h ?? 0) % 12 || 12;
   const ampm = (h ?? 0) >= 12 ? "PM" : "AM";
   return `${hour}:${String(m ?? 0).padStart(2, "0")} ${ampm}`;

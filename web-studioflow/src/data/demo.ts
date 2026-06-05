@@ -40,15 +40,32 @@ export const studio: Studio = {
   brandColor: "350 74% 60%",
   initials: "AD",
   vertical: "dance",
-  settings: { preferredUnits: "metric" },
+  address: {
+    line1: "1422 NW Irving St",
+    city: "Portland",
+    stateOrProvince: "OR",
+    postalCode: "97209",
+    country: "US",
+  },
+  settings: {
+    preferredUnits: "imperial",
+    regional: {
+      country: "US",
+      timezone: "America/Los_Angeles",
+      currency: "USD",
+      dateFormat: "MM/DD/YYYY",
+      timeFormat: "12h",
+      measurementSystem: "imperial",
+    },
+  },
 };
 
 export const teachers: Teacher[] = [
-  { id: "t1", studioId: studio.id, name: "Mara Delgado", preferredName: "Mara", styles: ["Ballet", "Lyrical"], email: "mara@aurora.dance", phone: "(503) 555-0101", address: "1422 NW Irving St, Portland, OR 97209", emergencyContact: { name: "Carlos Delgado", relationship: "Spouse", phone: "(503) 555-0102" }, status: "active" as const, hireDate: "2020-08-15", employeeId: "EMP-001", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2024-06-01", expiresAt: "2027-06-01" }, { name: "First Aid / CPR", issuedAt: "2025-09-15", expiresAt: "2027-09-15" }, { name: "Safe Sport", issuedAt: "2025-01-10", expiresAt: "2026-01-10" }], hourlyRateCents: 4500, payType: "employee" },
-  { id: "t2", studioId: studio.id, name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], email: "theo@aurora.dance", phone: "(503) 555-0201", address: "825 NW 23rd Ave, Portland, OR 97210", emergencyContact: { name: "Yuki Nakamura", relationship: "Partner", phone: "(503) 555-0202" }, status: "active" as const, hireDate: "2021-03-01", employeeId: "EMP-002", certifications: [{ name: "First Aid / CPR", issuedAt: "2025-08-20", expiresAt: "2027-08-20" }], hourlyRateCents: 5000, payType: "1099" },
-  { id: "t3", studioId: studio.id, name: "Priya Anand", styles: ["Contemporary", "Lyrical"], email: "priya@aurora.dance", phone: "(503) 555-0301", address: "310 NE Multnomah St, Portland, OR 97232", status: "active" as const, hireDate: "2022-09-01", employeeId: "EMP-003", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2024-11-01", expiresAt: "2027-11-01" }, { name: "Police Check", issuedAt: "2025-06-01", expiresAt: "2026-06-01" }], hourlyRateCents: 4000, payType: "employee" },
-  { id: "t4", studioId: studio.id, name: "Jules Romano", preferredName: "Jules", styles: ["Tap", "Jazz"], email: "jules@aurora.dance", phone: "(503) 555-0401", address: "55 SW Yamhill St, Portland, OR 97204", emergencyContact: { name: "Marie Romano", relationship: "Mother", phone: "(503) 555-0402" }, status: "on_leave" as const, hireDate: "2023-01-15", employeeId: "EMP-004", certifications: [{ name: "First Aid / CPR", issuedAt: "2024-12-01", expiresAt: "2026-12-01" }], hourlyRateCents: 3500, payType: "1099" },
-  { id: "t5", studioId: studio.id, name: "Sasha Berg", styles: ["Acro", "Ballet"], email: "sasha@aurora.dance", phone: "(503) 555-0501", address: "721 NW 9th Ave, Portland, OR 97209", emergencyContact: { name: "David Berg", relationship: "Spouse", phone: "(503) 555-0502" }, status: "active" as const, hireDate: "2019-06-01", employeeId: "EMP-005", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2025-02-01", expiresAt: "2028-02-01" }, { name: "First Aid / CPR", issuedAt: "2025-10-01", expiresAt: "2027-10-01" }, { name: "Safe Sport", issuedAt: "2025-03-15", expiresAt: "2026-03-15" }, { name: "Police Check", issuedAt: "2025-05-01", expiresAt: "2026-05-01" }], hourlyRateCents: 5500, payType: "employee" },
+  { id: "t1", studioId: studio.id, name: "Mara Delgado", preferredName: "Mara", styles: ["Ballet", "Lyrical"], skills: [{ name: "Ballet", category: "Dance" }, { name: "Lyrical", category: "Dance" }, { name: "Pointe", category: "Dance" }], email: "mara@aurora.dance", phone: "+1 503 555 0101", address: "1422 NW Irving St, Portland, OR 97209", emergencyContact: { name: "Carlos Delgado", relationship: "Spouse", phone: "+1 503 555 0102" }, status: "active" as const, hireDate: "2020-08-15", employeeId: "EMP-001", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2024-06-01", expiresAt: "2027-06-01" }, { name: "First Aid / CPR", issuedAt: "2025-09-15", expiresAt: "2027-09-15" }, { name: "Safe Sport", issuedAt: "2025-01-10", expiresAt: "2026-01-10" }], hourlyRateCents: 4500, payType: "employee" },
+  { id: "t2", studioId: studio.id, name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], skills: [{ name: "Hip Hop", category: "Dance" }, { name: "Jazz", category: "Dance" }, { name: "Breaking", category: "Dance" }], email: "theo@aurora.dance", phone: "+1 503 555 0201", address: "825 NW 23rd Ave, Portland, OR 97210", emergencyContact: { name: "Yuki Nakamura", relationship: "Partner", phone: "+1 503 555 0202" }, status: "active" as const, hireDate: "2021-03-01", employeeId: "EMP-002", certifications: [{ name: "First Aid / CPR", issuedAt: "2025-08-20", expiresAt: "2027-08-20" }], hourlyRateCents: 5000, payType: "1099" },
+  { id: "t3", studioId: studio.id, name: "Priya Anand", styles: ["Contemporary", "Lyrical"], skills: [{ name: "Contemporary", category: "Dance" }, { name: "Lyrical", category: "Dance" }, { name: "Improvisation", category: "Dance" }], email: "priya@aurora.dance", phone: "+1 503 555 0301", address: "310 NE Multnomah St, Portland, OR 97232", status: "active" as const, hireDate: "2022-09-01", employeeId: "EMP-003", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2024-11-01", expiresAt: "2027-11-01" }, { name: "Police Check", issuedAt: "2025-06-01", expiresAt: "2026-06-01" }], hourlyRateCents: 4000, payType: "employee" },
+  { id: "t4", studioId: studio.id, name: "Jules Romano", preferredName: "Jules", styles: ["Tap", "Jazz"], skills: [{ name: "Tap", category: "Dance" }, { name: "Jazz", category: "Dance" }, { name: "Musical Theatre", category: "Dance" }], email: "jules@aurora.dance", phone: "+1 503 555 0401", address: "55 SW Yamhill St, Portland, OR 97204", emergencyContact: { name: "Marie Romano", relationship: "Mother", phone: "+1 503 555 0402" }, status: "on_leave" as const, hireDate: "2023-01-15", employeeId: "EMP-004", certifications: [{ name: "First Aid / CPR", issuedAt: "2024-12-01", expiresAt: "2026-12-01" }], hourlyRateCents: 3500, payType: "1099" },
+  { id: "t5", studioId: studio.id, name: "Sasha Berg", styles: ["Acro", "Ballet"], skills: [{ name: "Acro", category: "Dance" }, { name: "Ballet", category: "Dance" }, { name: "Pointe", category: "Dance" }, { name: "Partnering", category: "Dance" }], email: "sasha@aurora.dance", phone: "+1 503 555 0501", address: "721 NW 9th Ave, Portland, OR 97209", emergencyContact: { name: "David Berg", relationship: "Spouse", phone: "+1 503 555 0502" }, status: "active" as const, hireDate: "2019-06-01", employeeId: "EMP-005", certifications: [{ name: "Dance Teacher Certification", issuedAt: "2025-02-01", expiresAt: "2028-02-01" }, { name: "First Aid / CPR", issuedAt: "2025-10-01", expiresAt: "2027-10-01" }, { name: "Safe Sport", issuedAt: "2025-03-15", expiresAt: "2026-03-15" }, { name: "Police Check", issuedAt: "2025-05-01", expiresAt: "2026-05-01" }], hourlyRateCents: 5500, payType: "employee" },
 ];
 
 export const classes: Class[] = [

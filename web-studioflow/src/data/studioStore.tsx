@@ -3,7 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { studio as defaultStudio } from "./demo";
 import { getTerminology } from "./terminology";
 import type { VerticalTerminology } from "./terminology";
-import type { Studio } from "./types";
+import type { Studio, RegionalSettings } from "./types";
+import { DEFAULT_REGIONAL_SETTINGS } from "@/lib/locale";
 
 /* ── Studio branding (persisted to localStorage) ──────────────────── */
 
@@ -12,7 +13,14 @@ const STUDIO_KEY = "studioflow_studio";
 function loadStudio(): Studio {
   try {
     const raw = localStorage.getItem(STUDIO_KEY);
-    if (raw) return JSON.parse(raw) as Studio;
+    if (raw) {
+      const parsed = JSON.parse(raw) as Studio;
+      // Ensure regional settings are present (backward compat with pre-i18n data)
+      if (!parsed.settings?.regional) {
+        parsed.settings = { ...parsed.settings, regional: DEFAULT_REGIONAL_SETTINGS };
+      }
+      return parsed;
+    }
   } catch { /* ignore corrupt data */ }
   return { ...defaultStudio };
 }
