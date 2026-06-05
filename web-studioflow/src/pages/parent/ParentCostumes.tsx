@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { useStudents, useCostumes } from "@/data/store";
+import { useParent } from "@/data/parentStore";
 import { COSTUME_FEE_TYPE_LABELS } from "@/data/types";
 import type { CostumeFee, SizeRecommendation } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
@@ -30,18 +31,18 @@ type Tab = "costumes" | "measurements" | "fees";
 export default function ParentCostumes() {
   const [tab, setTab] = useState<Tab>("costumes");
   const { students } = useStudents();
+  const { children: parentChildren } = useParent();
   const ctx = useCostumes();
   const { preferredUnits: units } = useUnitPreference();
 
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStudentId, setWizardStudentId] = useState<string>();
 
-  // In a real app, we'd filter by the logged-in parent's children
-  // For demo, show all students that have costume assignments
+  // Students with costume assignments — used for Costumes and Fees tabs
   const parentStudents = useMemo(() => {
     const assignedIds = new Set(ctx.assignments.map((a) => a.studentId));
-    return students.filter((s) => assignedIds.has(s.id));
-  }, [students, ctx.assignments]);
+    return parentChildren.filter((s) => assignedIds.has(s.id));
+  }, [parentChildren, ctx.assignments]);
 
   const handleOpenWizard = useCallback((studentId?: string) => {
     setWizardStudentId(studentId);
@@ -416,7 +417,7 @@ export default function ParentCostumes() {
           </div>
           {showWizard && (
             <MeasurementWizard
-              students={parentStudents}
+              students={parentChildren}
               existingMeasurements={ctx.measurements}
               preselectedStudentId={wizardStudentId}
               draftMeasurement={
