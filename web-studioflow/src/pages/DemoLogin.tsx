@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const SUPABASE_FUNCTIONS_URL = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string}/functions/v1`;
+const SUPABASE_FUNCTIONS_URL = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
 
 interface DemoAccount {
   email: string;

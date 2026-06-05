@@ -10,7 +10,7 @@
 
 import { supabase, getAccessToken } from "./supabase";
 
-const EDGE_FUNCTION = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
+const EDGE_FUNCTION = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
 
 /** Placeholder key — replace with real publishable key for production. */
 const STRIPE_PK = "pk_test_placeholder";

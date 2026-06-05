@@ -13,7 +13,7 @@ import type { AuthError } from "@supabase/supabase-js";
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
 const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
-const SUPABASE_FUNCTIONS_URL = `${import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string}/functions/v1`;
+const SUPABASE_FUNCTIONS_URL = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
 
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
