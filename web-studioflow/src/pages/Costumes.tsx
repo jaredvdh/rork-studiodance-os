@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { formatHeight, formatWeight, formatCm } from "@/lib/units";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
+import { FRESHNESS_CONFIG } from "@/lib/measurements";
 import CostumeForm from "@/components/CostumeForm";
 import SizingChartUpload from "@/components/SizingChartUpload";
 import VendorOrderingCentre from "@/components/VendorOrderingCentre";
