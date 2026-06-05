@@ -16,6 +16,7 @@ import {
   Signature,
   FileText,
   Heart,
+  Home,
   Info,
   KeyRound,
   Mail,
@@ -41,18 +42,25 @@ import {
 import { styleStyles, teacherName, useStudioData, useTeachers, useTerminology } from "@/data/store";
 import { useParent } from "@/data/parentStore";
 import {
+  type AddressSource,
   type Caregiver,
   type CaregiverAuditEvent,
   type CaregiverPermissions,
   type CaregiverStatus,
   type FamilyContact,
   SAFE_SECONDARY_DEFAULTS,
+  ADDRESS_SOURCE_LABELS,
   caregiverFullName,
   caregiverToContact,
   contactFullName,
+  formatAddressMultiline,
+  formatAddressShort,
+  resolveAddressSource,
 } from "@/data/types";
 import { ageFromDob, formatDate } from "@/lib/format";
+import { getCountryConfig } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import AddressForm, { AddressDisplay } from "@/components/AddressForm";
 import ChildRegistrationWizard from "@/components/ChildRegistrationWizard";
 
 /* ── Tab definitions ──────────────────────────────────────────────── */
@@ -285,10 +293,12 @@ export default function ParentFamily() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function OverviewTab() {
-  const { children: myStudents, primaryCaregiver, additionalCaregivers } = useParent();
+  const { parent, children: myStudents, primaryCaregiver, additionalCaregivers, updateCaregiver } = useParent();
   const { classes, students: allStudents } = useStudioData();
   const teachers = useTeachers().teachers;
   const term = useTerminology();
+
+  const [showAddressEdit, setShowAddressEdit] = useState(false);
 
   const unsignedWaivers = useMemo(
     () => myStudents.filter((s) => s.waiver !== "signed"),
@@ -298,6 +308,8 @@ function OverviewTab() {
   const allWaiversCurrent = unsignedWaivers.length === 0;
   const activeAdditional = additionalCaregivers.filter((a) => a.status === "active");
   const caregiverCount = 1 + activeAdditional.length;
+  const totalEnrolments = myStudents.reduce((a, s) => a + s.classIds.length, 0);
+  const medicalFlags = myStudents.filter((s) => s.allergies || s.medicalNotes).length;
 
   // Authorized pickup summary
   const pickupPeople: string[] = [];
@@ -308,15 +320,29 @@ function OverviewTab() {
     }
   }
 
-  // Medical flags
-  const medicalFlags = myStudents.filter((s) => s.allergies || s.medicalNotes).length;
+  // Separate-household caregivers
+  const separateHouseholds = activeAdditional.filter(
+    (a) => a.addressSource === "separate",
+  );
 
-  // Enrolment summary
-  const totalEnrolments = myStudents.reduce((a, s) => a + s.classIds.length, 0);
+  const householdAddress = parent.householdAddress;
+  const billingAddress = parent.billingAddress;
+  const hasBillingDiff = billingAddress && (
+    !householdAddress ||
+    billingAddress.line1 !== householdAddress.line1 ||
+    billingAddress.city !== householdAddress.city ||
+    billingAddress.postalCode !== householdAddress.postalCode
+  );
+  const countryCfg = householdAddress
+    ? getCountryConfig(householdAddress.country)
+    : getCountryConfig("US");
+
+  // Recent activity: caregiver audit log
+  const recentActivity = (parent.caregiverAuditLog ?? []).slice().reverse().slice(0, 4);
 
   return (
     <div className="space-y-6">
-      {/* ── Household snapshot card ───────────────────────────────── */}
+      {/* ── Household Summary card ───────────────────────────────── */}
       <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft overflow-hidden">
         <div className="bg-amber-50/60 px-6 py-4 border-b border-amber-100">
           <div className="flex items-center gap-3">
@@ -334,137 +360,208 @@ function OverviewTab() {
           </div>
         </div>
         <div className="p-5 sm:p-6">
-          {/* Compact metadata grid */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetaBadge
               icon={Users}
               label={term.participantPlural}
               value={String(myStudents.length)}
-              href="/parent/family"
-              tabArg="children"
               color="amber"
             />
             <MetaBadge
               icon={Shield}
               label="Caregivers"
               value={String(caregiverCount)}
-              href="/parent/family"
-              tabArg="caregivers"
               color="teal"
             />
             <MetaBadge
               icon={Signature}
               label="Waivers"
               value={allWaiversCurrent ? "All signed" : `${unsignedWaivers.length} needed`}
-              href="/parent/family"
-              tabArg="waivers"
               color={allWaiversCurrent ? "success" : "rose"}
             />
             <MetaBadge
               icon={Stethoscope}
               label="Medical flags"
               value={medicalFlags > 0 ? `${medicalFlags} flagged` : "None"}
-              href="/parent/family"
-              tabArg="medical"
               color={medicalFlags > 0 ? "rose" : "muted"}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Relationship visualization ────────────────────────────── */}
-      <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5 sm:p-6">
-        <h3 className="font-display text-lg font-semibold mb-4">Family relationships</h3>
-        <div className="space-y-4">
-          {/* Primary caregiver → children */}
-          <RelationshipRow
-            caregiver={primaryCaregiver}
-            isPrimary
-            myStudents={myStudents}
-          />
-          {/* All additional caregivers */}
-          {additionalCaregivers.map((cg) => {
-            if (cg.status === "removed") return null;
-            if (cg.status === "active") {
-              return (
-                <RelationshipRow
-                  key={cg.id}
-                  caregiver={cg}
-                  isPrimary={false}
-                  myStudents={myStudents}
-                />
-              );
-            }
-            if (cg.status === "invited") {
-              return (
-                <div key={cg.id} className="flex items-start gap-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-4">
-                  <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-800">
-                      {caregiverFullName(cg)} — Invitation pending
-                    </p>
-                    <p className="text-xs text-amber-600/80 mt-0.5">
-                      They'll appear here once they accept and create their account.
-                    </p>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })}
-          {/* Always show option to add another caregiver */}
-          <button
-            onClick={() => {
-              const tab = document.querySelector('[data-tab="caregivers"]') as HTMLElement | null;
-              tab?.click();
-            }}
-            className="flex items-center gap-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/30 p-4 text-left w-full transition hover:bg-amber-50/60"
-          >
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-600">
-              <Plus className="h-4 w-4" />
+      {/* ── Household Address card ───────────────────────────────── */}
+      <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft overflow-hidden">
+        <div className="bg-amber-50/60 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal/10 text-teal">
+              <Home className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-medium text-amber-800">
-                {additionalCaregivers.filter((a) => a.status !== "removed").length > 0
-                  ? "Add another caregiver"
-                  : "Add a caregiver"}
+              <h3 className="font-display text-lg font-semibold">
+                Household Address
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {householdAddress
+                  ? `${householdAddress.city}, ${householdAddress.stateOrProvince ?? householdAddress.country} · ${countryCfg.name}`
+                  : "No address on file"}
               </p>
-              <p className="text-xs text-amber-600/80">Invite a parent, guardian, or adult contact</p>
             </div>
+          </div>
+          <button
+            onClick={() => setShowAddressEdit(!showAddressEdit)}
+            className="rounded-full border border-amber-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+          >
+            {showAddressEdit ? "Cancel" : "Edit"}
           </button>
+        </div>
+        <div className="p-5 sm:p-6">
+          {showAddressEdit ? (
+            <AddressForm
+              address={householdAddress ?? undefined}
+              defaultCountry={householdAddress?.country ?? "US"}
+              onSave={(addr) => {
+                updateCaregiver(primaryCaregiver.id, { address: addr });
+                setShowAddressEdit(false);
+              }}
+              onCancel={() => setShowAddressEdit(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <AddressDisplay address={householdAddress ?? null} country={householdAddress?.country} />
+              {hasBillingDiff && billingAddress && (
+                <div className="mt-3 rounded-xl bg-amber-50/60 border border-amber-100 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                    Billing Address
+                  </p>
+                  <AddressDisplay address={billingAddress} country={billingAddress.country} />
+                </div>
+              )}
+              {parent.addressUpdatedAt && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-amber-50">
+                  <Clock className="h-3 w-3" />
+                  Last updated {formatDate(parent.addressUpdatedAt, { month: "short", day: "numeric", year: "numeric" })}
+                  {parent.addressUpdatedBy && parent.addressUpdatedBy !== "admin"
+                    ? ` by ${primaryCaregiver.first_name}`
+                    : parent.addressUpdatedBy === "admin"
+                      ? " by admin"
+                      : ""}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── At-a-glance safety & compliance strip ─────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Authorized pickup */}
-        <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <KeyRound className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Authorized pickup
-            </h4>
-          </div>
-          {pickupPeople.length > 0 ? (
-            <div className="space-y-2">
-              {pickupPeople.map((name) => (
-                <div key={name} className="flex items-center gap-3 rounded-lg bg-amber-50/60 px-3 py-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="text-sm font-medium">{name}</span>
-                </div>
-              ))}
+      {/* ── Caregivers card ──────────────────────────────────────── */}
+      <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft overflow-hidden">
+        <div className="bg-amber-50/60 px-6 py-4 border-b border-amber-100">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal/10 text-teal">
+              <Shield className="h-5 w-5" />
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No pickup authorizations configured.</p>
+            <div>
+              <h3 className="font-display text-lg font-semibold">Caregivers</h3>
+              <p className="text-xs text-muted-foreground">
+                {caregiverCount} total · {separateHouseholds.length} at separate address{separateHouseholds.length !== 1 ? "es" : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-5 sm:p-6 space-y-3">
+          <CaregiverAddressRow
+            caregiver={primaryCaregiver}
+            householdAddress={householdAddress}
+            isPrimary
+          />
+          {activeAdditional.map((cg) => (
+            <CaregiverAddressRow
+              key={cg.id}
+              caregiver={cg}
+              householdAddress={householdAddress}
+            />
+          ))}
+          {additionalCaregivers.filter((a) => a.status === "invited").length > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-4">
+              <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  {additionalCaregivers.filter((a) => a.status === "invited").length} invitation{additionalCaregivers.filter((a) => a.status === "invited").length !== 1 ? "s" : ""} pending
+                </p>
+                <p className="text-xs text-amber-600/80">
+                  They'll appear here once they accept.
+                </p>
+              </div>
+            </div>
           )}
         </div>
+      </div>
 
+      {/* ── Students card ────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft overflow-hidden">
+        <div className="bg-amber-50/60 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-display text-lg font-semibold">{term.participantPlural}</h3>
+              <p className="text-xs text-muted-foreground">
+                {myStudents.length} registered · {totalEnrolments} enrolment{totalEnrolments !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const tab = document.querySelector('[data-tab="children"]') as HTMLElement | null;
+              tab?.click();
+            }}
+            className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+          >
+            View all
+          </button>
+        </div>
+        <div className="p-5 sm:p-6 space-y-2">
+          {myStudents.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2 text-center">No children registered yet.</p>
+          ) : (
+            myStudents.map((s) => {
+              const enrolledClasses = classes.filter((c) => s.classIds.includes(c.id));
+              return (
+                <div key={s.id} className="flex items-center gap-3 rounded-xl bg-amber-50/60 px-4 py-3">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-100 text-xs font-semibold text-amber-700">
+                    {(s.name[0] ?? "")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ageFromDob(s.dob)} yrs · {enrolledClasses.length} class{enrolledClasses.length !== 1 ? "es" : ""}
+                      {householdAddress && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px]">
+                          <Home className="h-2.5 w-2.5" /> Inherits household address
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {s.waiver !== "signed" && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      Waiver
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── Waiver & Medical strip ───────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2">
         {/* Waiver compliance */}
-        <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5 sm:p-6">
+        <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5">
           <div className="flex items-center gap-2 mb-3">
             <Signature className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Waiver compliance
+              Waiver Status
             </h4>
           </div>
           {allWaiversCurrent ? (
@@ -494,9 +591,70 @@ function OverviewTab() {
             </div>
           )}
         </div>
+
+        {/* Medical flags */}
+        <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Stethoscope className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Medical Flags
+            </h4>
+          </div>
+          {medicalFlags === 0 ? (
+            <div className="flex items-center gap-3 rounded-lg bg-success/5 px-3 py-2.5">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium text-success">No medical flags</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {myStudents.filter((s) => s.allergies || s.medicalNotes).map((s) => (
+                <div key={s.id} className="flex items-start gap-2 rounded-lg bg-amber-50/60 px-3 py-2.5">
+                  {s.allergies && <Wheat className="h-4 w-4 text-rose shrink-0 mt-0.5" />}
+                  {!s.allergies && <Stethoscope className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />}
+                  <div>
+                    <p className="text-sm font-medium">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{s.allergies ?? s.medicalNotes}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Quick actions (refined) ───────────────────────────────── */}
+      {/* ── Recent Activity card ─────────────────────────────────── */}
+      {recentActivity.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/70 bg-white shadow-soft overflow-hidden">
+          <div className="bg-amber-50/60 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold">Recent Activity</h3>
+                <p className="text-xs text-muted-foreground">
+                  Last {recentActivity.length} event{recentActivity.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-5 sm:p-6 divide-y divide-amber-50">
+            {recentActivity.map((event) => (
+              <div key={event.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm">{event.details ?? event.event}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(event.timestamp, { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick actions ────────────────────────────────────────── */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
           {
@@ -580,6 +738,62 @@ function MetaBadge({
         <p className="font-display text-base font-semibold">{value}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
+    </div>
+  );
+}
+
+/* ── Caregiver address row ─────────────────────────────────────── */
+
+function CaregiverAddressRow({
+  caregiver,
+  householdAddress,
+  isPrimary,
+}: {
+  caregiver: Caregiver;
+  householdAddress?: import("@/data/types").Address;
+  isPrimary?: boolean;
+}) {
+  const src = caregiver.addressSource ?? resolveAddressSource(caregiver, householdAddress);
+  const label = ADDRESS_SOURCE_LABELS[src] ?? "Address not specified";
+  const sourceColors: Record<AddressSource, string> = {
+    household: "bg-success/10 text-success border-success/20",
+    separate: "bg-teal/10 text-teal border-teal/20",
+    billing: "bg-gold/15 text-gold border-gold/20",
+    emergency_only: "bg-muted text-muted-foreground border-border",
+  };
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-amber-50/60 px-4 py-3">
+      <div
+        className={cn(
+          "grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-semibold",
+          isPrimary ? "bg-amber-400 text-amber-900" : "bg-amber-100 text-amber-700",
+        )}
+      >
+        {(caregiver.first_name[0] ?? "") + (caregiver.last_name[0] ?? "")}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold truncate">
+          {caregiverFullName(caregiver)}
+          {isPrimary && (
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+              Account owner
+            </span>
+          )}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {caregiver.relationship_to_student}
+          {caregiver.household_label && ` \u00b7 ${caregiver.household_label}`}
+        </p>
+      </div>
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium",
+          sourceColors[src] ?? sourceColors.emergency_only,
+        )}
+      >
+        <Home className="h-3 w-3" />
+        {label}
+      </span>
     </div>
   );
 }
@@ -684,9 +898,10 @@ function RelationshipRow({
    ═══════════════════════════════════════════════════════════════════ */
 
 function ChildrenTab() {
-  const { classes } = useStudioData();
+  const { parent, classes } = useStudioData();
   const { teachers } = useTeachers();
   const { children: myStudents, primaryContact, secondaryContact } = useParent();
+  const householdAddress = parent.householdAddress;
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);

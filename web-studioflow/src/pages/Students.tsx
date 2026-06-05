@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useContext } from "react";
 import {
   CheckCircle2,
   Clock,
   Eye,
   EyeOff,
+  History,
+  Ruler,
   Signature,
   GraduationCap,
   KeyRound,
@@ -24,10 +26,11 @@ import {
 } from "lucide-react";
 
 import { useEnrichedClasses, useStudents, useStudioData, useTerminology } from "@/data/store";
-import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, WaiverStatus } from "@/data/types";
+import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, StudentMeasurement, WaiverStatus } from "@/data/types";
 import { caregiverFullName } from "@/data/types";
 import { parentAccounts } from "@/data/demo";
-import { ageFromDob, formatCurrency, initials } from "@/lib/format";
+import { ageFromDob, formatCurrency, formatDate, initials } from "@/lib/format";
+import { formatCm, formatWeight } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 const waiverBadge: Record<WaiverStatus, string> = {
@@ -50,7 +53,8 @@ export default function Students() {
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Student | null>(null);
-  const [enrolOpen, setEnrolOpen] = useState<string | null>(null); // studentId being enrolled
+  const [enrolOpen, setEnrolOpen] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState<"profile" | "measurements">("profile"); // studentId being enrolled
 
   const rows = useMemo(() => {
     return students.filter((s) => {
@@ -183,6 +187,30 @@ export default function Students() {
               <h3 className="mt-4 font-display text-2xl font-semibold">{selected.name}</h3>
               <p className="text-sm text-muted-foreground">Age {ageFromDob(selected.dob)} · {selected.classIds.length} classes enrolled</p>
             </div>
+            <div className="px-6 pt-4 pb-0">
+              {/* Drawer tabs */}
+              <div className="flex gap-1 bg-secondary/40 rounded-xl p-1">
+                {([
+                  { key: "profile", label: "Profile", icon: Shield },
+                  { key: "measurements", label: "Measurements", icon: Ruler },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setDrawerTab(tab.key)}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition",
+                      drawerTab === tab.key
+                        ? "bg-white shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <tab.icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {drawerTab === "profile" ? (
             <div className="space-y-5 px-6 py-6">
               <DetailRow label="Parent / Guardian" value={selected.parentName} sub={selected.parentEmail} />
               <CaregiverSection student={selected} />
@@ -244,6 +272,9 @@ export default function Students() {
                 Close
               </button>
             </div>
+            ) : (
+            <MeasurementsTabPanel studentId={selected.id} />
+            )}
           </div>
         </div>
       )}
@@ -360,6 +391,144 @@ function DetailRow({ label, value, sub }: { label: string; value: string; sub?: 
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-medium">{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/* ── Measurements tab panel in admin student drawer ──────────────── */
+
+const MEASUREMENT_LABELS: { key: keyof StudentMeasurement; label: string; format: (v: number | undefined) => string }[] = [
+  { key: "heightCm", label: "Height", format: (v) => formatCm(v, "metric") },
+  { key: "weightKg", label: "Weight", format: (v) => formatWeight(v, "metric") },
+  { key: "chestCm", label: "Chest", format: (v) => v != null ? `${Math.round(v)} cm` : "—" },
+  { key: "waistCm", label: "Waist", format: (v) => v != null ? `${Math.round(v)} cm` : "—" },
+  { key: "hipsCm", label: "Hips", format: (v) => v != null ? `${Math.round(v)} cm` : "—" },
+  { key: "girthCm", label: "Girth", format: (v) => v != null ? `${Math.round(v)} cm` : "—" },
+  { key: "inseamCm", label: "Inseam", format: (v) => v != null ? `${Math.round(v)} cm` : "—" },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  approved: "bg-success/10 text-success border-success/20",
+  pending: "bg-gold/15 text-gold border-gold/20",
+  rejected: "bg-destructive/10 text-destructive border-destructive/20",
+  draft: "bg-muted text-muted-foreground border-border",
+};
+
+function MeasurementsTabPanel({ studentId, onBack, onClose }: { studentId: string; onBack: () => void; onClose: () => void }) {
+  const costumesCtx = useContext(CostumesContext);
+  const measurementRecord = costumesCtx?.measurementForStudent(studentId) ?? null;
+  const historyList = costumesCtx?.measurementHistory(studentId) ?? [];
+
+  if (!measurementRecord) {
+    return (
+      <div className="px-6 py-6 space-y-5">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-muted text-muted-foreground">
+            <Ruler className="h-7 w-7" />
+          </div>
+          <h4 className="mt-3 font-display text-base font-semibold">No measurements on file</h4>
+          <p className="mt-1 text-sm text-muted-foreground max-w-xs">
+            Measurements can be submitted by parents through the parent portal or entered by admin staff.
+          </p>
+        </div>
+        <button onClick={onBack} className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+          Back to Profile
+        </button>
+      </div>
+    );
+  }
+
+  const allMeasurements = historyList.length > 0 ? historyList : [measurementRecord];
+  const latest = allMeasurements[0];
+  const hasMultiple = allMeasurements.length > 1;
+
+  return (
+    <div className="space-y-5 px-6 py-6">
+      {/* Latest measurement card */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Latest measurement
+          </p>
+          <span className={cn(
+            "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold",
+            STATUS_COLORS[latest.status] ?? STATUS_COLORS.draft,
+          )}>
+            {latest.status}
+          </span>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-white p-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            {MEASUREMENT_LABELS.map(({ key, label, format }) => {
+              const val = latest[key as keyof StudentMeasurement];
+              return (
+                <div key={key} className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium">{format(val as number | undefined)}</span>
+                </div>
+              );
+            })}
+            {latest.shoeSize && (
+              <div className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
+                <span className="text-muted-foreground">Shoe</span>
+                <span className="font-medium">{latest.shoeSize}</span>
+              </div>
+            )}
+          </div>
+          {latest.measuredAt && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Measured {formatDate(latest.measuredAt, { month: "short", day: "numeric", year: "numeric" })}
+              {latest.measuredBy && ` by ${latest.measuredBy}`}
+              {latest.submittedBy && ` · Submitted by ${latest.submittedBy}`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Measurement history */}
+      {hasMultiple && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Measurement history ({allMeasurements.length})
+          </p>
+          <div className="space-y-2">
+            {allMeasurements.slice(1).map((m) => (
+              <div key={m.id} className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <History className="h-3 w-3" />
+                    {formatDate(m.measuredAt ?? m.createdAt, { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                  <span className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                    STATUS_COLORS[m.status] ?? STATUS_COLORS.draft,
+                  )}>
+                    {m.status}
+                  </span>
+                </div>
+                {/* Growth delta */}
+                {m.heightCm != null && latest.heightCm != null && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Height:</span>
+                    <span className="font-medium">{formatCm(m.heightCm, "metric")}</span>
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      latest.heightCm >= m.heightCm ? "text-success" : "text-rose",
+                    )}>
+                      {latest.heightCm >= m.heightCm ? "↑" : "↓"}{" "}
+                      {Math.abs(latest.heightCm - m.heightCm).toFixed(1)} cm since
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button onClick={onBack} className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+        Back to Profile
+      </button>
     </div>
   );
 }

@@ -30,7 +30,7 @@ import type {
   WaiverTemplate,
   WaiverVersion,
 } from "./types";
-import { SAFE_SECONDARY_DEFAULTS } from "./types";
+import { SAFE_SECONDARY_DEFAULTS, type Address, type AddressSource } from "./types";
 
 export const studio: Studio = {
   id: "stu_aurora",
@@ -90,7 +90,7 @@ function pick<T>(arr: T[], i: number): T {
   return arr[i % arr.length];
 }
 
-function makeContact(first: string, last: string, email: string, phone: string, address: string, relationship: string, billing: boolean, emergency: boolean, household?: string): FamilyContact {
+function makeContact(first: string, last: string, email: string, phone: string, address: string, relationship: string, billing: boolean, emergency: boolean, household?: string, addressSource?: AddressSource): FamilyContact {
   return {
     firstName: first,
     lastName: last,
@@ -102,6 +102,7 @@ function makeContact(first: string, last: string, email: string, phone: string, 
     state: "OR",
     zip: "97209",
     householdLabel: household,
+    addressSource,
     receivesEmails: true,
     receivesSMS: true,
     receivesBilling: billing,
@@ -131,6 +132,7 @@ function makeCaregiver(
     city: "Portland",
     state: "OR",
     zip: "97209",
+    addressSource: role === "primary_caregiver" ? "household" : (overrides?.addressSource as AddressSource | undefined),
     status: "active",
     role,
     receives_announcements: true,
@@ -157,6 +159,7 @@ const rajCg = makeCaregiver("cg_secondary_p3", "Raj", "Patel", "raj.patel@email.
 const gregCg = makeCaregiver("cg_addl_greg", "Greg", "Walsh", "greg.walsh@email.com", "(555) 111-2233", "4510 NE Alberta Ct", "Father", "additional_caregiver", {
   ...SAFE_SECONDARY_DEFAULTS,
   household_label: "Greg's house",
+  addressSource: "separate" as AddressSource,
   authorized_pickup: true,
 });
 
@@ -171,6 +174,7 @@ const lenaCg: Caregiver = {
   city: "Portland",
   state: "OR",
   zip: "97211",
+  addressSource: "separate" as AddressSource,
   household_label: "Greg & Lena's house",
   status: "active" as const,
   role: "additional_caregiver" as const,
@@ -185,40 +189,52 @@ const lenaCg: Caregiver = {
   authorized_pickup: true,
 };
 
+// ── Structured household addresses ────────────────────────────
+const addrWalsh: Address = { line1: "1428 NW Lovejoy St", city: "Portland", stateOrProvince: "OR", postalCode: "97209", country: "US" };
+const addrCarter: Address = { line1: "3821 SE Hawthorne Blvd", city: "Portland", stateOrProvince: "OR", postalCode: "97214", country: "US" };
+const addrPatel: Address = { line1: "720 SW Broadway Dr", city: "Portland", stateOrProvince: "OR", postalCode: "97205", country: "US" };
+const addrGreg: Address = { line1: "4510 NE Alberta Ct", city: "Portland", stateOrProvince: "OR", postalCode: "97211", country: "US" };
+
 export const parentAccounts: ParentAccount[] = [
   {
     id: "p1",
     studioId: studio.id,
-    primaryContact: makeContact("Diane", "Walsh", "diane.walsh@email.com", "(555) 123-4567", "1428 NW Lovejoy St", "Parent", true, true, "Diane's house"),
-    primaryCaregiver: makeCaregiver("cg_primary_p1", "Diane", "Walsh", "diane.walsh@email.com", "(555) 123-4567", "1428 NW Lovejoy St", "Parent", "primary_caregiver", { household_label: "Diane's house" }),
+    primaryContact: makeContact("Diane", "Walsh", "diane.walsh@email.com", "(555) 123-4567", "1428 NW Lovejoy St", "Parent", true, true, "Diane's house", "household"),
+    primaryCaregiver: makeCaregiver("cg_primary_p1", "Diane", "Walsh", "diane.walsh@email.com", "(555) 123-4567", "1428 NW Lovejoy St", "Parent", "primary_caregiver", { household_label: "Diane's house", addressSource: "household" }),
     // Multi-household: Diane is separated; Greg (ex) and his partner Lena are also caregivers
-    secondaryContact: makeContact("Greg", "Walsh", "greg.walsh@email.com", "(555) 111-2233", "4510 NE Alberta Ct", "Father", false, true, "Greg's house"),
+    secondaryContact: makeContact("Greg", "Walsh", "greg.walsh@email.com", "(555) 111-2233", "4510 NE Alberta Ct", "Father", false, true, "Greg's house", "separate"),
     secondaryCaregiver: gregCg,
     additionalCaregivers: [gregCg, lenaCg],
     caregiverAuditLog: [
       { id: "alog1", caregiverId: "cg_primary_p1", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 90).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
-      { id: "alog2", caregiverId: "cg_addl_greg", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 30).toISOString(), event: "caregiver_nominated", details: "Greg Walsh nominated as additional caregiver" },
-      { id: "alog3", caregiverId: "cg_addl_lena", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 15).toISOString(), event: "caregiver_nominated", details: "Lena Walsh nominated as additional caregiver" },
+      { id: "alog2", caregiverId: "cg_addl_greg", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 30).toISOString(), event: "caregiver_nominated", details: "Greg Walsh nominated as additional caregiver — separate household" },
+      { id: "alog3", caregiverId: "cg_addl_lena", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 15).toISOString(), event: "caregiver_nominated", details: "Lena Walsh nominated as additional caregiver — Greg & Lena's household" },
     ],
     childIds: ["s1", "s5"],
+    householdAddress: addrWalsh,
+    addressUpdatedAt: new Date(Date.now() - 86400000 * 90).toISOString(),
+    addressUpdatedBy: "cg_primary_p1",
   },
   {
     id: "p2",
     studioId: studio.id,
-    primaryContact: makeContact("Marcus", "Carter", "marcus.carter@email.com", "(555) 234-5678", "3821 SE Hawthorne Blvd", "Parent", true, true, undefined),
-    primaryCaregiver: makeCaregiver("cg_primary_p2", "Marcus", "Carter", "marcus.carter@email.com", "(555) 234-5678", "3821 SE Hawthorne Blvd", "Parent", "primary_caregiver"),
+    primaryContact: makeContact("Marcus", "Carter", "marcus.carter@email.com", "(555) 234-5678", "3821 SE Hawthorne Blvd", "Parent", true, true, undefined, "household"),
+    primaryCaregiver: makeCaregiver("cg_primary_p2", "Marcus", "Carter", "marcus.carter@email.com", "(555) 234-5678", "3821 SE Hawthorne Blvd", "Parent", "primary_caregiver", { addressSource: "household" }),
     additionalCaregivers: [],
     caregiverAuditLog: [
       { id: "alog4", caregiverId: "cg_primary_p2", parentId: "p2", timestamp: new Date(Date.now() - 86400000 * 120).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
     ],
     childIds: ["s2"],
+    householdAddress: addrCarter,
+    addressUpdatedAt: new Date(Date.now() - 86400000 * 120).toISOString(),
+    addressUpdatedBy: "cg_primary_p2",
   },
   {
     id: "p3",
     studioId: studio.id,
-    primaryContact: makeContact("Anita", "Patel", "anita.patel@email.com", "(555) 345-6789", "720 SW Broadway Dr", "Guardian", true, true, undefined),
-    secondaryContact: makeContact("Raj", "Patel", "raj.patel@email.com", "(555) 765-4321", "720 SW Broadway Dr", "Guardian", true, false, undefined),
-    primaryCaregiver: makeCaregiver("cg_primary_p3", "Anita", "Patel", "anita.patel@email.com", "(555) 345-6789", "720 SW Broadway Dr", "Guardian", "primary_caregiver"),
+    primaryContact: makeContact("Anita", "Patel", "anita.patel@email.com", "(555) 345-6789", "720 SW Broadway Dr", "Guardian", true, true, undefined, "household"),
+    secondaryContact: makeContact("Raj", "Patel", "raj.patel@email.com", "(555) 765-4321", "720 SW Broadway Dr", "Guardian", true, false, undefined, "household"),
+    primaryCaregiver: makeCaregiver("cg_primary_p3", "Anita", "Patel", "anita.patel@email.com", "(555) 345-6789", "720 SW Broadway Dr", "Guardian", "primary_caregiver", { addressSource: "household" }),
     secondaryCaregiver: rajCg,
     additionalCaregivers: [rajCg],
     caregiverAuditLog: [
@@ -227,6 +243,9 @@ export const parentAccounts: ParentAccount[] = [
       { id: "alog7", caregiverId: "cg_secondary_p3", parentId: "p3", timestamp: new Date(Date.now() - 86400000 * 35).toISOString(), event: "billing_access_changed", details: "Billing and invoice payment enabled for Raj Patel" },
     ],
     childIds: ["s3"],
+    householdAddress: addrPatel,
+    addressUpdatedAt: new Date(Date.now() - 86400000 * 80).toISOString(),
+    addressUpdatedBy: "cg_primary_p3",
   },
 ];
 

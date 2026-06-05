@@ -852,7 +852,7 @@ interface CostumesCtx {
   addDistribution: (d: Omit<CostumeDistribution, "id" | "studioId" | "createdAt">) => Promise<void>;
 }
 
-const CostumesContext = createContext<CostumesCtx | null>(null);
+export const CostumesContext = createContext<CostumesCtx | null>(null);
 
 export function CostumesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

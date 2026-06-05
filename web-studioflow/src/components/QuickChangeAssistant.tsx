@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { RecitalPerformance, QuickChangeConflict, Student } from "@/data/types";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -182,31 +184,19 @@ export default function QuickChangeAssistant({
           {/* Student timelines */}
           {studentTimelines.length > 0 && (
             <div>
-              <h4 className="font-semibold mb-3">Student Timelines</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold">Student Timelines</h4>
+                {onReorderRoutine && (
+                  <span className="text-xs text-muted-foreground">Drag to reorder routines</span>
+                )}
+              </div>
               <div className="space-y-2">
                 {studentTimelines.map((st) => (
-                  <div key={st.studentId} className="rounded-xl border border-border/70 bg-card p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-plum/10">
-                        <Users className="h-4 w-4 text-plum" />
-                      </div>
-                      <p className="text-sm font-semibold">{st.studentName}</p>
-                      <span className="text-xs text-muted-foreground">{st.routines.length} routines</span>
-                    </div>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                      {st.routines.map((r, i) => (
-                        <div key={i} className="flex items-center gap-2 shrink-0">
-                          <div className="rounded-lg bg-secondary px-3 py-2 text-xs">
-                            <p className="font-medium">{r.performanceName}</p>
-                            {r.startTime && <p className="text-muted-foreground">{r.startTime}</p>}
-                          </div>
-                          {i < st.routines.length - 1 && (
-                            <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <TimelineRow
+                    key={st.studentId}
+                    timeline={st}
+                    onReorder={onReorderRoutine}
+                  />
                 ))}
               </div>
             </div>
@@ -224,4 +214,107 @@ function calculateTimeBetween(endTime?: string, startTime?: string): number {
   const endMins = (eh ?? 0) * 60 + (em ?? 0);
   const startMins = (sh ?? 0) * 60 + (sm ?? 0);
   return startMins - endMins;
+}
+
+interface TimelineRowProps {
+  timeline: { studentId: string; studentName: string; routines: { performanceId: string; performanceName: string; startTime?: string; endTime?: string }[] };
+  onReorder?: (perfId: string, newOrder: number) => void;
+}
+
+function TimelineRow({ timeline, onReorder }: TimelineRowProps) {
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
+  const handleDragStart = useCallback((idx: number) => {
+    setDragIdx(idx);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setOverIdx(idx);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (dragIdx != null && overIdx != null && dragIdx !== overIdx && onReorder) {
+      const routine = timeline.routines[dragIdx];
+      if (routine) {
+        onReorder(routine.performanceId, overIdx);
+      }
+    }
+    setDragIdx(null);
+    setOverIdx(null);
+  }, [dragIdx, overIdx, timeline.routines, onReorder]);
+
+  const moveUp = useCallback((idx: number) => {
+    if (idx > 0 && onReorder) {
+      const routine = timeline.routines[idx];
+      if (routine) onReorder(routine.performanceId, idx - 1);
+    }
+  }, [timeline.routines, onReorder]);
+
+  const moveDown = useCallback((idx: number) => {
+    if (idx < timeline.routines.length - 1 && onReorder) {
+      const routine = timeline.routines[idx];
+      if (routine) onReorder(routine.performanceId, idx + 1);
+    }
+  }, [timeline.routines, onReorder]);
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-4">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-plum/10">
+          <Users className="h-4 w-4 text-plum" />
+        </div>
+        <p className="text-sm font-semibold">{timeline.studentName}</p>
+        <span className="text-xs text-muted-foreground">{timeline.routines.length} routines</span>
+      </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {timeline.routines.map((r, i) => (
+          <div key={i} className="flex items-center gap-2 shrink-0">
+            <div
+              draggable={!!onReorder}
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDragEnd={handleDragEnd}
+              className={cn(
+                "rounded-lg bg-secondary px-3 py-2 text-xs transition-all",
+                dragIdx === i && "opacity-50 scale-95",
+                overIdx === i && dragIdx !== i && "ring-2 ring-plum bg-plum/10",
+                onReorder && "cursor-grab active:cursor-grabbing",
+              )}
+            >
+              <div className="flex items-center gap-1.5">
+                {onReorder && <GripVertical className="h-3 w-3 text-muted-foreground" />}
+                <div>
+                  <p className="font-medium">{r.performanceName}</p>
+                  {r.startTime && <p className="text-muted-foreground">{r.startTime}</p>}
+                </div>
+              </div>
+            </div>
+            {onReorder && (
+              <div className="flex flex-col gap-0.5 shrink-0">
+                <button
+                  onClick={() => moveUp(i)}
+                  disabled={i === 0}
+                  className="grid h-4 w-4 place-items-center rounded hover:bg-plum/10 disabled:opacity-30"
+                >
+                  <ArrowUp className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={() => moveDown(i)}
+                  disabled={i === timeline.routines.length - 1}
+                  className="grid h-4 w-4 place-items-center rounded hover:bg-plum/10 disabled:opacity-30"
+                >
+                  <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </div>
+            )}
+            {i < timeline.routines.length - 1 && (
+              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

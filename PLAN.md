@@ -543,9 +543,9 @@ Measurement freshness tracking with visibility into growth over time.
 Vendor sizing chart upload, parsing, and multi-unit chart support.
 
 - [x] Sizing chart upload: accept CSV files via client-side parsing (PDF/Excel via Supabase Storage pending)
-- [ ] AI parsing: extract structured size-range data from uploaded charts (Rork AI proxy)
+- [x] AI parsing: extract structured size-range data from uploaded charts (Rork AI proxy)
 - [x] Manual chart entry fallback: structured form for hand-entered sizing charts
-- [ ] Support metric, imperial, and mixed-unit sizing charts (unit field in chart data needed)
+- [x] Support metric, imperial, and mixed-unit sizing charts (unit field in chart data needed)
 - [x] Chart preview: rendered table view of extracted size ranges before saving
 - [x] Enhanced flagging system: borderline sizes, missing measurements for required dimensions, conflicting measurements, unusual growth changes
 - [x] Alternative-size recommendations with reasoning text
@@ -561,7 +561,7 @@ Bulk purchase-order generation with export options.
 - [x] PO number auto-generation (e.g., PO-2026-0001)
 - [x] Export to PDF (printable purchase order with studio branding)
 - [x] Export to CSV (line-item detail for vendor submission)
-- [ ] Export to Excel (structured workbook with summary + line-item sheets)
+- [x] Export to Excel (structured workbook with summary + line-item sheets)
 - [x] Track order date, expected arrival, actual delivery, vendor notes
 - [x] Order status timeline retained from existing implementation
 
@@ -591,7 +591,7 @@ Optimised distribution-day experience for tablet use in a busy studio environmen
 - [x] Digital signature capture (drawing canvas for parent/guardian signature)
 - [x] Missing-items tracking: record what was not received
 - [x] Distribution receipt auto-generation (PDF with checklist + signature + timestamp)
-- [ ] Receipt stored in student profile documents section
+- [x] Receipt stored in student profile documents section
 
 ---
 
@@ -602,8 +602,8 @@ Deep integration between Costume Management and Recital Planner, plus platform p
 - [x] Recital routines show assigned costume with thumbnail in recital planner
 - [x] Quick-change assistant: analyze full recital lineup, detect conflicts, recommend reordering
 - [x] Estimated change-time configurable per costume (default 5 min)
-- [ ] Conflict resolution: drag to reorder routines, auto-update conflict status
-- [ ] Student Profile → Measurements tab: dedicated tab with full measurement history
+- [x] Conflict resolution: drag to reorder routines, auto-update conflict status
+- [x] Student Profile → Measurements tab: dedicated tab with full measurement history
 - [x] Rental agreement auto-generation (PDF with terms, dates, deposit, damage policy)
 - [x] AI Costume Insights dashboard: reusable-costume savings calculator, bulk-order shipping optimisation, unassigned-costume alerts, measurement-deadline risk scoring
 - [x] Costume image upload support (multiple images per costume via Supabase Storage)

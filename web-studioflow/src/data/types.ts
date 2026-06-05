@@ -370,6 +370,8 @@ export interface FamilyContact {
   /** @deprecated Use address field instead. */
   zip?: string;
   householdLabel?: string;
+  /** How the caregiver's address relates to the household. */
+  addressSource?: AddressSource;
   receivesEmails: boolean;
   receivesSMS: boolean;
   receivesBilling: boolean;
@@ -431,6 +433,8 @@ export interface Caregiver extends CaregiverPermissions {
   /** @deprecated Use address field instead. */
   zip?: string;
   household_label?: string;
+  /** How the caregiver's address relates to the household. */
+  addressSource?: AddressSource;
   status: CaregiverStatus;
   role: CaregiverRole;
   invited_at?: string;
@@ -464,6 +468,89 @@ export function caregiverFullName(c: Caregiver): string {
   return `${c.first_name} ${c.last_name}`;
 }
 
+/* ── Address relationship types for caregivers ────────────────────── */
+
+/** Describes how a caregiver's address relates to the family household. */
+export type AddressSource =
+  | "household"           // Lives at the household address
+  | "separate"            // Has their own separate address on file
+  | "billing"             // Address used only for billing
+  | "emergency_only";     // No address — emergency contact only
+
+export const ADDRESS_SOURCE_LABELS: Record<AddressSource, string> = {
+  household: "Lives at household address",
+  separate: "Separate address on file",
+  billing: "Billing address",
+  emergency_only: "Emergency contact only",
+};
+
+/** Determine the effective address source for a caregiver given the household data. */
+export function resolveAddressSource(
+  caregiver: Caregiver | FamilyContact,
+  householdAddress?: Address,
+): AddressSource {
+  // Caregiver type
+  if ("first_name" in caregiver && "role" in caregiver) {
+    const cg = caregiver as Caregiver;
+    if (cg.role === "emergency_contact_only") return "emergency_only";
+    if (cg.addressSource) return cg.addressSource;
+  }
+  // FamilyContact type
+  if ("firstName" in caregiver) {
+    const fc = caregiver as FamilyContact;
+    if (fc.addressSource) return fc.addressSource;
+    if (fc.emergencyContact && !fc.receivesBilling && !fc.address) return "emergency_only";
+  }
+  // Heuristic: if caregiver has an address different from household, they're separate
+  const cgAddr = ("address" in caregiver ? (caregiver as Caregiver).address : (caregiver as FamilyContact).address) as Address | string | undefined;
+  if (!cgAddr && householdAddress) return "household";
+  if (!cgAddr && !householdAddress) return "emergency_only";
+  if (typeof cgAddr === "string") {
+    // Can't compare string to structured, assume separate if different content
+    return "separate";
+  }
+  if (householdAddress && cgAddr && typeof cgAddr === "object") {
+    const a = cgAddr as Address;
+    const ha = householdAddress;
+    const same = a.line1 === ha.line1 && a.city === ha.city && a.postalCode === ha.postalCode && a.country === ha.country;
+    return same ? "household" : "separate";
+  }
+  return householdAddress ? "household" : "emergency_only";
+}
+
+/** Format an Address for display on one line. */
+export function formatAddressShort(addr?: Address | string | null): string {
+  if (!addr) return "";
+  if (typeof addr === "string") return addr;
+  const parts = [addr.line1, addr.line2, addr.city, addr.stateOrProvince, addr.postalCode]
+    .filter(Boolean);
+  return parts.join(", ");
+}
+
+/** Format an Address for display across multiple lines. */
+export function formatAddressMultiline(addr?: Address | string | null): string[] {
+  if (!addr) return [];
+  if (typeof addr === "string") return [addr];
+  const lines: string[] = [addr.line1];
+  if (addr.line2) lines.push(addr.line2);
+  const cityRegion = [addr.city, addr.stateOrProvince, addr.postalCode].filter(Boolean).join(" ");
+  if (cityRegion) lines.push(cityRegion);
+  if (addr.country) lines.push(addr.country);
+  return lines;
+}
+
+/** Create an empty address object with defaults. */
+export function emptyAddress(country: CountryCode = "US"): Address {
+  return { line1: "", city: "", stateOrProvince: "", postalCode: "", country };
+}
+
+/** Check if an Address is effectively empty (all fields blank). */
+export function isAddressEmpty(addr?: Address | string | null): boolean {
+  if (!addr) return true;
+  if (typeof addr === "string") return addr.trim() === "";
+  return !addr.line1 && !addr.line2 && !addr.city && !addr.stateOrProvince && !addr.postalCode;
+}
+
 /** Audit-log entry for caregiver lifecycle events. */
 export interface CaregiverAuditEvent {
   id: string;
@@ -490,6 +577,14 @@ export interface ParentAccount {
   /** Audit trail for sensitive caregiver events. */
   caregiverAuditLog?: CaregiverAuditEvent[];
   childIds: string[];
+  /** Primary household address — the canonical address for this family. */
+  householdAddress?: Address;
+  /** Billing address — if different from household. */
+  billingAddress?: Address;
+  /** When the household address was last updated. */
+  addressUpdatedAt?: string;
+  /** Who last updated the address (caregiver ID or 'admin'). */
+  addressUpdatedBy?: string;
 }
 
 export interface RecitalEvent {
