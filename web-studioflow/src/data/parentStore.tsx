@@ -169,9 +169,8 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const pc = parent.primaryContact;
       // Delegate to shared context so the new child appears everywhere.
-      // All registration fields (legal name, emergency, medical, consent, waivers)
-      // pass through as provided by the wizard.
-      sharedAddStudent({
+      // addStudent returns the new ID synchronously — use it directly.
+      const newId = sharedAddStudent({
         ...child,
         parentId: parent.id,
         parentName: `${pc.firstName} ${pc.lastName}`,
@@ -182,19 +181,10 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
         payment: "paid",
         balanceCents: 0,
       });
-      // The shared addStudent creates an optimistic ID. Sync parent.childIds
-      // on the next render when sharedStudents updates.
-      setTimeout(() => {
-        const newChild = sharedStudents.find(
-          (s) =>
-            s.parentId === parent.id && !parent.childIds.includes(s.id),
-        );
-        if (newChild) {
-          patchParent({ childIds: [...parent.childIds, newChild.id] });
-        }
-      }, 100);
+      // Immediately link the new child to this parent
+      patchParent({ childIds: [...parent.childIds, newId] });
     },
-    [parent, sharedAddStudent, sharedStudents, patchParent],
+    [parent, sharedAddStudent, patchParent],
   );
 
   const removeChild = useCallback(

@@ -1360,7 +1360,14 @@ function ReviewStep({
   medical: ChildMedicalInfo; physicianClinic: string; medicalInfoConfirmed: boolean;
   childAddress?: Address; householdAddress?: Address;
 }) {
-  const displayDob = dob ? new Date(dob + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+  const displayDob = dob
+    ? (() => {
+        const d = new Date(dob + "T00:00:00");
+        const day = String(d.getDate()).padStart(2, "0");
+        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        return `${months[d.getMonth()]} ${day}, ${d.getFullYear()}`;
+      })()
+    : "—";
   const hasMedicalFlags = !!(medical.allergies || medical.medications || medical.medicalConditions || medical.hasAsthma || medical.hasEpiPen || medical.activityRestrictions || physicianClinic);
 
   return (

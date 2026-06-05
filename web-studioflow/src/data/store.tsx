@@ -297,7 +297,7 @@ export function useEnrichedClasses() {
 
 interface StudentsCtx {
   students: Student[];
-  addStudent: (s: Omit<Student, "id" | "studioId">) => void;
+  addStudent: (s: Omit<Student, "id" | "studioId">) => string;
   updateStudent: (id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => void;
   /** Enrol a student into a class — writes to enrolments table (source of truth).
    * Pass forceWaitlist to bypass capacity check and force waitlist status. */
@@ -341,17 +341,28 @@ export function StudentsProvider({ children }: { children: React.ReactNode }) {
   const enrolMut = useEnrolStudent();
   const withdrawMut = useWithdrawStudent();
 
-  const addStudent = useCallback((s: Omit<Student, "id" | "studioId">) => {
+  const addStudent = useCallback((s: Omit<Student, "id" | "studioId">): string => {
     const tempId = `s${Date.now()}`;
     const optimistic: Student = { ...s, id: tempId, studioId: "" };
     setStudents((prev) => [...prev, optimistic]);
+
+    // Demo mode: keep optimistic entry — no Supabase table to persist to
+    if (isDemo) return tempId;
+
     addStudentMut.mutate(s, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+      onSuccess: (data) => {
+        // Replace optimistic ID with the real Supabase ID
+        setStudents((prev) =>
+          prev.map((x) => (x.id === tempId ? { ...x, id: data.id, studioId: data.studioId } : x)),
+        );
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+      },
       onError: () => {
         setStudents((prev) => prev.filter((x) => x.id !== tempId));
       },
     });
-  }, [addStudentMut, queryClient]);
+    return tempId;
+  }, [addStudentMut, queryClient, isDemo]);
 
   const updateStudent = useCallback((id: string, patch: Partial<Omit<Student, "id" | "studioId">>) => {
     setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
