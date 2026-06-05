@@ -55,6 +55,11 @@ import {
   useSignWaiver,
   useAddUploadedDocument,
   useVerifyDocument,
+  useAddSizingChart,
+  useDeleteSizingChart,
+  useAddSizeRecommendation,
+  useAddVendorOrder,
+  useAddCostumeDistribution,
 } from "./supabaseHooks";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
