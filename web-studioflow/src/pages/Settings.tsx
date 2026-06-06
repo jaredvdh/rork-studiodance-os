@@ -6,11 +6,14 @@ import {
   Camera,
   Check,
   CheckCircle,
+  CreditCard,
   ExternalLink,
   Globe,
   Image,
+  Link2,
   Loader2,
   Palette,
+  Pencil,
   RefreshCw,
   Save,
   ShieldAlert,
@@ -74,6 +77,15 @@ export default function Settings() {
 
   const [logoUploading, setLogoUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
+
+  // Payment configuration
+  const paymentMethod = studio.settings?.paymentMethod ?? "stripe";
+  const [manualPaymentNotes, setManualPaymentNotes] = useState(
+    studio.settings?.manualPaymentNotes ?? "",
+  );
+  const [manualPaymentLink, setManualPaymentLink] = useState(
+    studio.settings?.manualPaymentLink ?? "",
+  );
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -213,6 +225,21 @@ export default function Settings() {
       };
     }
 
+    // Check if payment settings changed
+    const paymentMethod = studio.settings?.paymentMethod ?? "stripe";
+    const savedManualNotes = studio.settings?.manualPaymentNotes ?? "";
+    const savedManualLink = studio.settings?.manualPaymentLink ?? "";
+    if (
+      manualPaymentNotes !== savedManualNotes ||
+      manualPaymentLink !== savedManualLink
+    ) {
+      updates.settings = {
+        ...(updates.settings as Record<string, unknown> ?? studio.settings),
+        manualPaymentNotes: manualPaymentNotes || undefined,
+        manualPaymentLink: manualPaymentLink || undefined,
+      };
+    }
+
     if (Object.keys(updates).length === 0) {
       toast("No changes to save");
       return;
@@ -227,6 +254,8 @@ export default function Settings() {
     tagline !== studio.tagline ||
     city !== studio.city ||
     brandColor !== studio.brandColor ||
+    manualPaymentNotes !== (studio.settings?.manualPaymentNotes ?? "") ||
+    manualPaymentLink !== (studio.settings?.manualPaymentLink ?? "") ||
     (() => {
       const origToggles = original.settings?.featureToggles ?? {};
       return Object.keys({ ...origToggles, ...featureToggles }).some(
@@ -458,8 +487,22 @@ export default function Settings() {
       {/* Unit System */}
       <UnitPreferenceSection />
 
-      {/* Stripe Connect */}
-      <StripeConnectSection />
+      {/* Payment Configuration */}
+      <PaymentSection
+        paymentMethod={paymentMethod}
+        manualPaymentNotes={manualPaymentNotes}
+        manualPaymentLink={manualPaymentLink}
+        onPaymentMethodChange={(method) =>
+          updateStudio({
+            settings: { ...studio.settings, paymentMethod: method },
+          })
+        }
+        onManualNotesChange={setManualPaymentNotes}
+        onManualLinkChange={setManualPaymentLink}
+      />
+
+      {/* Stripe Connect (shown when Stripe is active payment method) */}
+      {paymentMethod === "stripe" && <StripeConnectSection />}
 
       {/* Save */}
       <div className="flex items-center gap-3">
@@ -1014,6 +1057,144 @@ function EnabledModulesSection() {
         Navigation menus and dashboard cards reflect only enabled modules. To change which modules are available, select
         a different studio type above.
       </p>
+    </section>
+  );
+}
+
+/* ── Payment Configuration section ──────────────────────────────── */
+
+function PaymentSection({
+  paymentMethod,
+  manualPaymentNotes,
+  manualPaymentLink,
+  onPaymentMethodChange,
+  onManualNotesChange,
+  onManualLinkChange,
+}: {
+  paymentMethod: string;
+  manualPaymentNotes: string;
+  manualPaymentLink: string;
+  onPaymentMethodChange: (method: string) => void;
+  onManualNotesChange: (notes: string) => void;
+  onManualLinkChange: (link: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-rose/10">
+          <CreditCard className="h-4.5 w-4.5 text-rose" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold">Payment method</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Choose how families pay. Stripe Connect processes real payments; Manual tracking is for studios using external billing.
+          </p>
+        </div>
+      </div>
+
+      {/* Payment method selector */}
+      <div className="grid gap-3 sm:grid-cols-2 mb-5">
+        {[
+          {
+            value: "stripe",
+            label: "Stripe Connect",
+            desc: "Accept credit cards, ACH, and digital wallets. Funds deposited directly to your bank.",
+            icon: Building2,
+          },
+          {
+            value: "manual",
+            label: "Manual / External tracking",
+            desc: "Track payments manually. Use for cash, cheque, bank transfer, or third-party processors.",
+            icon: Pencil,
+          },
+        ].map((opt) => {
+          const active = paymentMethod === opt.value;
+          const OptIcon = opt.icon;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => onPaymentMethodChange(opt.value)}
+              className={cn(
+                "flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all",
+                active
+                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                  : "border-border/70 bg-card hover:bg-secondary/50",
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={cn(
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-lg",
+                    active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <OptIcon className="h-4 w-4" />
+                </div>
+                <span className={cn("text-sm font-semibold", active && "text-primary")}>
+                  {opt.label}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{opt.desc}</p>
+              {active && (
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  Active
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Manual payment fields — only shown when manual is selected */}
+      {paymentMethod === "manual" && (
+        <div className="space-y-4 rounded-xl border border-border/60 bg-secondary/30 p-4">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+            Manual payment configuration
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium" htmlFor="manual-payment-link">
+              External payment link
+            </label>
+            <div className="relative">
+              <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="manual-payment-link"
+                type="url"
+                value={manualPaymentLink}
+                onChange={(e) => onManualLinkChange(e.target.value)}
+                placeholder="https://your-payment-processor.com/pay"
+                className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3.5 text-sm outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Link to your external payment page (Stripe Payment Links, PayPal, Square, etc.)
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium" htmlFor="manual-payment-notes">
+              Payment instructions for families
+            </label>
+            <textarea
+              id="manual-payment-notes"
+              value={manualPaymentNotes}
+              onChange={(e) => onManualNotesChange(e.target.value)}
+              rows={3}
+              placeholder="e.g. Please make cheques payable to 'Studio Name' or send e-transfer to billing@studio.com"
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              These instructions appear on invoices and the parent portal payment page.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* RevenueCat note — future mobile app only */}
+      <div className="mt-4 rounded-xl border border-border/60 bg-secondary/30 p-3.5">
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          <span className="font-semibold text-foreground/70">Mobile app subscriptions</span> — RevenueCat integration for native iOS and Android subscription management is planned for a future release. For now, use Stripe Connect or Manual tracking for all billing.
+        </p>
+      </div>
     </section>
   );
 }
