@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CreditCard,
   FileText,
-  Megaphone,
   Sparkles,
   Users,
   Check,
@@ -18,31 +17,21 @@ import {
   Shirt,
   GraduationCap,
   Upload,
-  GitBranch,
-  SearchCheck,
   Rocket,
   BarChart3,
   Menu,
   X,
   UserPlus,
-  Bell,
   Smartphone,
   Layers,
   Zap,
-  TrendingUp,
   ClipboardCheck,
   MessageCircle,
   MoveRight,
   Star,
-  Medal,
   Timer,
-  Banknote,
-  RefreshCw,
-  LineChart,
-  ChevronDown,
   Monitor,
   Building2,
-  Instagram,
 } from "lucide-react";
 
 import {
@@ -495,27 +484,6 @@ const roadmapItems = [
   { icon: Smartphone, title: "Staff Mobile App", description: "Dedicated mobile app for instructors to manage classes and attendance." },
 ];
 
-/* ── Mockup card helper ───────────────────────────────────────────── */
-
-function MockCard({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  return (
-    <div
-      className={cn("animate-float-up rounded-xl border border-black/[0.06] bg-white shadow-sm", className)}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
-}
-
 /* ── Section heading helper ──────────────────────────────────────── */
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -545,12 +513,23 @@ function SectionHeading({
   );
 }
 
+/* ── Screenshots ─────────────────────────────────────────────────── */
+
+const SCREENSHOTS = {
+  dashboard: "https://r2-pub.rork.com/generated-images/88d1cab1-4c27-4268-bb1c-71c7d6da492c.png",
+  schedule: "https://r2-pub.rork.com/generated-images/c7c249e2-7b43-434a-b748-692755a6f006.png",
+  classes: "https://r2-pub.rork.com/generated-images/c787a95c-8f9f-4b7c-a756-3bfea43ad233.png",
+  students: "https://r2-pub.rork.com/generated-images/4e34fecf-d4cd-4699-8c7a-66c8fad7ea4d.png",
+  portal: "https://r2-pub.rork.com/generated-images/96712729-1ac9-4d0a-897f-c10a47a2d3f6.png",
+} as const;
+
 /* ── Main Component ───────────────────────────────────────────────── */
 
 export default function Landing() {
   const { studio } = useStudio();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessType>("dance");
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const profile = businessProfiles.find((p) => p.id === selectedBusiness)!;
 
   /* Scroll-aware nav background */
@@ -565,6 +544,7 @@ export default function Landing() {
   const navLinks = (
     <>
       <a href="#features" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Features</a>
+      <a href="#screenshots" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Screenshots</a>
       <a href="#why" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Why StudioFlow</a>
       <a href="#how" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">How it works</a>
       <a href="#migration" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Migration</a>
@@ -694,154 +674,41 @@ export default function Landing() {
               <p className="mt-6 text-sm text-foreground/40">Free 30-day trial. No credit card required.</p>
             </div>
 
-            {/* Right: layered floating dashboard mockups (desktop only) */}
-            <div className="relative hidden lg:block" style={{ minHeight: "460px" }}>
-              {/* Main panel — browser frame with full dashboard */}
-              <MockCard delay={0} className="relative z-10 overflow-hidden shadow-soft">
+            {/* Right: Dashboard screenshot (desktop) */}
+            <div className="relative hidden lg:block animate-float-up" style={{ animationDelay: "80ms" }}>
+              <div className="relative z-10 overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-lift">
                 {/* Browser chrome */}
                 <div className="flex items-center gap-2 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-3">
                   <span className="h-2.5 w-2.5 rounded-full bg-rose/40" />
                   <span className="h-2.5 w-2.5 rounded-full bg-gold/40" />
                   <span className="h-2.5 w-2.5 rounded-full bg-teal/40" />
                   <span className="ml-2 text-[11px] font-medium text-foreground/30">app.studioflow.co — Dashboard</span>
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <span className="h-1 w-12 rounded-full bg-black/[0.04]" />
-                  </div>
                 </div>
-                {/* Dashboard content */}
-                <div className="p-5">
-                  {/* Top stat cards */}
-                  <div className="grid grid-cols-4 gap-3 mb-4">
-                    {[
-                      { label: "Classes", value: "8 today", icon: CalendarDays, color: "bg-rose/10 text-rose" },
-                      { label: "Students", value: "247", icon: Users, color: "bg-teal/10 text-teal" },
-                      { label: "Revenue", value: "$4,280", icon: CreditCard, color: "bg-gold/10 text-gold" },
-                      { label: "Waivers", value: "12 due", icon: FileText, color: "bg-plum/10 text-plum" },
-                    ].map((card) => (
-                      <div key={card.label} className="rounded-xl border border-black/[0.04] bg-[#F9F7F4] p-3">
-                        <div className={cn("mb-2 grid h-7 w-7 place-items-center rounded-lg", card.color)}>
-                          <card.icon className="h-3.5 w-3.5" />
-                        </div>
-                        <p className="font-display text-lg font-semibold tracking-tight">{card.value}</p>
-                        <p className="text-[11px] font-medium text-foreground/35">{card.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Schedule + Attendance row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Schedule */}
-                    <div className="rounded-xl border border-black/[0.04] bg-[#F9F7F4] p-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[11px] font-semibold text-foreground/40 uppercase tracking-wider">Upcoming Classes</span>
-                        <span className="text-[11px] font-medium text-rose cursor-pointer">View all</span>
-                      </div>
-                      {["Beginner Ballet — 4:30 PM", "Jazz II — 5:45 PM", "Contemporary — 7:00 PM"].map((cls, i) => (
-                        <div key={cls} className={cn("flex items-center justify-between py-2", i < 2 && "border-b border-black/[0.04]")}>
-                          <span className="text-[12px] font-medium text-foreground/70">{cls}</span>
-                          <span className="rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">On</span>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Attendance */}
-                    <div className="rounded-xl border border-black/[0.04] bg-[#F9F7F4] p-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[11px] font-semibold text-foreground/40 uppercase tracking-wider">Today's Attendance</span>
-                      </div>
-                      {[
-                        { time: "4:30 PM", pct: 85, label: "Beginner Ballet" },
-                        { time: "5:45 PM", pct: 92, label: "Jazz II" },
-                        { time: "7:00 PM", pct: 71, label: "Contemporary" },
-                      ].map((row) => (
-                        <div key={row.time} className="flex items-center gap-2 py-1.5">
-                          <span className="text-[11px] font-medium text-foreground/50 w-14">{row.time}</span>
-                          <div className="flex-1 h-1.5 rounded-full bg-black/[0.05] overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-teal transition-all"
-                              style={{ width: `${row.pct}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-semibold text-foreground/35 w-8 text-right">{row.pct}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </MockCard>
-
-              {/* Floating — Quick Actions */}
-              <MockCard delay={120} className="absolute -bottom-3 -right-3 z-20 w-40 p-3 shadow-md">
-                <p className="text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Quick Actions</p>
-                <div className="mt-2 space-y-1.5">
-                  {["+ Add class", "+ Enrol student", "+ Send message"].map((a) => (
-                    <div key={a} className="flex items-center gap-2 rounded-lg bg-[#F9F7F4] px-2.5 py-1.5 text-[12px] font-medium text-foreground/60">
-                      <div className="h-1.5 w-1.5 rounded-full bg-rose/50" />
-                      {a}
-                    </div>
-                  ))}
-                </div>
-              </MockCard>
-
-              {/* Floating — Student Profile */}
-              <MockCard delay={200} className="absolute -left-4 top-12 z-20 w-44 p-3 shadow-md">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-rose/10 text-rose text-xs font-bold">EK</div>
-                  <div>
-                    <p className="text-[12px] font-semibold text-foreground/80">Emma K.</p>
-                    <p className="text-[11px] text-foreground/40">Ballet III · Age 8</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  {[
-                    { label: "Waiver", status: "Signed", color: "text-teal" },
-                    { label: "Payment", status: "Current", color: "text-teal" },
-                    { label: "Attendance", status: "92%", color: "text-foreground/50" },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center justify-between text-[11px]">
-                      <span className="text-foreground/40">{s.label}</span>
-                      <span className={cn("font-semibold", s.color)}>{s.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </MockCard>
-
-              {/* Floating — Billing mini */}
-              <MockCard delay={280} className="absolute -right-2 top-20 z-20 w-40 p-3 shadow-md">
-                <p className="text-[11px] font-semibold text-foreground/30 uppercase tracking-wider mb-2">This Month</p>
-                <p className="font-display text-xl font-semibold tracking-tight">$4,280</p>
-                <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-teal">
-                  <TrendingUp className="h-3 w-3" />
-                  12% vs last month
-                </div>
-                <div className="mt-2 h-1 rounded-full bg-black/[0.04] overflow-hidden">
-                  <div className="h-full w-[72%] rounded-full bg-teal" />
-                </div>
-              </MockCard>
+                <img
+                  src={SCREENSHOTS.dashboard}
+                  alt="StudioFlow Dashboard — classes, students, revenue and waivers at a glance"
+                  className="w-full cursor-pointer transition-opacity hover:opacity-95"
+                  onClick={() => setLightboxImg(SCREENSHOTS.dashboard)}
+                />
+              </div>
+              {/* Ambient glow */}
+              <div className="pointer-events-none absolute -inset-4 -z-10 rounded-full bg-rose/8 blur-3xl" />
             </div>
 
-            {/* Mobile mockup (simpler) */}
+            {/* Mobile dashboard screenshot */}
             <div className="block lg:hidden animate-float-up" style={{ animationDelay: "120ms" }}>
-              <div className="rounded-2xl border border-black/[0.06] bg-white overflow-hidden shadow-soft">
+              <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-soft">
                 <div className="flex items-center gap-1.5 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-2.5">
                   <span className="h-2 w-2 rounded-full bg-rose/40" />
                   <span className="h-2 w-2 rounded-full bg-gold/40" />
                   <span className="h-2 w-2 rounded-full bg-teal/40" />
                   <span className="ml-1 text-[10px] font-medium text-foreground/30">Dashboard</span>
                 </div>
-                <div className="p-4">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[
-                      { label: "Classes today", value: "8", color: "bg-rose/10 text-rose" },
-                      { label: "Students", value: "247", color: "bg-teal/10 text-teal" },
-                      { label: "Revenue", value: "$4.2k", color: "bg-gold/10 text-gold" },
-                      { label: "Waivers", value: "12 due", color: "bg-plum/10 text-plum" },
-                    ].map((card) => (
-                      <div key={card.label} className="rounded-xl border border-black/[0.04] bg-[#F9F7F4] p-3">
-                        <p className="font-display text-lg font-semibold">{card.value}</p>
-                        <p className="text-[11px] font-medium text-foreground/35">{card.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <img
+                  src={SCREENSHOTS.dashboard}
+                  alt="StudioFlow Dashboard"
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
@@ -963,6 +830,118 @@ export default function Landing() {
               <p className="mt-2 text-[13px] leading-relaxed text-foreground/45">{f.body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          SCREENSHOT SHOWCASE
+          ════════════════════════════════════════════════════════════ */}
+      <section id="screenshots" className="border-t border-black/[0.04] bg-[#F7F5F2]">
+        <div className="mx-auto max-w-7xl px-5 py-20">
+          <div className="text-center mb-12">
+            <SectionLabel>See it in action</SectionLabel>
+            <SectionHeading className="mt-3">Designed for how studios actually work.</SectionHeading>
+            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-foreground/45">
+              Every screen is built from real studio workflows. No bloated menus — just what you need.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Schedule screenshot */}
+            <div className="group cursor-pointer" onClick={() => setLightboxImg(SCREENSHOTS.schedule)}>
+              <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition-shadow group-hover:shadow-lg">
+                <div className="flex items-center gap-1.5 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-2.5">
+                  <span className="h-2 w-2 rounded-full bg-rose/40" />
+                  <span className="h-2 w-2 rounded-full bg-gold/40" />
+                  <span className="h-2 w-2 rounded-full bg-teal/40" />
+                  <span className="ml-1 text-[11px] font-medium text-foreground/30">Schedule — Weekly view</span>
+                </div>
+                <img
+                  src={SCREENSHOTS.schedule}
+                  alt="StudioFlow 24-hour weekly schedule with classes arranged by day"
+                  className="w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
+              <h3 className="mt-3 font-display text-lg font-semibold">24-Hour Schedule</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-foreground/45">
+                Scrollable timeline from midnight to midnight. See every class, teacher, and room at a glance — no matter how early or late.
+              </p>
+            </div>
+
+            {/* Classes screenshot */}
+            <div className="group cursor-pointer" onClick={() => setLightboxImg(SCREENSHOTS.classes)}>
+              <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition-shadow group-hover:shadow-lg">
+                <div className="flex items-center gap-1.5 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-2.5">
+                  <span className="h-2 w-2 rounded-full bg-rose/40" />
+                  <span className="h-2 w-2 rounded-full bg-gold/40" />
+                  <span className="h-2 w-2 rounded-full bg-teal/40" />
+                  <span className="ml-1 text-[11px] font-medium text-foreground/30">Classes</span>
+                </div>
+                <img
+                  src={SCREENSHOTS.classes}
+                  alt="StudioFlow class management with editable class cards"
+                  className="w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
+              <h3 className="mt-3 font-display text-lg font-semibold">Class Management</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-foreground/45">
+                Edit times, teachers, rooms and descriptions. Duplicate classes in one click. Full control over your timetable.
+              </p>
+            </div>
+
+            {/* Students screenshot */}
+            <div className="group cursor-pointer" onClick={() => setLightboxImg(SCREENSHOTS.students)}>
+              <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition-shadow group-hover:shadow-lg">
+                <div className="flex items-center gap-1.5 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-2.5">
+                  <span className="h-2 w-2 rounded-full bg-rose/40" />
+                  <span className="h-2 w-2 rounded-full bg-gold/40" />
+                  <span className="h-2 w-2 rounded-full bg-teal/40" />
+                  <span className="ml-1 text-[11px] font-medium text-foreground/30">Students & Caregivers</span>
+                </div>
+                <img
+                  src={SCREENSHOTS.students}
+                  alt="StudioFlow student and family management with waiver tracking"
+                  className="w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
+              <h3 className="mt-3 font-display text-lg font-semibold">Student & Family Records</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-foreground/45">
+                Track every student, caregiver, waiver status, and attendance — all connected and searchable in one place.
+              </p>
+            </div>
+
+            {/* Portal screenshot */}
+            <div className="group cursor-pointer" onClick={() => setLightboxImg(SCREENSHOTS.portal)}>
+              <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition-shadow group-hover:shadow-lg">
+                <div className="flex items-center gap-1.5 border-b border-black/[0.04] bg-[#F7F5F2] px-4 py-2.5">
+                  <span className="h-2 w-2 rounded-full bg-rose/40" />
+                  <span className="h-2 w-2 rounded-full bg-gold/40" />
+                  <span className="h-2 w-2 rounded-full bg-teal/40" />
+                  <span className="ml-1 text-[11px] font-medium text-foreground/30">Parent Portal — Mobile</span>
+                </div>
+                <img
+                  src={SCREENSHOTS.portal}
+                  alt="StudioFlow parent portal — schedules, waivers and payments on mobile"
+                  className="w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
+              <h3 className="mt-3 font-display text-lg font-semibold">Parent & Member Portal</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-foreground/45">
+                Families view schedules, sign waivers, and manage accounts from any device. No more chasing paper forms.
+              </p>
+            </div>
+          </div>
+
+          {/* View all screenshots link */}
+          <div className="mt-10 text-center">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-6 py-3 text-[14px] font-semibold text-foreground shadow-sm transition-all hover:bg-neutral-50 active:scale-[0.97]"
+            >
+              Explore the full dashboard
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -1200,56 +1179,19 @@ export default function Landing() {
       <section id="portal" className="border-t border-black/[0.04] bg-[#F7F5F2]">
         <div className="mx-auto max-w-7xl px-5 py-20">
           <div className="grid gap-12 md:grid-cols-2 md:gap-16 items-center">
-            {/* Left: portal mockup */}
+            {/* Left: portal phone screenshot */}
             <div className="flex justify-center">
               <div className="relative">
-                {/* Phone frame */}
-                <div className="w-64 rounded-[2.5rem] border-[5px] border-[#1a1423] bg-white p-4 shadow-lift mx-auto">
+                {/* Phone frame with actual screenshot */}
+                <div className="w-64 rounded-[2.5rem] border-[5px] border-[#1a1423] bg-white overflow-hidden shadow-lift mx-auto">
                   {/* Notch */}
-                  <div className="mx-auto mb-4 h-6 w-24 rounded-full bg-[#1a1423]" />
-                  {/* Portal content */}
-                  <div className="rounded-2xl bg-[#F9F7F4] p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-[11px] font-bold text-foreground/50">STUDIOFLOW PORTAL</span>
-                      <Bell className="h-4 w-4 text-rose/60" />
-                    </div>
-                    {/* Student list */}
-                    <div className="space-y-3">
-                      <div className="rounded-xl bg-white p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-[13px] font-semibold text-foreground/80">Emma K.</p>
-                            <p className="text-[11px] text-foreground/40">Ballet III · Tue 4:30 PM</p>
-                          </div>
-                          <div className="rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-bold text-teal">Signed in</div>
-                        </div>
-                      </div>
-                      <div className="rounded-xl bg-white p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-[13px] font-semibold text-foreground/80">Liam K.</p>
-                            <p className="text-[11px] text-foreground/40">Hip Hop I · Thu 5:00 PM</p>
-                          </div>
-                          <div className="rounded-full bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold">Waiver due</div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Quick actions */}
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 rounded-lg bg-white p-2.5 text-[12px] font-medium text-foreground/60 shadow-sm">
-                        <CalendarDays className="h-3.5 w-3.5 text-rose/60" />
-                        View schedule
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg bg-white p-2.5 text-[12px] font-medium text-foreground/60 shadow-sm">
-                        <FileText className="h-3.5 w-3.5 text-teal/60" />
-                        Sign waivers
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg bg-white p-2.5 text-[12px] font-medium text-foreground/60 shadow-sm">
-                        <CreditCard className="h-3.5 w-3.5 text-gold/60" />
-                        View payments
-                      </div>
-                    </div>
-                  </div>
+                  <div className="mx-auto mt-3 h-6 w-24 rounded-full bg-[#1a1423]" />
+                  {/* Portal screenshot */}
+                  <img
+                    src={SCREENSHOTS.portal}
+                    alt="StudioFlow Parent Portal — schedules, waivers and payments on mobile"
+                    className="w-full mt-3"
+                  />
                 </div>
                 {/* Ambient glow */}
                 <div className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-rose/10 blur-3xl" />
@@ -1406,11 +1348,39 @@ export default function Landing() {
       {/* ════════════════════════════════════════════════════════════
           FOOTER
           ════════════════════════════════════════════════════════════ */}
+      {/* ════════════════════════════════════════════════════════════
+          LIGHTBOX
+          ════════════════════════════════════════════════════════════ */}
+      {lightboxImg && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a1423]/90 backdrop-blur-md p-4 animate-fade-in"
+          onClick={() => setLightboxImg(null)}
+        >
+          <button
+            onClick={() => setLightboxImg(null)}
+            className="absolute top-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white/90 hover:bg-white/20 transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightboxImg}
+            alt="Screenshot preview"
+            className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════
+          FOOTER
+          ════════════════════════════════════════════════════════════ */}
       <footer className="border-t border-black/[0.04] bg-[#F7F5F2]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-8 text-[14px] text-foreground/35 sm:flex-row">
           <p>© {new Date().getFullYear()} StudioFlow. Built for modern studios.</p>
           <div className="flex flex-wrap justify-center gap-5">
             <a href="#features" className="transition-colors hover:text-foreground/70">Features</a>
+            <a href="#screenshots" className="transition-colors hover:text-foreground/70">Screenshots</a>
             <a href="#why" className="transition-colors hover:text-foreground/70">Why StudioFlow</a>
             <a href="#how" className="transition-colors hover:text-foreground/70">How it works</a>
             <a href="#migration" className="transition-colors hover:text-foreground/70">Migration</a>
