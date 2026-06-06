@@ -578,7 +578,7 @@ function ClassesTab({ teacher }: { teacher: Teacher }) {
       {/* Class list */}
       <div className="rounded-2xl border border-border/70 bg-card shadow-soft overflow-hidden">
         <div className="border-b border-border/60 bg-secondary/40 px-6 py-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assigned {term.class.toLowerCase()}s</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assigned {term.classPlural.toLowerCase()}</span>
         </div>
         {assignedClasses.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-12 text-center">

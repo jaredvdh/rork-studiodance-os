@@ -10,6 +10,10 @@ export interface VerticalTerminology {
   instructor: string;
   /** Plural instructor */
   instructorPlural: string;
+  /** Singular class label (e.g. "Class", "Session", "WOD") */
+  class: string;
+  /** Plural class label */
+  classPlural: string;
   /** Class style label (e.g. "Dance Style", "Workout Type") */
   classStyle: string;
   /** Singular event label (e.g. "Recital", "Competition", "Workshop") */
@@ -26,6 +30,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Students",
     instructor: "Instructor",
     instructorPlural: "Instructors",
+    class: "Class",
+    classPlural: "Classes",
     classStyle: "Dance Style",
     event: "Recital",
     eventPlural: "Recitals",
@@ -36,6 +42,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Members",
     instructor: "Teacher",
     instructorPlural: "Teachers",
+    class: "Class",
+    classPlural: "Classes",
     classStyle: "Practice Style",
     event: "Workshop",
     eventPlural: "Workshops",
@@ -46,6 +54,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Athletes",
     instructor: "Coach",
     instructorPlural: "Coaches",
+    class: "WOD",
+    classPlural: "WODs",
     classStyle: "Workout Type",
     event: "Competition",
     eventPlural: "Competitions",
@@ -56,6 +66,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Members",
     instructor: "Trainer",
     instructorPlural: "Trainers",
+    class: "Class",
+    classPlural: "Classes",
     classStyle: "Class Type",
     event: "Event",
     eventPlural: "Events",
@@ -66,6 +78,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Students",
     instructor: "Sensei",
     instructorPlural: "Senseis",
+    class: "Class",
+    classPlural: "Classes",
     classStyle: "Discipline",
     event: "Tournament",
     eventPlural: "Tournaments",
@@ -76,6 +90,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     participantPlural: "Students",
     instructor: "Teacher",
     instructorPlural: "Teachers",
+    class: "Class",
+    classPlural: "Classes",
     classStyle: "Instrument",
     event: "Recital",
     eventPlural: "Recitals",
