@@ -1,88 +1,91 @@
-# Redesign StudioFlow landing page with premium SaaS look, 5-tier pricing, and vertical-aware content
+# StudioFlow Landing Page — Enhancement Pass 2
 
 ## Overview
 
-A complete redesign of the public `/` landing page (Landing.tsx). The current 696-line page is replaced with a polished, multi-section SaaS page that communicates StudioFlow as a modern self-service platform for class-based studios.
+Enhanced the public landing page to increase trust, conversion rate, product credibility, and differentiation from competitors (Jackrabbit, Mindbody, WellnessLiving, Pike13, DanceStudio-Pro).
 
-## Design
+## Design (unchanged from Pass 1)
 
 - **Canvas**: Warm cream (#FAF8F5) background with soft ambient blurs and grain texture
-- **Typography**: Fraunces display font for headings, Inter for body — keeps the editorial/premium feel
-- **Accent**: Rose/pink (#e85d75) for CTAs and highlights, deep navy (#1a1423) for dark sections and primary buttons
-- **Cards**: Rounded-2xl/3xl with subtle borders and shadows, hover lift animations
-- **Mockups**: Layered floating UI cards (dashboard, attendance, billing, migration wizard, mobile portal) instead of stock imagery — shows the actual product
+- **Typography**: Fraunces display font for headings, Inter for body
+- **Accent**: Rose/pink (#e85d75) for CTAs, deep navy (#1a1423) for dark sections
+- **Cards**: Rounded-2xl/3xl with subtle borders, hover lift animations
 
-## Sections (top to bottom)
+## Sections (top to bottom — new sections marked ★)
 
 ### 1. Navigation (sticky)
+- Logo, desktop links: Features, Why StudioFlow, How it works, Migration, Pricing, FAQ
+- "Portal" link (shortened from "Parent/Student Portal"), "Log in", "Open dashboard" CTA
+- Mobile hamburger menu with full links
 
-- Logo, desktop links (Features, How it works, Migration, Pricing, Portal, Log in)
-- "Open dashboard" CTA button
-- Mobile hamburger menu
-- "Parent/Student Portal" renamed to just "Portal"
+### 2. Hero (enhanced)
+- Browser-chrome mockup with 4 stat cards, schedule panel, and attendance bars
+- Floating panels: Quick Actions, Student Profile, Billing mini-card
+- Mobile simplified mockup
+- Trust badge, headline, subheadline, dual CTAs
 
-### 2. Hero
+### 3. Trust & Reassurance Bar ★ NEW
+- Horizontal bar below hero with 6 checkmarks
+- Items: 30-Day Free Trial, No Credit Card Required, No Setup Fees, No Sales Calls, Import Existing Data, Cancel Anytime
+- Stacks vertically on mobile
 
-- Updated headline: "Run your studio from one calm dashboard."
-- Updated subheadline: "Classes, members, students, billing, waivers, staff, events and communication — all in one operating system built for modern studios."
-- Trust statement badge: "No sales calls. No onboarding fees. No long implementation projects."
-- Primary CTA: "Start Free Trial", Secondary: "View Live Demo"
-- Large floating mockup panel on desktop: browser chrome with layered cards showing class schedule, student profile, billing, waivers, migration wizard, mobile portal — all animated with stagger delays
+### 4. Business Type Selector (enhanced)
+- 5 tabs: Dance Studio, Fitness Studio, Music School, Martial Arts, Yoga / Pilates
+- Each has 3 industry-specific mockup cards with icons (replacing generic stats)
+- Dance: Recital Planner, Costume Tracker, Parent Portal
+- Fitness: Membership Dashboard, Attendance Tracking, Coach Schedule
+- Music: Teacher Timetable, Lesson Scheduling, Student Records
+- Martial Arts: Belt Grading, Attendance Records, Membership Management
+- Yoga: Class Bookings, Waitlists, Instructor Schedules
 
-### 3. Business Type Selector
+### 5. Features ("Everything your studio needs.")
+- 10 feature cards in responsive grid (unchanged from Pass 1)
 
-- 5 tab-style buttons: Dance Studio, Fitness Studio, Music School, Martial Arts, Yoga / Pilates
-- Selecting updates: product screenshots context, use cases list, feature highlights, and testimonial-like content
-- Each type has its own mockup card (e.g., Dance shows recital/costume cards, Fitness shows membership/attendance, etc.)
+### 6. Why StudioFlow ★ NEW
+- Headline: "Stop stitching together spreadsheets, forms, and messaging apps."
+- Comparison table: 7 rows comparing Traditional Studios vs StudioFlow
+- StudioFlow column highlighted with teal checkmarks
+- Covers: scattered student info, paper waivers, multiple apps, manual attendance, difficult migrations, hidden fees, forced demos
 
-### 4. Features ("Everything your studio needs.")
+### 7. Migration (unchanged)
+- 4-step wizard, checklist card, competitor mentions
 
-- 10 feature cards in a responsive grid (2-col tablet, 3-col desktop)
-- Icons with rose background that fills on hover
-- Cards: Scheduling & Classes, Students/Members/Families, Attendance Tracking, Billing & Payments, Digital Waivers, Communication Tools, Events & Recitals, Instructor Management, Migration Assistant, Parent/Member Portal
+### 8. How It Works (unchanged)
+- 4 steps with icons and connecting lines
 
-### 5. Migration ("Switching software should not be painful.")
+### 9. Pricing (enhanced)
+- "Everything included" banner above cards: unlimited staff, unlimited classes, portal, mobile responsive, digital waivers, migration tools, free updates
+- 30-Day Free Trial pill highlighted in rose
+- 5-tier cards: Startup ($29), Studio ($59 ★ Most Popular), Growth ($99), Pro ($149), Enterprise (Custom)
 
-- Headline: "Switching software should not be painful."
-- Subheadline about moving from spreadsheets or existing platforms
-- 4-step wizard visual (Upload → Map → Validate → Launch) with numbered circles and connecting lines
-- Checklist card with 6 items (CSV/Excel, smart mapping, duplicate detection, family linking, class/enrolment preview)
-- Competitor mention: "Whether you're moving from spreadsheets, Jackrabbit, Mindbody, WellnessLiving or another platform..."
+### 10. Portal Section (enhanced messaging)
+- New headline: "Everything your students, members, and families need in one place."
+- New supporting copy about schedules, attendance, waivers, payments, announcements — accessible from any device
+- Focuses on outcomes rather than technology
+- Mobile phone mockup with portal UI
 
-### 6. How It Works ("Start today. Open registration tonight.")
+### 11. FAQ ★ NEW
+- 9 expandable accordion questions covering:
+  - Migration from Jackrabbit, Mindbody
+  - Setup time, sales demos, fitness/music school use
+  - Family management, setup fees, cancellation
 
-- Headline: "Start today. Open registration tonight."
-- Subheadline: "Most studios can create their account, import data and begin accepting registrations within a single session."
-- 4 numbered steps in a horizontal layout (desktop) / vertical (mobile): Create your studio → Import your data → Open registration → Run everything in one place
+### 12. Future Roadmap ★ NEW
+- Headline: "Built for where your studio is going next."
+- 8 "Coming Soon" cards: Native iOS App, Native Android App, Online Registration Forms, Costume Ordering, Advanced Reporting, AI Insights, Multi-location Management, Staff Mobile App
+- Subtle styling with rose-tinted icons
 
-### 7. Pricing ("Simple pricing that grows with your studio.")
+### 13. Final CTA (enhanced)
+- Trust checkmarks: 30-Day Free Trial, No Credit Card Required, Setup in Under an Hour, Import Existing Data
+- Primary CTA: "Start free trial", Secondary: "Book a demo" (changed from "View demo")
+- Dark navy background with ambient glows
 
-- 5-tier pricing cards: Startup ($29/mo, 150 students), Studio ($59/mo, 300, **Most Popular**), Growth ($99/mo, 750), Pro ($149/mo, 1500), Enterprise (Custom, multi-location)
-- Each card shows features specific to the tier in a comparison layout
-- "Start Free Trial" CTA on every card (Enterprise: "Contact us")
-- Subheadline: "No contracts. No forced demos. No surprise onboarding fees."
-
-### 8. Portal Section
-
-- Dedicated section highlighting the parent/member portal
-- Shows mockup of mobile portal screens
-- Copy: "A secure portal for students, members, families and caregivers."
-
-### 9. Final CTA
-
-- Headline: "Spend less time managing your studio. More time growing it."
-- Subheadline: "Join modern studios using StudioFlow to simplify scheduling, communication, billing and events."
-- Two CTAs: Start Free Trial, View Demo
-- Dark navy background with rose ambient glows
-
-### 10. Footer
-
-- Copyright, section links, Portal link, Log in link
+### 14. Footer (enhanced)
+- Added Why StudioFlow and FAQ links alongside existing sections
 
 ## Responsive Behavior
 
-- Mobile: single-column cards, collapsed nav hamburger, stacked mockup panels hidden below tablet
+- Mobile: trust bar stacks, pricing cards stack, business selector scrolls, comparison table horizontally scrollable, FAQ accordions full-width, CTA buttons full-width on mobile
 - Tablet: 2-column grids where appropriate
-- Desktop: full multi-column layouts, floating mockup panels visible
-- All buttons ≥44px touch targets on mobile
-
+- Desktop: full multi-column layouts with floating mockup panels
+- All touch targets ≥44px
