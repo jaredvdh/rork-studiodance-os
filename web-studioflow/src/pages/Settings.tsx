@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Camera, Check, ExternalLink, Globe, Loader2, RefreshCw, Ruler, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { ArrowRight, Building2, Camera, Check, CheckCircle, ExternalLink, Globe, Loader2, RefreshCw, Ruler, Save, ShieldAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
 import { useUnitPreference } from "@/hooks/useUnitPreference";
 import type { Vertical, UnitSystem, CountryCode, CurrencyCode, DateFormat, TimeFormat, MeasurementSystem } from "@/data/types";
-import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
+import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology, MODULE_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 import { getStripeConnectState, startStripeConnect } from "@/lib/stripe";
 import { uploadStudioLogo, removeStudioLogo } from "@/lib/storage";
@@ -245,6 +245,9 @@ export default function Settings() {
           </select>
         </div>
       </section>
+
+      {/* Enabled Modules Preview */}
+      <EnabledModulesSection />
 
       {/* Regional Settings */}
       <RegionalSettingsSection />
@@ -691,6 +694,63 @@ function RegionalSettingsSection() {
           })}
         </div>
       </div>
+    </section>
+  );
+}
+
+/* ── Enabled Modules Preview section ─────────────────────────────── */
+
+function EnabledModulesSection() {
+  const { studio } = useStudio();
+  const term = getTerminology(studio.vertical);
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+          <CheckCircle className="h-4.5 w-4.5 text-primary" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold">Enabled modules</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            These modules are active for {VERTICAL_LABELS[studio.vertical]}. Determined by your studio type.
+          </p>
+        </div>
+      </div>
+
+      {/* Terminology preview */}
+      <div className="mb-5 rounded-xl border border-border/60 bg-secondary/30 p-3.5">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+          Terminology — how labels appear throughout the app
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <span className="text-muted-foreground">Participants:</span>
+          <span className="font-medium">{term.participant} / {term.participantPlural}</span>
+          <span className="text-muted-foreground">Instructors:</span>
+          <span className="font-medium">{term.instructor} / {term.instructorPlural}</span>
+          <span className="text-muted-foreground">{term.classStyle}:</span>
+          <span className="font-medium">{term.styleCategories.join(", ")}</span>
+          <span className="text-muted-foreground">Events:</span>
+          <span className="font-medium">{term.event} / {term.eventPlural}</span>
+        </div>
+      </div>
+
+      {/* Modules list */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {term.enabledModules.map((key) => (
+          <div
+            key={key}
+            className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-background px-3.5 py-2.5"
+          >
+            <CheckCircle className="h-4 w-4 shrink-0 text-teal" />
+            <span className="text-sm font-medium">{MODULE_LABELS[key]}</span>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-[11px] text-muted-foreground">
+        Navigation menus and dashboard cards reflect only enabled modules. To change which modules are available, select a different studio type above.
+      </p>
     </section>
   );
 }

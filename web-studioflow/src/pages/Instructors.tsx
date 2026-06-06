@@ -343,7 +343,7 @@ function InstructorModal({
         {/* Teaching styles */}
         <Field label={`${term.classStyle}s *`}>
           <div className="flex flex-wrap gap-2">
-            {ALL_STYLES.map((s) => {
+            {term.styleCategories.map((s) => {
               const active = form.styles.includes(s);
               return (
                 <button
