@@ -201,6 +201,7 @@ export interface Class {
   waitlist: number;
   inRecital: boolean;
   priceCents: number;
+  description?: string;
 }
 
 /** @deprecated Use Class instead. Kept for backward compatibility. */
