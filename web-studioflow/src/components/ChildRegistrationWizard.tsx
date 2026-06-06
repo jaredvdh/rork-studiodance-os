@@ -1,4 +1,5 @@
 import { Component, useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ErrorInfo, ReactNode } from "react";
 import {
   AlertTriangle,
@@ -361,6 +362,8 @@ export default function ChildRegistrationWizard({
 
   if (!open) return null;
 
+  const DEBUG = true;
+
   // Resolve the guardian display name for steps
   const guardianDisplayName =
     guardianMode === "self"
@@ -375,7 +378,7 @@ export default function ChildRegistrationWizard({
      Render
      ═══════════════════════════════════════════════════════════════ */
 
-  return (
+  const wizardContent = (
     <div className="fixed inset-0 z-50 flex flex-col bg-parent/95">
       {/* ── Header bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200/40 bg-white/80 backdrop-blur-xl shrink-0">
@@ -444,7 +447,7 @@ export default function ChildRegistrationWizard({
       </div>
 
       {/* ── Step content (scrollable) ───────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className={cn("flex-1 overflow-y-auto", DEBUG && "border-4 border-red-500")}>
         <div className="max-w-lg mx-auto px-4 py-6 min-h-[300px]">
           <StepErrorBoundary key={step}>
           {step === "child" && (
@@ -618,6 +621,8 @@ export default function ChildRegistrationWizard({
       </div>
     </div>
   );
+
+  return createPortal(wizardContent, document.body);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -650,7 +655,7 @@ function ChildDetailsStep({
   childAddress: Address; setChildAddress: (v: Address) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 border-4 border-blue-500">
       <div className="text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-700">
           <Baby className="h-6 w-6" />
@@ -663,7 +668,7 @@ function ChildDetailsStep({
 
       {/* Legal names */}
       <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 border-4 border-green-500">
           <Field label="Legal first name *" value={legalFirstName} onChange={setLegalFirstName} placeholder="First name as on birth certificate" required />
           <Field label="Legal last name *" value={legalLastName} onChange={setLegalLastName} placeholder="Last name" required />
         </div>
