@@ -605,6 +605,7 @@ export function classById(id: string, contextClasses?: Class[]): Class | undefin
 
 /** Tailwind-ready accent tokens per class style for chips and visuals. */
 export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
+  // Dance
   Ballet: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Jazz: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
   "Hip Hop": { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
@@ -612,6 +613,30 @@ export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
   Tap: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
   Lyrical: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Acro: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  // Yoga
+  Vinyasa: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  Hatha: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+  Yin: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  Restorative: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
+  "Power Yoga": { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  // CrossFit / Gym
+  Strength: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  Conditioning: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  "Olympic Lifting": { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
+  Gymnastics: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  Mobility: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+  // Martial Arts
+  Beginner: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  Intermediate: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
+  Advanced: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  Sparring: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  "Grading Prep": { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+  // Music
+  Piano: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+  Guitar: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
+  Voice: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  Violin: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  Drums: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
 };
 
 /* ── Shared waivers state (templates + signatures) ───────────────────── */

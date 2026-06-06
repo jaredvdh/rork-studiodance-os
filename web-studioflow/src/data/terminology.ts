@@ -1,4 +1,29 @@
-import type { Vertical } from "./types";
+import type { Vertical, ClassStyle } from "./types";
+
+/** Modules that can be enabled/disabled per vertical via enabledModules config. */
+export type ModuleKey =
+  | "family"
+  | "classes"
+  | "schedule"
+  | "costumes"
+  | "recitals"
+  | "payments"
+  | "waivers"
+  | "instructors"
+  | "announcements";
+
+/** Human-readable labels for module keys (used in settings preview). */
+export const MODULE_LABELS: Record<ModuleKey, string> = {
+  family: "Family & Participants",
+  classes: "Classes",
+  schedule: "Schedule",
+  costumes: "Costumes",
+  recitals: "Recitals & Events",
+  payments: "Payments",
+  waivers: "Waivers & Docs",
+  instructors: "Instructors",
+  announcements: "Announcements",
+};
 
 /** User-facing labels that change based on studio vertical. */
 export interface VerticalTerminology {
@@ -22,6 +47,10 @@ export interface VerticalTerminology {
   eventPlural: string;
   /** Adjective form of the vertical (e.g. "dance", "yoga", "CrossFit") */
   verticalAdjective: string;
+  /** Modules that are enabled for this vertical type. Used for nav visibility and dashboard cards. */
+  enabledModules: ModuleKey[];
+  /** Available class/style categories for this vertical (used in filter dropdowns). */
+  styleCategories: ClassStyle[];
 }
 
 const terminology: Record<Vertical, VerticalTerminology> = {
@@ -36,6 +65,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Recital",
     eventPlural: "Recitals",
     verticalAdjective: "dance",
+    enabledModules: ["family", "classes", "schedule", "costumes", "recitals", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Ballet", "Jazz", "Hip Hop", "Contemporary", "Tap", "Lyrical", "Acro"],
   },
   yoga: {
     participant: "Member",
@@ -48,6 +79,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Workshop",
     eventPlural: "Workshops",
     verticalAdjective: "yoga",
+    enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Vinyasa", "Hatha", "Yin", "Restorative", "Power Yoga"],
   },
   crossfit: {
     participant: "Athlete",
@@ -60,6 +93,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Competition",
     eventPlural: "Competitions",
     verticalAdjective: "CrossFit",
+    enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Strength", "Conditioning", "Olympic Lifting", "Gymnastics", "Mobility"],
   },
   gym: {
     participant: "Member",
@@ -72,6 +107,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Event",
     eventPlural: "Events",
     verticalAdjective: "gym",
+    enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Strength", "Conditioning", "Olympic Lifting", "Gymnastics", "Mobility"],
   },
   martial_arts: {
     participant: "Student",
@@ -84,6 +121,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Tournament",
     eventPlural: "Tournaments",
     verticalAdjective: "martial arts",
+    enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Beginner", "Intermediate", "Advanced", "Sparring", "Grading Prep"],
   },
   music_school: {
     participant: "Student",
@@ -96,6 +135,8 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     event: "Recital",
     eventPlural: "Recitals",
     verticalAdjective: "music",
+    enabledModules: ["family", "classes", "schedule", "recitals", "payments", "waivers", "instructors", "announcements"],
+    styleCategories: ["Piano", "Guitar", "Voice", "Violin", "Drums"],
   },
 };
 

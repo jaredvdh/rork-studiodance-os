@@ -22,8 +22,10 @@ import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-/** Verticals that have recitals and costume systems. */
-const PERFORMANCE_VERTICALS = new Set(["dance", "music_school"]);
+/** Check if a module key is enabled for the current vertical. */
+function hasModule(enabled: import("@/data/terminology").ModuleKey[], key: import("@/data/terminology").ModuleKey): boolean {
+  return enabled.includes(key);
+}
 
 const SETUP_COMPLETE_KEY = "studioflow_setup_complete";
 function hasCompletedSetup(): boolean {
@@ -42,7 +44,9 @@ export default function Dashboard() {
 
   const { studio } = useStudio();
   const term = useTerminology();
-  const showPerformance = PERFORMANCE_VERTICALS.has(studio.vertical);
+  const showCostumes = hasModule(term.enabledModules, "costumes");
+  const showRecitals = hasModule(term.enabledModules, "recitals");
+  const showPerformance = showCostumes || showRecitals;
   const classes = useEnrichedClasses();
   const { students } = useStudents();
   const { teachers } = useTeachers();

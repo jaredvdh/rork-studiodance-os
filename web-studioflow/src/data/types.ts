@@ -117,18 +117,21 @@ export type Vertical =
 
 /** Class style — formerly DanceStyle. The available values depend on the studio vertical. */
 export type ClassStyle =
-  | "Ballet"
-  | "Jazz"
-  | "Hip Hop"
-  | "Contemporary"
-  | "Tap"
-  | "Lyrical"
-  | "Acro";
+  // Dance
+  | "Ballet" | "Jazz" | "Hip Hop" | "Contemporary" | "Tap" | "Lyrical" | "Acro"
+  // Yoga
+  | "Vinyasa" | "Hatha" | "Yin" | "Restorative" | "Power Yoga"
+  // CrossFit / Gym
+  | "Strength" | "Conditioning" | "Olympic Lifting" | "Gymnastics" | "Mobility"
+  // Martial Arts
+  | "Beginner" | "Intermediate" | "Advanced" | "Sparring" | "Grading Prep"
+  // Music
+  | "Piano" | "Guitar" | "Voice" | "Violin" | "Drums";
 
 /** @deprecated Use ClassStyle instead. Kept for backward compatibility. */
 export type DanceStyle = ClassStyle;
 
-export type AgeGroup = "Tiny Tots" | "Junior" | "Intermediate" | "Senior" | "Adult";
+export type AgeGroup = "Tiny Tots" | "Junior" | "Intermediate" | "Senior" | "Adult" | "All Levels";
 
 export type WeekDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 export type PayType = "employee" | "1099";

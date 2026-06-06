@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Clock, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
@@ -6,8 +6,6 @@ import { styleStyles, teacherName, useStudio, useEnrichedClasses, useClasses, us
 import type { AgeGroup, ClassStyle, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const STYLES: ClassStyle[] = ["Ballet", "Jazz", "Hip Hop", "Contemporary", "Tap", "Lyrical", "Acro"];
 const AGES: AgeGroup[] = ["Tiny Tots", "Junior", "Intermediate", "Senior", "Adult"];
 const DAYS: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -20,6 +18,20 @@ export default function Classes() {
   const [styleFilter, setStyleFilter] = useState<ClassStyle | "All">("All");
   const [open, setOpen] = useState<boolean>(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Reset style filter when vertical changes to avoid stale/invalid selections
+  useEffect(() => {
+    if (styleFilter !== "All" && !(term.styleCategories as readonly string[]).includes(styleFilter)) {
+      setStyleFilter("All");
+    }
+  }, [studio.vertical, term.styleCategories]);
+
+  // Reset form style if it's no longer valid for the new vertical
+  useEffect(() => {
+    if (!(term.styleCategories as readonly string[]).includes(form.style)) {
+      setForm((f) => ({ ...f, style: term.styleCategories[0] }));
+    }
+  }, [studio.vertical]);
 
   const filtered = useMemo(
     () => (styleFilter === "All" ? classes : classes.filter((c) => c.style === styleFilter)),
@@ -80,7 +92,7 @@ export default function Classes() {
 
       {/* Style filters */}
       <div className="flex flex-wrap gap-2">
-        {(["All", ...STYLES] as const).map((s) => (
+        {(["All", ...term.styleCategories] as (ClassStyle | "All")[]).map((s) => (
           <button
             key={s}
             onClick={() => setStyleFilter(s)}
@@ -189,7 +201,7 @@ export default function Classes() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={term.classStyle}>
-              <Select value={form.style} onChange={(v) => setForm({ ...form, style: v as ClassStyle })} options={STYLES} />
+              <Select value={form.style} onChange={(v) => setForm({ ...form, style: v as ClassStyle })} options={term.styleCategories as string[]} />
             </Field>
             <Field label="Age group">
               <Select value={form.ageGroup} onChange={(v) => setForm({ ...form, ageGroup: v as AgeGroup })} options={AGES} />

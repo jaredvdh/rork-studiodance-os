@@ -31,12 +31,6 @@ import { styleStyles, useClasses, useTeachers, useTerminology } from "@/data/sto
 import type { ClassStyle, Teacher, InstructorStatus, Certification, InstructorDocument } from "@/data/types";
 import { cn } from "@/lib/utils";
 
-/* ── Constants ─────────────────────────────────────────────────────── */
-
-const ALL_STYLES: ClassStyle[] = [
-  "Ballet", "Jazz", "Hip Hop", "Contemporary", "Tap", "Lyrical", "Acro",
-];
-
 const STATUS_OPTIONS: { value: InstructorStatus; label: string; color: string }[] = [
   { value: "active", label: "Active", color: "bg-teal/10 text-teal border-teal/20" },
   { value: "on_leave", label: "On Leave", color: "bg-gold/15 text-gold border-gold/20" },

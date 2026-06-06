@@ -49,8 +49,18 @@ import { cn } from "@/lib/utils";
 
 type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "costumes" | "instructors" | "announcements" | "payments" | "waivers" | "migration";
 
-/** Verticals that use costume & recital features. */
-const PERFORMANCE_VERTICALS = new Set(["dance", "music_school"]);
+/** Map nav keys to the ModuleKey that gates them (undefined = always shown). */
+const NAV_MODULE_MAP: Partial<Record<NavKey, import("@/data/terminology").ModuleKey>> = {
+  students: "family",
+  classes: "classes",
+  schedule: "schedule",
+  recitals: "recitals",
+  costumes: "costumes",
+  instructors: "instructors",
+  announcements: "announcements",
+  payments: "payments",
+  waivers: "waivers",
+};
 
 interface NavItem {
   to: string;
@@ -108,10 +118,11 @@ function StudioBrand() {
 }
 
 function SidebarContent({ onNavigate, term, vertical }: { onNavigate?: () => void; term: VerticalTerminology; vertical: string }) {
-  const showPerformance = PERFORMANCE_VERTICALS.has(vertical);
+  const enabledSet = new Set(term.enabledModules);
   const visibleItems = navItems.filter(({ key }) => {
-    if (key === "costumes" || key === "recitals") return showPerformance;
-    return true;
+    const moduleKey = NAV_MODULE_MAP[key];
+    if (moduleKey) return enabledSet.has(moduleKey);
+    return true; // dashboard, migration always shown
   });
 
   return (
