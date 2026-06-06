@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const SUPABASE_FUNCTIONS_URL = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
+/** Build the Supabase Functions URL only when the env var looks like a real URL. */
+function getSupabaseFunctionsUrl(): string | null {
+  const raw = import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string;
+  if (!raw || (!raw.startsWith("http://") && !raw.startsWith("https://"))) {
+    return null;
+  }
+  return `${raw}/functions/v1`;
+}
 
 interface DemoAccount {
   email: string;
@@ -91,18 +98,21 @@ export default function DemoLogin() {
 
     // 1. Try the Supabase edge function (fails gracefully if not deployed)
     let token: string | null = null;
-    try {
-      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/demo-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        token = data.access_token;
+    const functionsUrl = getSupabaseFunctionsUrl();
+    if (functionsUrl) {
+      try {
+        const res = await fetch(`${functionsUrl}/demo-login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          token = data.access_token;
+        }
+      } catch {
+        // Edge function unreachable — fall through to client-side token
       }
-    } catch {
-      // Edge function unreachable — fall through to client-side token
     }
 
     // 2. Fall back to client-side JWT if edge function didn't return one

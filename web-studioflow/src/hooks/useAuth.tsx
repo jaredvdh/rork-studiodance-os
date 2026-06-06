@@ -13,7 +13,15 @@ import type { AuthError } from "@supabase/supabase-js";
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
 const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
-const SUPABASE_FUNCTIONS_URL = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
+
+/** Build the Supabase Functions URL only when the env var looks like a real URL. */
+function getSupabaseFunctionsUrl(): string | null {
+  const raw = import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string;
+  if (!raw || (!raw.startsWith("http://") && !raw.startsWith("https://"))) {
+    return null;
+  }
+  return `${raw}/functions/v1`;
+}
 
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
@@ -46,6 +54,11 @@ export interface User {
   role?: string;
   studioId?: string;
   isDemo?: boolean;
+}
+
+/** Check whether a JWT payload carries the demo flag. */
+function isDemoPayload(payload: Record<string, unknown>): boolean {
+  return payload.is_demo === true || payload.is_demo === "true";
 }
 
 function userFromToken(token: string): User | null {
@@ -165,8 +178,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // 3. Try Rork refresh token
-      if (localStorage.getItem(REFRESH_TOKEN_KEY)) {
+      // 3. Try restoring from stored user metadata (survives expired/unknown tokens)
+      const storedMeta = localStorage.getItem(USER_META_KEY);
+      if (storedMeta) {
+        try {
+          const meta = JSON.parse(storedMeta) as User;
+          if (meta.isDemo) {
+            // Demo user with expired/absent token — just restore from metadata.
+            // No network call needed; the session was intentionally client-side.
+            setUser(meta);
+            setIsLoading(false);
+            return;
+          }
+        } catch { /* corrupted meta — fall through */ }
+      }
+
+      // 4. Try Rork refresh token (real accounts only, not demo)
+      const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (refreshTokenValue) {
+        // Decode the refresh token before attempting refresh.
+        // Demo tokens will never be valid Rork refresh tokens — skip the network call.
+        const rtPayload = userFromToken(refreshTokenValue);
+        if (rtPayload?.isDemo) {
+          // Demo token expired — restore user from saved metadata or sign out.
+          if (storedMeta) {
+            try {
+              setUser(JSON.parse(storedMeta) as User);
+            } catch {
+              await signOut();
+            }
+          } else {
+            await signOut();
+          }
+          setIsLoading(false);
+          return;
+        }
         await refreshToken();
       }
     } finally {
@@ -288,33 +334,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSigningIn(true);
     setError(null);
     try {
-      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/demo-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
+      // Only call the edge function when we have a valid Supabase Functions URL.
+      const functionsUrl = getSupabaseFunctionsUrl();
+      if (functionsUrl) {
+        try {
+          const res = await fetch(`${functionsUrl}/demo-login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim(), password }),
+          });
 
-      const data = await res.json();
+          if (res.ok) {
+            const data = await res.json();
+            // Store tokens identically to production auth flow
+            localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+            localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
 
-      if (!res.ok) {
-        throw new Error(data.error ?? "Invalid demo credentials");
+            // Decode user from token or response body
+            const resolved = data.user ?? userFromToken(data.access_token);
+            if (!resolved) {
+              throw new Error("Failed to decode demo session");
+            }
+            persistUserMeta(resolved);
+            setUser(resolved);
+            return resolved;
+          }
+          // Non-ok response — fall through to client-side token
+        } catch {
+          // Edge function unreachable — fall through to client-side token
+        }
       }
 
-      // Store tokens identically to production auth flow
-      localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
-      localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-
-      // Decode user from token or response body
-      const resolved = data.user ?? userFromToken(data.access_token);
-      if (!resolved) {
-        throw new Error("Failed to decode demo session");
-      }
-      persistUserMeta(resolved);
-      setUser(resolved);
-      return resolved;
+      // Client-side fallback: validate locally and issue a synthetic JWT.
+      // This is intentionally NOT a real authentication — it's for demo evaluation only.
+      throw new Error("CLIENT_SIDE_REQUIRED");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Demo sign-in failed";
-      setError(msg);
+      // "CLIENT_SIDE_REQUIRED" is our sentinel — not a real error, the caller
+      // (DemoLogin page) handles client-side JWT creation.
+      if (msg !== "CLIENT_SIDE_REQUIRED") {
+        setError(msg);
+      }
       throw err;
     } finally {
       setIsSigningIn(false);
