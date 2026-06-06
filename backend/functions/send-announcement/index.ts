@@ -158,14 +158,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const studioName = studio?.name ?? "StudioFlow";
 
-    // Fetch all parents for this studio
-    const { data: parents, error: parentError } = await supabase
-      .from("parents")
+    // Fetch all caregivers for this studio
+    const { data: caregivers, error: caregiverError } = await supabase
+      .from("caregivers")
       .select("*")
       .eq("studio_id", announcement.studio_id);
 
-    if (parentError) {
-      return new Response(JSON.stringify({ error: "Failed to fetch parents" }), {
+    if (caregiverError) {
+      return new Response(JSON.stringify({ error: "Failed to fetch caregivers" }), {
         status: 500,
         headers: {
           ...corsHeaders,
@@ -180,8 +180,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const recipients = new Set<string>();
     const isEmergency = announcement.scope === "Emergency";
 
-    for (const parent of parents ?? []) {
-      recipients.add(parent.email);
+    for (const caregiver of caregivers ?? []) {
+      recipients.add(caregiver.email);
     }
 
     const recipientList = Array.from(recipients);

@@ -341,7 +341,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await upsert("profiles", PROFILES_AURORA, "Aurora profiles");
     await upsert("teachers", TEACHERS_AURORA, "Aurora teachers");
     await upsert("classes", CLASSES_AURORA, "Aurora classes");
-    await upsert("parents", PARENTS_AURORA, "Aurora parents");
+    await upsert("caregivers", PARENTS_AURORA, "Aurora caregivers");
     await upsert("students", STUDENTS_AURORA, "Aurora students");
     await upsert("enrolments", ENROLMENTS_AURORA, "Aurora enrolments");
     await upsert("announcements", ANNOUNCEMENTS_AURORA, "Aurora announcements");
@@ -354,7 +354,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await upsert("profiles", PROFILES_CROSSFIT, "CrossFit profiles");
     await upsert("teachers", TEACHERS_CROSSFIT, "CrossFit coaches");
     await upsert("classes", CLASSES_CROSSFIT, "CrossFit sessions");
-    await upsert("parents", PARENTS_CROSSFIT, "CrossFit parents");
+    await upsert("caregivers", PARENTS_CROSSFIT, "CrossFit caregivers");
     await upsert("students", STUDENTS_CROSSFIT, "CrossFit athletes");
     await upsert("enrolments", ENROLMENTS_CROSSFIT, "CrossFit enrolments");
     await upsert("announcements", ANNOUNCEMENTS_CROSSFIT, "CrossFit announcements");

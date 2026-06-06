@@ -899,7 +899,7 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
           <Ruler className="mx-auto h-10 w-10 text-muted-foreground/50" />
           <p className="mt-4 text-lg font-semibold">No measurements yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Student measurements will appear here once parents submit them through the portal.
+            Student measurements will appear here once parents / caregivers submit them through the portal.
           </p>
         </div>
       )}

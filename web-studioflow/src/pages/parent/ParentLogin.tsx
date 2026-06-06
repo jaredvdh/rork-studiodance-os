@@ -63,7 +63,7 @@ export default function ParentLogin() {
             subtitle={`Sign in to manage your children's classes, payments, and waivers at ${studio.name}`}
           />
 
-          {/* OAuth buttons — balanced emphasis for parents */}
+          {/* OAuth buttons — balanced emphasis for parents / caregivers */}
           <OAuthButtons
             onSignIn={signIn}
             isLoading={isSigningIn}

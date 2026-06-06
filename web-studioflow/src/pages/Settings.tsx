@@ -176,7 +176,7 @@ export default function Settings() {
         <div>
           <h3 className="text-sm font-semibold">Studio details</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            These details are shown throughout the app and in emails to parents.
+            These details are shown throughout the app and in emails to parents / caregivers.
           </p>
         </div>
 

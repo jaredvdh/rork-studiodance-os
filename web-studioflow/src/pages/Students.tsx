@@ -428,7 +428,7 @@ function MeasurementsTabPanel({ studentId, onBack, onClose }: { studentId: strin
           </div>
           <h4 className="mt-3 font-display text-base font-semibold">No measurements on file</h4>
           <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-            Measurements can be submitted by parents through the parent portal or entered by admin staff.
+            Measurements can be submitted by parents / caregivers through the portal or entered by admin staff.
           </p>
         </div>
         <button onClick={onBack} className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
