@@ -10,6 +10,11 @@
       "name": "Backend",
       "path": "backend",
       "framework": "supabase"
+    },
+    {
+      "name": "StudioFlow",
+      "path": "ios-studioflow",
+      "framework": "swift"
     }
   ]
 }
