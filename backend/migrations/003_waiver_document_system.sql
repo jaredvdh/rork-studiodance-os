@@ -114,7 +114,7 @@ CREATE TRIGGER trg_prevent_waiver_delete
 CREATE TABLE IF NOT EXISTS uploaded_documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id uuid NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-  family_id uuid REFERENCES parents(id) ON DELETE SET NULL,
+  family_id uuid REFERENCES caregivers(id) ON DELETE SET NULL,
   student_id uuid REFERENCES students(id) ON DELETE SET NULL,
   class_id uuid REFERENCES classes(id) ON DELETE SET NULL,
   event_id uuid REFERENCES recital_events(id) ON DELETE SET NULL,

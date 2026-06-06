@@ -356,7 +356,7 @@ BEGIN
           is_studio_member(studio_id)
           AND EXISTS (
             SELECT 1 FROM students s
-            JOIN parents p ON s.parent_id = p.id
+            JOIN caregivers c ON s.caregiver_id = c.id
             WHERE s.id = %1$s.student_id
               AND p.id::text = auth.uid()::text
           )

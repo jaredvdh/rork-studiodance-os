@@ -253,7 +253,7 @@ export function useSupabaseStudents(isDemo: boolean) {
       if (error || !data) return { data: null, error };
       return { data: data.map((s) => ({
         id: s.id, studioId: s.studio_id, name: s.name, dob: s.dob ?? "",
-        parentId: s.parent_id ?? "", parentName: s.parent_name ?? "", parentEmail: s.parent_email ?? "",
+        caregiverId: s.caregiver_id ?? "", caregiverName: s.caregiver_name ?? "", caregiverEmail: s.caregiver_email ?? "",
         classIds: s.class_ids ?? [], attendanceRate: s.attendance_rate ?? 1,
         waiver: (s.waiver as Student["waiver"]) ?? "missing",
         payment: (s.payment as Student["payment"]) ?? "paid",
@@ -311,9 +311,9 @@ export function useAddStudent() {
         studio_id: studioId,
         name: student.name,
         dob: student.dob,
-        parent_id: student.parentId,
-        parent_name: student.parentName,
-        parent_email: student.parentEmail,
+        caregiver_id: student.caregiverId,
+        caregiver_name: student.caregiverName,
+        caregiver_email: student.caregiverEmail,
         class_ids: student.classIds,
         attendance_rate: student.attendanceRate,
         waiver: student.waiver,
@@ -366,9 +366,9 @@ export function useUpdateStudent() {
       const updates: Record<string, unknown> = {};
       if (patch.name !== undefined) updates.name = patch.name;
       if (patch.dob !== undefined) updates.dob = patch.dob;
-      if (patch.parentId !== undefined) updates.parent_id = patch.parentId;
-      if (patch.parentName !== undefined) updates.parent_name = patch.parentName;
-      if (patch.parentEmail !== undefined) updates.parent_email = patch.parentEmail;
+      if (patch.caregiverId !== undefined) updates.caregiver_id = patch.caregiverId;
+      if (patch.caregiverName !== undefined) updates.caregiver_name = patch.caregiverName;
+      if (patch.caregiverEmail !== undefined) updates.caregiver_email = patch.caregiverEmail;
       if (patch.classIds !== undefined) updates.class_ids = patch.classIds;
       if (patch.attendanceRate !== undefined) updates.attendance_rate = patch.attendanceRate;
       if (patch.waiver !== undefined) updates.waiver = patch.waiver;
@@ -700,7 +700,7 @@ export function useSupabaseParents(isDemo: boolean) {
   return useDualQuery<ParentAccount>(
     ["parents", studioId],
     async () => {
-      const { data, error } = await supabase.from("parents").select("*").eq("studio_id", studioId);
+      const { data, error } = await supabase.from("caregivers").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
       return {
         data: data.map((p) => {

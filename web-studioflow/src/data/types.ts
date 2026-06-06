@@ -281,9 +281,9 @@ export interface Student {
   gender?: string;
   pronouns?: string;
   schoolGrade?: string;
-  parentId: string;
-  parentName: string;
-  parentEmail: string;
+  caregiverId: string;
+  caregiverName: string;
+  caregiverEmail: string;
   classIds: string[];
   attendanceRate: number; // 0..1
   waiver: WaiverStatus;
@@ -555,7 +555,7 @@ export function isAddressEmpty(addr?: Address | string | null): boolean {
 export interface CaregiverAuditEvent {
   id: string;
   caregiverId: string;
-  parentId: string;
+  caregiverId: string;
   timestamp: string;
   event: string;
   details?: string;

@@ -332,52 +332,127 @@ export type Database = {
           },
         ]
       }
-      parents: {
+      caregivers: {
         Row: {
+          accepted_at: string | null
           address: string | null
+          authorized_pickup: boolean | null
+          can_manage_enrolments: boolean | null
+          can_pay_invoices: boolean | null
+          can_sign_waivers: boolean | null
+          can_view_billing: boolean | null
+          can_view_medical_notes: boolean | null
+          can_view_schedule: boolean | null
           child_ids: string[] | null
           city: string | null
+          communication_only: boolean | null
+          court_order_on_file: boolean | null
           created_at: string | null
+          custody_restriction: boolean | null
           email: string
+          emergency_contact: boolean | null
+          first_name: string | null
+          household_label: string | null
           id: string
+          invited_at: string | null
+          is_authorized_pickup: boolean | null
+          is_billing_contact: boolean | null
+          is_primary_contact: boolean | null
+          last_name: string | null
           name: string
           phone: string | null
+          receives_announcements: boolean | null
+          receives_emergency_messages: boolean | null
+          relationship_to_student: string | null
+          role: string
           state: string | null
+          status: string
+          structured_address: Json | null
           studio_id: string
           updated_at: string | null
           zip: string | null
         }
         Insert: {
+          accepted_at?: string | null
           address?: string | null
+          authorized_pickup?: boolean | null
+          can_manage_enrolments?: boolean | null
+          can_pay_invoices?: boolean | null
+          can_sign_waivers?: boolean | null
+          can_view_billing?: boolean | null
+          can_view_medical_notes?: boolean | null
+          can_view_schedule?: boolean | null
           child_ids?: string[] | null
           city?: string | null
+          communication_only?: boolean | null
+          court_order_on_file?: boolean | null
           created_at?: string | null
+          custody_restriction?: boolean | null
           email: string
+          emergency_contact?: boolean | null
+          first_name?: string | null
+          household_label?: string | null
           id?: string
+          invited_at?: string | null
+          is_authorized_pickup?: boolean | null
+          is_billing_contact?: boolean | null
+          is_primary_contact?: boolean | null
+          last_name?: string | null
           name: string
           phone?: string | null
+          receives_announcements?: boolean | null
+          receives_emergency_messages?: boolean | null
+          relationship_to_student?: string | null
+          role?: string
           state?: string | null
+          status?: string
+          structured_address?: Json | null
           studio_id: string
           updated_at?: string | null
           zip?: string | null
         }
         Update: {
+          accepted_at?: string | null
           address?: string | null
+          authorized_pickup?: boolean | null
+          can_manage_enrolments?: boolean | null
+          can_pay_invoices?: boolean | null
+          can_sign_waivers?: boolean | null
+          can_view_billing?: boolean | null
+          can_view_medical_notes?: boolean | null
+          can_view_schedule?: boolean | null
           child_ids?: string[] | null
           city?: string | null
+          communication_only?: boolean | null
+          court_order_on_file?: boolean | null
           created_at?: string | null
+          custody_restriction?: boolean | null
           email?: string
+          emergency_contact?: boolean | null
+          first_name?: string | null
+          household_label?: string | null
           id?: string
+          invited_at?: string | null
+          is_authorized_pickup?: boolean | null
+          is_billing_contact?: boolean | null
+          is_primary_contact?: boolean | null
+          last_name?: string | null
           name?: string
           phone?: string | null
+          receives_announcements?: boolean | null
+          receives_emergency_messages?: boolean | null
+          relationship_to_student?: string | null
+          role?: string
           state?: string | null
+          status?: string
+          structured_address?: Json | null
           studio_id?: string
           updated_at?: string | null
           zip?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "parents_studio_id_fkey"
+            foreignKeyName: "caregivers_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
@@ -470,9 +545,9 @@ export type Database = {
           id: string
           medical_notes: string | null
           name: string
-          parent_email: string | null
-          parent_id: string | null
-          parent_name: string | null
+          caregiver_email: string | null
+          caregiver_id: string | null
+          caregiver_name: string | null
           payment: string | null
           studio_id: string
           updated_at: string | null
@@ -516,10 +591,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "students_parent_id_fkey"
-            columns: ["parent_id"]
+            foreignKeyName: "students_caregiver_id_fkey"
+            columns: ["caregiver_id"]
             isOneToOne: false
-            referencedRelation: "parents"
+            referencedRelation: "caregivers"
             referencedColumns: ["id"]
           },
           {

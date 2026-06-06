@@ -26,14 +26,14 @@ function newId(prefix: string): string {
 function pushAudit(
   log: CaregiverAuditEvent[] | undefined,
   caregiverId: string,
-  parentId: string,
+  accountId: string,
   event: string,
   details?: string,
 ): CaregiverAuditEvent[] {
   const entry: CaregiverAuditEvent = {
     id: newId("alog"),
     caregiverId,
-    parentId,
+    accountId,
     timestamp: new Date().toISOString(),
     event,
     details,
@@ -66,9 +66,9 @@ interface ParentCtx {
       Student,
       | "id"
       | "studioId"
-      | "parentId"
-      | "parentName"
-      | "parentEmail"
+      | "caregiverId"
+      | "caregiverName"
+      | "caregiverEmail"
       | "classIds"
       | "attendanceRate"
       | "payment"
@@ -113,7 +113,7 @@ interface ParentCtx {
 const ParentContext = createContext<ParentCtx | null>(null);
 
 export function ParentProvider({ children }: { children: React.ReactNode }) {
-  const [parentId, setParentId] = useState<string>(parentAccounts[0].id);
+  const [accountId, setAccountId] = useState<string>(parentAccounts[0].id);
   const [allParents, setAllParents] = useState<ParentAccount[]>(parentAccounts);
 
   // Derive students from the shared context (enrolment-aware), not standalone demo data.
@@ -121,8 +121,8 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
   const { students: sharedStudents, addStudent: sharedAddStudent, updateStudent: sharedUpdateStudent } = useStudents();
 
   const parent = useMemo(
-    () => allParents.find((p) => p.id === parentId) ?? allParents[0],
-    [allParents, parentId],
+    () => allParents.find((p) => p.id === accountId) ?? allParents[0],
+    [allParents, accountId],
   );
 
   const primaryContact = parent.primaryContact;
@@ -158,9 +158,9 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
         Student,
         | "id"
         | "studioId"
-        | "parentId"
-        | "parentName"
-        | "parentEmail"
+        | "caregiverId"
+        | "caregiverName"
+        | "caregiverEmail"
         | "classIds"
         | "attendanceRate"
         | "payment"
@@ -172,9 +172,9 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
       // addStudent returns the new ID synchronously — use it directly.
       const newId = sharedAddStudent({
         ...child,
-        parentId: parent.id,
-        parentName: `${pc.firstName} ${pc.lastName}`,
-        parentEmail: pc.email,
+        caregiverId: parent.id,
+        caregiverName: `${pc.firstName} ${pc.lastName}`,
+        caregiverEmail: pc.email,
         classIds: [],
         attendanceRate: 1,
         waiver: child.waiver ?? "missing",

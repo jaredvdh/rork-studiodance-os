@@ -65,18 +65,45 @@ CREATE TABLE IF NOT EXISTS teachers (
   updated_at timestamptz DEFAULT now()
 );
 
--- ── parents (families) ───────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS parents (
+-- ── caregivers (parents/guardians/family contacts) ─────────────────────────────
+CREATE TABLE IF NOT EXISTS caregivers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id uuid NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-  name text NOT NULL,
+  first_name text,
+  last_name text,
+  name text NOT NULL,                           -- legacy full-name field
   email text NOT NULL,
   phone text,
-  address text,
-  city text,
-  state text,
-  zip text,
+  address text,                                 -- legacy single-line address
+  city text,                                     -- legacy city
+  state text,                                    -- legacy state
+  zip text,                                      -- legacy zip
+  relationship_to_student text,
+  is_primary_contact boolean DEFAULT false,
+  is_billing_contact boolean DEFAULT false,
+  is_authorized_pickup boolean DEFAULT false,
+  emergency_contact boolean DEFAULT false,
+  status text NOT NULL DEFAULT 'active'
+    CHECK (status IN ('invited', 'active', 'disabled', 'removed')),
+  role text NOT NULL DEFAULT 'primary_caregiver'
+    CHECK (role IN ('primary_caregiver', 'secondary_caregiver', 'additional_caregiver', 'emergency_contact_only')),
+  receives_announcements boolean DEFAULT true,
+  receives_emergency_messages boolean DEFAULT true,
+  can_view_schedule boolean DEFAULT true,
+  can_view_billing boolean DEFAULT false,
+  can_pay_invoices boolean DEFAULT false,
+  can_manage_enrolments boolean DEFAULT false,
+  can_sign_waivers boolean DEFAULT false,
+  can_view_medical_notes boolean DEFAULT false,
+  authorized_pickup boolean DEFAULT false,
   child_ids text[],
+  structured_address jsonb DEFAULT '{}'::jsonb,
+  household_label text,
+  custody_restriction boolean DEFAULT false,
+  court_order_on_file boolean DEFAULT false,
+  communication_only boolean DEFAULT false,
+  invited_at timestamptz,
+  accepted_at timestamptz,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -108,9 +135,9 @@ CREATE TABLE IF NOT EXISTS students (
   studio_id uuid NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
   name text NOT NULL,
   dob date,
-  parent_id uuid REFERENCES parents(id) ON DELETE SET NULL,
-  parent_name text,
-  parent_email text,
+  caregiver_id uuid REFERENCES caregivers(id) ON DELETE SET NULL,
+  caregiver_name text,
+  caregiver_email text,
   class_ids text[],
   allergies text,
   medical_notes text,
@@ -212,10 +239,13 @@ CREATE TABLE IF NOT EXISTS studio_settings (
 
 -- ── Indexes ───────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_teachers_studio       ON teachers(studio_id);
-CREATE INDEX IF NOT EXISTS idx_parents_studio         ON parents(studio_id);
+CREATE INDEX IF NOT EXISTS idx_caregivers_studio       ON caregivers(studio_id);
+CREATE INDEX IF NOT EXISTS idx_caregivers_role          ON caregivers(role);
+CREATE INDEX IF NOT EXISTS idx_caregivers_status        ON caregivers(status);
+CREATE INDEX IF NOT EXISTS idx_caregivers_email         ON caregivers(email);
 CREATE INDEX IF NOT EXISTS idx_classes_studio         ON classes(studio_id);
 CREATE INDEX IF NOT EXISTS idx_students_studio        ON students(studio_id);
-CREATE INDEX IF NOT EXISTS idx_students_parent        ON students(parent_id);
+CREATE INDEX IF NOT EXISTS idx_students_caregiver      ON students(caregiver_id);
 CREATE INDEX IF NOT EXISTS idx_enrolments_studio      ON enrolments(studio_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_studio        ON invoices(studio_id);
 CREATE INDEX IF NOT EXISTS idx_announcements_studio   ON announcements(studio_id);
@@ -236,7 +266,7 @@ DO $$
 DECLARE
   t text;
   studio_scoped text[] := ARRAY[
-    'studios','teachers','parents','classes','students','enrolments',
+    'studios','teachers','caregivers','classes','students','enrolments',
     'invoices','announcements','recital_events','activity_logs',
     'import_history','studio_settings'
   ];
