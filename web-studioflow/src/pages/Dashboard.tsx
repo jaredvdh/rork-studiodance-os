@@ -22,6 +22,9 @@ import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+/** Verticals that have recitals and costume systems. */
+const PERFORMANCE_VERTICALS = new Set(["dance", "music_school"]);
+
 const SETUP_COMPLETE_KEY = "studioflow_setup_complete";
 function hasCompletedSetup(): boolean {
   return localStorage.getItem(SETUP_COMPLETE_KEY) === "true";
@@ -39,6 +42,7 @@ export default function Dashboard() {
 
   const { studio } = useStudio();
   const term = useTerminology();
+  const showPerformance = PERFORMANCE_VERTICALS.has(studio.vertical);
   const classes = useEnrichedClasses();
   const { students } = useStudents();
   const { teachers } = useTeachers();
@@ -122,8 +126,13 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard index={0} label={`Active ${term.participantPlural.toLowerCase()}`} value={String(activeStudents)} delta={6} hint="vs. last month" icon={Users} accent="rose" />
         <StatCard index={1} label="Revenue this month" value={formatCurrency(monthRevenue, true)} delta={12} hint="from enrolments" icon={DollarSign} accent="gold" />
-        <StatCard index={2} label="Class capacity" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
-        <StatCard index={3} label="Missing / Stale Measurements" value={String(missingOrStaleCount)} delta={missingOrStaleCount > 0 ? -3 : 0} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={Ruler} accent="plum" />
+        <StatCard index={2} label="Capacity filled" value={`${capacityPct}%`} delta={4} hint={`${totalEnrolled}/${totalCapacity} seats`} icon={TrendingUp} accent="teal" />
+        {showPerformance && (
+          <StatCard index={3} label="Missing / Stale Measurements" value={String(missingOrStaleCount)} delta={missingOrStaleCount > 0 ? -3 : 0} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={Ruler} accent="plum" />
+        )}
+        {!showPerformance && (
+          <StatCard index={3} label="Attendance rate" value={`${avgAttendance}%`} delta={2} hint={`of ${students.length} ${term.participantPlural.toLowerCase()}`} icon={TrendingUp} accent="plum" />
+        )}
       </div>
 
       {/* ── Waiver compliance & alerts ───────────────────────────── */}
@@ -146,7 +155,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Stale / missing measurement alert ──────────────────────── */}
-      {(missingMeasIds.length > 0 || staleMeasIds.length > 0) && (
+      {showPerformance && (missingMeasIds.length > 0 || staleMeasIds.length > 0) && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-rose/30 bg-rose/5 p-4 shadow-soft animate-float-up">
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose/10 text-rose">
@@ -365,7 +374,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recital / event alert strip */}
+      {/* Recital / event alert strip — only for performance verticals */}
+      {showPerformance && (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-gradient-to-r from-plum/10 to-rose/10 p-6">
         <div className="grid h-12 w-12 place-items-center rounded-xl bg-plum/15 text-plum">
           <CalendarClock className="h-6 w-6" />
@@ -380,7 +390,7 @@ export default function Dashboard() {
           Manage {term.eventPlural.toLowerCase()}
         </Link>
       </div>
-
+      )}
       <p className="pb-2 text-center text-xs text-muted-foreground">
         Showing data for {initials(studio.name)} · {studio.name}
       </p>

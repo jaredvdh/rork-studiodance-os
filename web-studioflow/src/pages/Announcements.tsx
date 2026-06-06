@@ -4,10 +4,18 @@ import { AlertTriangle, Loader2, Mail, Megaphone, Plus, Send, Sparkles, Target, 
 import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabase";
 import { aiDraftAnnouncement } from "@/lib/ai";
-import { useAnnouncements, useClasses, useStudio, useStudents, useTeachers } from "@/data/store";
+import { useAnnouncements, useClasses, useStudio, useStudents, useTeachers, useTerminology } from "@/data/store";
 import type { AnnouncementScope } from "@/data/types";
+import type { VerticalTerminology } from "@/data/terminology";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+/** Display label for a scope, respecting the studio vertical's terminology. */
+function scopeLabel(scope: AnnouncementScope, term: VerticalTerminology): string {
+  if (scope === "Recital") return term.event;
+  if (scope === "Class") return term.class;
+  return scope;
+}
 
 const scopeMeta: Record<AnnouncementScope, { icon: typeof Megaphone; chip: string }> = {
   "Studio-wide": { icon: Users, chip: "bg-plum/10 text-plum" },
@@ -24,22 +32,24 @@ function buildAudience(
   targetId: string,
   classes: { id: string; name: string }[],
   teachers: { id: string; name: string }[],
+  term: VerticalTerminology,
 ): string {
   if (!targetId) {
     if (scope === "Studio-wide") return "All families";
-    if (scope === "Recital") return "All recital participants";
+    if (scope === "Recital") return `All ${term.event.toLowerCase()} participants`;
     if (scope === "Emergency") return "All families";
-    if (scope === "Class") return "All classes";
+    if (scope === "Class") return `All ${term.classPlural.toLowerCase()}`;
   }
   const cls = classes.find((c) => c.id === targetId);
   if (cls) return cls.name;
   const tch = teachers.find((t) => t.id === targetId);
-  if (tch) return `${tch.name}'s classes`;
+  if (tch) return `${tch.name}'s ${term.classPlural.toLowerCase()}`;
   return targetId;
 }
 
 export default function Announcements() {
   const { studio } = useStudio();
+  const term = useTerminology();
   const { announcements: items, addAnnouncement } = useAnnouncements();
   const { classes } = useClasses();
   const { teachers } = useTeachers();
@@ -80,7 +90,7 @@ export default function Announcements() {
     if (!form.title.trim()) return;
     setSendState("sending");
 
-    const audience = buildAudience(form.scope, form.targetId, classes, teachers);
+    const audience = buildAudience(form.scope, form.targetId, classes, teachers, term);
 
     // addAnnouncement now persists to Supabase via the shared context mutation
     addAnnouncement({
@@ -171,7 +181,7 @@ export default function Announcements() {
                     form.scope === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground/70 hover:bg-secondary",
                   )}
                 >
-                  {s}
+                  {scopeLabel(s, term)}
                 </button>
               ))}
             </div>
@@ -199,7 +209,7 @@ export default function Announcements() {
           {form.targetId && (
             <div className="rounded-xl border border-teal/20 bg-teal/5 px-4 py-2.5 text-sm text-teal">
               <Target className="mr-1.5 inline h-4 w-4" />
-              Targeting: <span className="font-semibold">{buildAudience(form.scope, form.targetId, classes, teachers)}</span>
+              Targeting: <span className="font-semibold">{buildAudience(form.scope, form.targetId, classes, teachers, term)}</span>
             </div>
           )}
 

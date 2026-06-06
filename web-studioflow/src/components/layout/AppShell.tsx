@@ -49,6 +49,9 @@ import { cn } from "@/lib/utils";
 
 type NavKey = "dashboard" | "classes" | "students" | "schedule" | "recitals" | "costumes" | "instructors" | "announcements" | "payments" | "waivers" | "migration";
 
+/** Verticals that use costume & recital features. */
+const PERFORMANCE_VERTICALS = new Set(["dance", "music_school"]);
+
 interface NavItem {
   to: string;
   key: NavKey;
@@ -72,8 +75,8 @@ const navItems: NavItem[] = [
 function navLabel(key: NavKey, term: VerticalTerminology): string {
   switch (key) {
     case "dashboard": return "Dashboard";
-    case "classes": return "Classes";
-    case "students": return `${term.participantPlural} & Parents`;
+    case "classes": return term.classPlural;
+    case "students": return `${term.participantPlural} & Caregivers`;
     case "schedule": return "Schedule";
     case "recitals": return term.eventPlural;
     case "costumes": return "Costumes";
@@ -104,7 +107,13 @@ function StudioBrand() {
   );
 }
 
-function SidebarContent({ onNavigate, term }: { onNavigate?: () => void; term: VerticalTerminology }) {
+function SidebarContent({ onNavigate, term, vertical }: { onNavigate?: () => void; term: VerticalTerminology; vertical: string }) {
+  const showPerformance = PERFORMANCE_VERTICALS.has(vertical);
+  const visibleItems = navItems.filter(({ key }) => {
+    if (key === "costumes" || key === "recitals") return showPerformance;
+    return true;
+  });
+
   return (
     <div className="flex h-full flex-col gap-1 px-4 py-6">
       <NavLink to="/" className="mb-6 block px-2">
@@ -115,7 +124,7 @@ function SidebarContent({ onNavigate, term }: { onNavigate?: () => void; term: V
         Manage
       </p>
       <nav className="flex flex-col gap-1">
-        {navItems.map(({ to, key, icon: Icon }) => (
+        {visibleItems.map(({ to, key, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -355,6 +364,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const demo = isDemoSession();
   const location = useLocation();
+  const { studio } = useStudio();
   const term = useTerminology();
   const current = navItems.find((n) => location.pathname.startsWith(n.to))
     ? navLabel(navItems.find((n) => location.pathname.startsWith(n.to))!.key, term)
@@ -364,7 +374,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-72 bg-sidebar lg:block">
-        <SidebarContent term={term} />
+        <SidebarContent term={term} vertical={studio.vertical} />
       </aside>
 
       {/* Mobile drawer */}
@@ -379,7 +389,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               <X className="h-5 w-5" />
             </button>
-            <SidebarContent term={term} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent term={term} vertical={studio.vertical} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
