@@ -113,7 +113,7 @@ interface ParentCtx {
 const ParentContext = createContext<ParentCtx | null>(null);
 
 export function ParentProvider({ children }: { children: React.ReactNode }) {
-  const [accountId, setAccountId] = useState<string>(parentAccounts[0].id);
+  const [accountId, setAccountId] = useState<string>(parentAccounts[0]?.id ?? "");
   const [allParents, setAllParents] = useState<ParentAccount[]>(parentAccounts);
 
   // Derive students from the shared context (enrolment-aware), not standalone demo data.
@@ -125,6 +125,8 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
     [allParents, accountId],
   );
 
+  // allParents is sourced from hardcoded demo parentAccounts (always populated).
+  // The ?? allParents[0] above guarantees a non-null parent for all downstream code.
   const primaryContact = parent.primaryContact;
   const additionalCaregivers = parent.additionalCaregivers ?? [];
   const secondaryCaregiver = additionalCaregivers[0];
