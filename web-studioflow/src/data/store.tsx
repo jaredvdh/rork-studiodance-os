@@ -573,20 +573,20 @@ export function useStudioData() {
     const mergedTeachers: Teacher[] = migration
       ? [...teachers, ...migration.importedTeachers]
       : teachers;
-    const mergedParents: ParentAccount[] = migration
-      ? [...([] as ParentAccount[]), ...migration.importedParents]
+    const mergedCaregivers: ParentAccount[] = migration
+      ? [...([] as ParentAccount[]), ...migration.importedCaregivers]
       : [];
     return {
       studio,
       classes: mergedClasses,
       teachers: mergedTeachers,
       students: mergedStudents,
-      parents: mergedParents,
+      caregivers: mergedCaregivers,
       announcements: anns,
       invoices: invs,
       revenueSeries: [] as { month: string; revenueCents: number; enrollments: number }[],
     };
-  }, [studio, teachers, classes, students, anns, invs, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedParents]);
+  }, [studio, teachers, classes, students, anns, invs, migration?.importedStudents, migration?.importedClasses, migration?.importedTeachers, migration?.importedCaregivers]);
 }
 
 // Re-export StudioProvider, useStudio, useTerminology so existing imports from "@/data/store" keep working

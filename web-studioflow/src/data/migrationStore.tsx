@@ -109,7 +109,7 @@ interface MigrationCtx {
   importedStudents: Student[];
   importedClasses: Class[];
   importedTeachers: Teacher[];
-  importedParents: ParentAccount[];
+  importedCaregivers: ParentAccount[];
   /** Import history */
   history: ImportJob[];
   /** Rollback the last import */
@@ -139,7 +139,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
   const [importedStudents, setImportedStudents] = useState<Student[]>(() => loadImported<Student>(IMPORTED_STUDENTS_KEY));
   const [importedClasses, setImportedClasses] = useState<Class[]>(() => loadImported<Class>(IMPORTED_CLASSES_KEY));
   const [importedTeachers, setImportedTeachers] = useState<Teacher[]>(() => loadImported<Teacher>(IMPORTED_TEACHERS_KEY));
-  const [importedParents, setImportedParents] = useState<ParentAccount[]>(() => loadImported<ParentAccount>(IMPORTED_PARENTS_KEY));
+  const [importedCaregivers, setImportedCaregivers] = useState<ParentAccount[]>(() => loadImported<ParentAccount>(IMPORTED_CAREGIVERS_KEY));
   const [history, setHistory] = useState<ImportJob[]>(loadHistory);
   /** Snapshot of state before the most recent import (for rollback) */
   const [lastSnapshot, setLastSnapshot] = useState<ImportSnapshot | null>(null);
@@ -219,11 +219,11 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         const validRows = prev.mappedRows.filter((r) => r.mapped.name?.trim());
         preview.studentCount = validRows.length;
 
-        // Count unique parent emails
-        const parentEmails = new Set(
+        // Count unique caregiver emails
+        const caregiverEmails = new Set(
           validRows.map((r) => r.mapped.parentEmail?.toLowerCase().trim()).filter(Boolean),
         );
-        preview.parentCount = parentEmails.size;
+        preview.caregiverCount = caregiverEmails.size;
 
         // Try linking to existing classes by matching class names in enrolment data
         const allClasses = [...demoClasses, ...importedClasses];
@@ -290,7 +290,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
 
     if (category === "students") {
       const newStudents: Student[] = [];
-      const newParents: ParentAccount[] = [];
+      const newCaregivers: ParentAccount[] = [];
       const caregiverMap = new Map<string, string>(); // email → caregiverId
 
       for (const row of mappedRows) {
@@ -309,7 +309,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         const emailNorm = caregiverEmail.toLowerCase();
         let caregiverId = caregiverMap.get(emailNorm);
         if (!caregiverId) {
-          caregiverId = `cg_mig_${ts}_${newParents.length}`;
+          caregiverId = `cg_mig_${ts}_${newCaregivers.length}`;
           caregiverMap.set(emailNorm, caregiverId);
 
           // Build the primary caregiver from imported data
