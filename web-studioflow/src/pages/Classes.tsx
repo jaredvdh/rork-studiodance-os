@@ -27,12 +27,17 @@ export default function Classes() {
     }
   }, [studio.vertical, term.styleCategories]);
 
-  // Reset form style if it's no longer valid for the new vertical
+  // Reset form state when vertical changes — clear stale selections
   useEffect(() => {
-    if (!(term.styleCategories as readonly string[]).includes(form.style)) {
-      setForm((f) => ({ ...f, style: term.styleCategories[0] }));
-    }
-  }, [studio.vertical]);
+    const validStyles = term.styleCategories as readonly string[];
+    const styleOk = validStyles.includes(form.style);
+    const teacherOk = teachers.length > 0 && teachers.some((t) => t.id === form.teacherId);
+    setForm((f) => ({
+      ...f,
+      style: styleOk ? f.style : (validStyles[0] as ClassStyle),
+      teacherId: teacherOk ? f.teacherId : (teachers[0]?.id ?? ""),
+    }));
+  }, [studio.vertical, teachers]);
 
   const filtered = useMemo(
     () => (styleFilter === "All" ? classes : classes.filter((c) => c.style === styleFilter)),
@@ -47,7 +52,7 @@ export default function Classes() {
     startTime: "16:00",
     durationMins: 60,
     room: "Studio A",
-    teacherId: teachers[0].id,
+    teacherId: teachers[0]?.id ?? "",
     capacity: 16,
     inRecital: true,
     price: 95,
@@ -118,7 +123,7 @@ export default function Classes() {
               style={{ animationDelay: `${i * 40}ms` }}
             >
               <div className="flex items-start justify-between">
-                <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", styleStyles[c.style].chip)}>{c.style}</span>
+                <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", (styleStyles[c.style] ?? styleStyles.Ballet).chip)}>{c.style}</span>
                 {c.inRecital && term.enabledModules.includes("recitals" as ModuleKey) && (
                   <span className="flex items-center gap-1 rounded-full bg-gold/15 px-2 py-1 text-xs font-semibold text-gold">
                     <Trophy className="h-3 w-3" /> {term.event}
@@ -141,7 +146,7 @@ export default function Classes() {
                   </span>
                 </div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div className={cn("h-full rounded-full", styleStyles[c.style].dot)} style={{ width: `${Math.min(pct, 100)}%` }} />
+                  <div className={cn("h-full rounded-full", (styleStyles[c.style] ?? styleStyles.Ballet).dot)} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
               </div>
 
