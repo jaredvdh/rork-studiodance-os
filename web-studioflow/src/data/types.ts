@@ -179,6 +179,8 @@ export interface Studio {
     regional?: RegionalSettings;
     /** Controls how measurements are collected — parent sizing only, full measurements, studio-only, or hybrid. */
     measurementCollectionMode?: MeasurementCollectionMode;
+    /** Feature toggles for admin-controlled module visibility. */
+    featureToggles?: Record<string, boolean>;
   };
 }
 
