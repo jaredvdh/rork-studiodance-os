@@ -15,16 +15,16 @@ import { useStudio, useTerminology } from "@/data/store";
 const features = [
   { icon: CalendarDays, title: "Class & schedule management", body: "Build recurring schedules, set capacities, manage waitlists and assign teachers in seconds." },
   { icon: Users, title: "Caregiver coordination", body: "Multiple caregivers per family, granular permissions, pickup authorization, and emergency contacts." },
-  { icon: CreditCard, title: "Payments (Stripe coming soon)", body: "Track tuition, recital fees, and invoices. Full Stripe integration on the roadmap." },
+  { icon: CreditCard, title: "Payments (Stripe coming soon)", body: "Track tuition, event fees, and invoices. Full Stripe integration on the roadmap." },
   { icon: Megaphone, title: "Announcements", body: "Studio-wide, per-class or emergency messages with delivery rules respecting caregiver permissions." },
   { icon: Signature, title: "Digital waivers", body: "Liability, media and medical forms signed online with timestamps and signature records." },
-  { icon: Sparkles, title: "Recital tools", body: "Generate rosters, running orders, and print-ready programmes from enrolled classes." },
+  { icon: Sparkles, title: "Event planning tools", body: "Generate rosters, running orders, and print-ready programmes for recitals and performances." },
 ];
 
 const steps = [
   { n: "01", title: "Create your studio", body: "Add your branding, rooms and staff in under five minutes." },
-  { n: "02", title: "Open registration", body: "Share your public class page and let families enroll themselves." },
-  { n: "03", title: "Run the show", body: "Track attendance, collect tuition and prep recitals — all in one place." },
+  { n: "02", title: "Open registration", body: "Share your public class page and let families enrol themselves." },
+  { n: "03", title: "Run the show", body: "Track attendance, collect tuition and manage events — all in one place." },
 ];
 
 export default function Landing() {
@@ -80,8 +80,8 @@ export default function Landing() {
             <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-balance md:text-6xl">
               Run your whole studio from one beautiful place.
             </h1>
-            <p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-              Classes, students, payments, waivers and recitals — StudioFlow replaces the spreadsheets, group chats and paper forms with one calm, premium dashboard.
+            <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
+              Classes, {term.participantPlural.toLowerCase()}, payments, waivers and {term.eventPlural.toLowerCase()} — StudioFlow replaces the spreadsheets, group chats and paper forms with one calm, premium dashboard.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link

@@ -218,7 +218,7 @@ export default function Announcements() {
             <input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder={form.scope === "Emergency" ? "URGENT: " : form.scope === "Class" ? "e.g. Tuesday Ballet caregivers — rehearsal update" : "e.g. Recital rehearsal on May 25th"}
+              placeholder={form.scope === "Emergency" ? "URGENT: " : form.scope === "Class" ? `e.g. ${term.class} announcement — schedule update` : `e.g. ${term.event} rehearsal on May 25th`}
               className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
             />
           </label>
@@ -228,7 +228,7 @@ export default function Announcements() {
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
               rows={4}
-              placeholder="Write your message to families…"
+              placeholder="Write your message to caregivers…"
               className="w-full resize-none rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
             />
           </label>

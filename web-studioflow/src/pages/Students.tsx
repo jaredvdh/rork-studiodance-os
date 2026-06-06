@@ -77,7 +77,7 @@ export default function Students() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl font-semibold tracking-tight">{term.participantPlural} &amp; Parents</h2>
+          <h2 className="font-display text-3xl font-semibold tracking-tight">{term.participantPlural} &amp; Caregivers</h2>
           <p className="text-sm text-muted-foreground">{students.length} enrolled {term.participantPlural.toLowerCase()} across {students.reduce((a, s) => a + s.classIds.length, 0)} class spots</p>
         </div>
         <div className="flex gap-2">
@@ -97,7 +97,7 @@ export default function Students() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by student or parent name…"
+            placeholder="Search by student or caregiver name…"
             className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -121,7 +121,7 @@ export default function Students() {
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-soft">
         <div className="hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] gap-4 border-b border-border/70 bg-secondary/40 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
           <span>{term.participant}</span>
-          <span>Parent / Guardian</span>
+          <span>Caregiver / Guardian</span>
           <span>Classes</span>
           <span>Attendance</span>
           <span>Waiver</span>
@@ -212,7 +212,7 @@ export default function Students() {
             </div>
             {drawerTab === "profile" ? (
             <div className="space-y-5 px-6 py-6">
-              <DetailRow label="Parent / Guardian" value={selected.caregiverName} sub={selected.caregiverEmail} />
+              <DetailRow label="Caregiver / Guardian" value={selected.caregiverName} sub={selected.caregiverEmail} />
               <CaregiverSection student={selected} />
               <DetailRow label="Attendance rate" value={`${Math.round(selected.attendanceRate * 100)}%`} />
               <div>
@@ -428,7 +428,7 @@ function MeasurementsTabPanel({ studentId, onBack, onClose }: { studentId: strin
           </div>
           <h4 className="mt-3 font-display text-base font-semibold">No measurements on file</h4>
           <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-            Measurements can be submitted by parents / caregivers through the portal or entered by admin staff.
+            Measurements can be submitted by caregivers through the portal or entered by admin staff.
           </p>
         </div>
         <button onClick={onBack} className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">

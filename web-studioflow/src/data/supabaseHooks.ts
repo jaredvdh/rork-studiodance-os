@@ -611,14 +611,16 @@ export function usePromoteEnrolment() {
 
 export function useSupabaseAnnouncements(isDemo: boolean) {
   const studioId = useStudioId();
+  const { studio: currentStudio } = useStudio();
+  const vAnnouncements = getDemoAnnouncements(currentStudio.vertical);
   return useDualQuery<Announcement>(
-    ["announcements", studioId],
+    ["announcements", studioId, currentStudio.vertical],
     async () => {
       const { data, error } = await supabase.from("announcements").select("*").eq("studio_id", studioId).order("sent_at", { ascending: false });
       if (error || !data) return { data: null, error };
       return { data: data.map((a) => ({ id: a.id, studioId: a.studio_id, title: a.title, body: a.body ?? "", scope: (a.scope as Announcement["scope"]) ?? "Studio-wide", sentAt: a.sent_at ?? "", audience: a.audience ?? "", reach: a.reach ?? 0 })), error: null };
     },
-    demoAnnouncements,
+    vAnnouncements,
     isDemo,
   );
 }

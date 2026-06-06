@@ -3,6 +3,7 @@ import { Clock, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
 import { styleStyles, teacherName, useStudio, useEnrichedClasses, useClasses, useTeachers, useTerminology } from "@/data/store";
+import type { ModuleKey } from "@/data/terminology";
 import type { AgeGroup, ClassStyle, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ export default function Classes() {
 
   const [form, setForm] = useState({
     name: "",
-    style: "Ballet" as ClassStyle,
+    style: term.styleCategories[0] as ClassStyle,
     ageGroup: "Junior" as AgeGroup,
     day: "Mon" as WeekDay,
     startTime: "16:00",
@@ -82,7 +83,7 @@ export default function Classes() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl font-semibold tracking-tight">Classes</h2>
+          <h2 className="font-display text-3xl font-semibold tracking-tight">{term.classPlural}</h2>
           <p className="text-sm text-muted-foreground">{classes.length} active classes · {classes.reduce((a, c) => a + c.enrolled, 0)} enrollments</p>
         </div>
         <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
@@ -118,9 +119,9 @@ export default function Classes() {
             >
               <div className="flex items-start justify-between">
                 <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", styleStyles[c.style].chip)}>{c.style}</span>
-                {c.inRecital && (
+                {c.inRecital && term.enabledModules.includes("recitals" as ModuleKey) && (
                   <span className="flex items-center gap-1 rounded-full bg-gold/15 px-2 py-1 text-xs font-semibold text-gold">
-                    <Trophy className="h-3 w-3" /> Recital
+                    <Trophy className="h-3 w-3" /> {term.event}
                   </span>
                 )}
               </div>
@@ -195,7 +196,7 @@ export default function Classes() {
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Tiny Tots Ballet"
+              placeholder={`e.g. ${term.verticalAdjective === "dance" ? "Tiny Tots Ballet" : term.verticalAdjective === "yoga" ? "Morning Vinyasa Flow" : term.verticalAdjective === "CrossFit" ? "Monday Strength WOD" : term.verticalAdjective === "music" ? "Beginner Piano Group" : `Intro ${term.class} A`}`}
               className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-rose focus:ring-2 focus:ring-rose/20"
             />
           </Field>

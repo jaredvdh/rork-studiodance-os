@@ -179,7 +179,15 @@ function SidebarContent({ onNavigate, term, vertical }: { onNavigate?: () => voi
           <span className="text-xs font-semibold uppercase tracking-wide">Studio AI</span>
         </div>
         <p className="text-xs leading-relaxed text-sidebar-foreground/70">
-          Auto-build {term.event.toLowerCase()} running orders and spot attendance dips. Coming soon to your studio.
+          {term.verticalAdjective === "dance"
+            ? `Auto-build ${term.event.toLowerCase()} running orders and spot attendance dips. Coming soon to your studio.`
+            : term.verticalAdjective === "CrossFit"
+            ? `Track programming, benchmark progress, and spot attendance dips. Coming soon to your box.`
+            : term.verticalAdjective === "yoga"
+            ? `Monitor workshop bookings, pass usage, and spot attendance trends. Coming soon to your studio.`
+            : term.verticalAdjective === "music"
+            ? `Optimise lesson scheduling, recital prep, and track practice notes. Coming soon to your academy.`
+            : `Track attendance trends, ${term.event.toLowerCase()} scheduling, and studio insights. Coming soon.`}
         </p>
       </div>
     </div>

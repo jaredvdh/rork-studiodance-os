@@ -616,11 +616,6 @@ export const enrolments: Enrolment[] = students.flatMap((student) =>
   })),
 );
 
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString();
-}
 function daysAhead(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() + n);

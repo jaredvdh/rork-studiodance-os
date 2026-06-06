@@ -181,6 +181,7 @@ function exportProgrammeToWord(
 
 function styleColor(style: ClassStyle): string {
   const map: Record<string, string> = {
+    // Dance
     Ballet: "#d94a6e",
     Jazz: "#c99d3e",
     "Hip Hop": "#77568c",
@@ -188,6 +189,30 @@ function styleColor(style: ClassStyle): string {
     Contemporary: "#4a9e8a",
     Lyrical: "#d94a6e",
     Acro: "#e07b5a",
+    // Yoga
+    Vinyasa: "#4a9e8a",
+    Hatha: "#77568c",
+    Yin: "#c99d3e",
+    Restorative: "#d94a6e",
+    "Power Yoga": "#e07b5a",
+    // CrossFit / Gym
+    Strength: "#1a1423",
+    Conditioning: "#d94a6e",
+    "Olympic Lifting": "#c99d3e",
+    Gymnastics: "#77568c",
+    Mobility: "#4a9e8a",
+    // Martial Arts
+    Beginner: "#4a9e8a",
+    Intermediate: "#c99d3e",
+    Advanced: "#1a1423",
+    Sparring: "#d94a6e",
+    "Grading Prep": "#e07b5a",
+    // Music
+    Piano: "#1a1423",
+    Guitar: "#c99d3e",
+    Voice: "#d94a6e",
+    Violin: "#77568c",
+    Drums: "#4a9e8a",
   };
   return map[style] ?? "#6b5e68";
 }
@@ -963,16 +988,7 @@ function Programme({
                       <span
                         className="inline-block h-2 w-2 rounded-full"
                         style={{
-                          backgroundColor:
-                            c.style === "Ballet" || c.style === "Lyrical"
-                              ? "#d94a6e"
-                              : c.style === "Jazz"
-                                ? "#c99d3e"
-                                : c.style === "Hip Hop"
-                                  ? "#77568c"
-                                  : c.style === "Tap"
-                                    ? "#1a1423"
-                                    : "#4a9e8a",
+                          backgroundColor: styleColor(c.style),
                         }}
                       />
                     </td>

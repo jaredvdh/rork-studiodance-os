@@ -193,7 +193,7 @@ export default function Dashboard() {
       <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-display text-lg font-semibold">Today's classes</h3>
+            <h3 className="font-display text-lg font-semibold">Today's {term.classPlural.toLowerCase()}</h3>
             <p className="text-sm text-muted-foreground">{todayDay} · {todayClasses.length} classes scheduled</p>
           </div>
           <Link to="/schedule" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose transition hover:opacity-80">
@@ -321,7 +321,7 @@ export default function Dashboard() {
         {/* Top classes */}
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-semibold">Fullest classes</h3>
+            <h3 className="font-display text-lg font-semibold">Fullest {term.classPlural.toLowerCase()}</h3>
             <Link to="/classes" className="text-sm text-muted-foreground transition hover:text-foreground">{classes.length} active</Link>
           </div>
           <div className="mt-4 space-y-3">

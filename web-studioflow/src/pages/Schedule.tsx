@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
+import { styleStyles, teacherName, useStudioData, useTeachers, useTerminology } from "@/data/store";
 import type { WeekDay } from "@/data/types";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ function toMinutes(time: string): number {
 export default function Schedule() {
   const { classes } = useStudioData();
   const { teachers } = useTeachers();
+  const term = useTerminology();
 
   const byDay = useMemo(() => {
     const map: Record<string, typeof classes> = {};
@@ -33,7 +34,7 @@ export default function Schedule() {
           <p className="text-sm text-muted-foreground">All rooms · Monday to Saturday</p>
         </div>
         <div className="flex flex-wrap gap-3 text-xs">
-          {(["Ballet", "Jazz", "Hip Hop", "Contemporary"] as const).map((s) => (
+          {term.styleCategories.map((s) => (
             <span key={s} className="flex items-center gap-1.5 text-muted-foreground">
               <span className={cn("h-2.5 w-2.5 rounded-full", styleStyles[s].dot)} /> {s}
             </span>
