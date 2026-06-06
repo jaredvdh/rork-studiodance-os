@@ -174,6 +174,8 @@ export interface Studio {
     preferredUnits?: "metric" | "imperial";
     /** Regional settings — becomes the platform-wide source of truth for all locale-dependent formatting. */
     regional?: RegionalSettings;
+    /** Controls how measurements are collected — parent sizing only, full measurements, studio-only, or hybrid. */
+    measurementCollectionMode?: MeasurementCollectionMode;
   };
 }
 
@@ -823,13 +825,53 @@ export interface CostumeAssignment {
   createdAt: string;
 }
 
-export type MeasurementStatus = "draft" | "pending" | "approved" | "rejected";
+export type MeasurementStatus =
+  | "draft"
+  | "size_provided"
+  | "studio_needed"
+  | "studio_measured"
+  | "parent_submitted"
+  | "pending_review"
+  | "approved"
+  | "rejected";
+
+export const MEASUREMENT_STATUS_LABELS: Record<MeasurementStatus, string> = {
+  draft: "Draft",
+  size_provided: "Size provided",
+  studio_needed: "Studio measurement needed",
+  studio_measured: "Studio measured",
+  parent_submitted: "Parent submitted",
+  pending_review: "Pending review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+export type MeasurementCollectionMode =
+  | "parent_size_only"
+  | "parent_measurements"
+  | "studio_only"
+  | "hybrid";
+
+export const MEASUREMENT_COLLECTION_MODE_LABELS: Record<MeasurementCollectionMode, string> = {
+  parent_size_only: "Parent Size Only",
+  parent_measurements: "Parent Measurements",
+  studio_only: "Studio Measurements Only",
+  hybrid: "Hybrid",
+};
+
 export type UnitSystem = "metric" | "imperial";
+
+/** Who provided/owns this measurement record — used for admin+parent dual-entry workflow. */
+export type MeasurementSource = "parent" | "studio" | "hybrid";
 
 export interface StudentMeasurement {
   id: string;
   studioId: string;
   studentId: string;
+  /** Parent-friendly sizing fields (simple mode). */
+  clothingSize?: string;
+  leotardSize?: string;
+  /** Full advanced measurements (admin mode). */
   heightCm?: number;
   weightKg?: number;
   chestCm?: number;
@@ -841,6 +883,7 @@ export interface StudentMeasurement {
   measuredBy?: string;
   measuredAt?: string;
   submittedBy?: string;
+  source: MeasurementSource;
   status: MeasurementStatus;
   notes?: string;
   createdAt: string;

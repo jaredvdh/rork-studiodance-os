@@ -26,6 +26,9 @@ type MeasurementDraft = Record<string, string>;
 
 const STEP_LABELS = ["Student", "Guide", "Measure", "Review", "Done"] as const;
 
+/** Which measurement mode the wizard operates in. */
+export type WizardMode = "simple" | "full";
+
 interface MeasurementWizardProps {
   students: Student[];
   existingMeasurements: StudentMeasurement[];
@@ -35,10 +38,14 @@ interface MeasurementWizardProps {
   /** If provided, pre-select this student and optionally load their draft */
   preselectedStudentId?: string;
   draftMeasurement?: StudentMeasurement;
+  /** Controls which fields are shown. "simple" = clothing/leotard sizes only (parent-friendly). "full" = all body measurements (admin). */
+  mode?: WizardMode;
 }
 
 export interface MeasurementSubmission {
   studentId: string;
+  clothingSize?: string;
+  leotardSize?: string;
   heightCm?: number;
   weightKg?: number;
   chestCm?: number;
@@ -60,9 +67,11 @@ export default function MeasurementWizard({
   onClose,
   preselectedStudentId,
   draftMeasurement,
+  mode = "simple",
 }: MeasurementWizardProps) {
   const { preferredUnits: units } = useUnitPreference();
   const isMetric = units === "metric";
+  const isSimple = mode === "simple";
 
   const [step, setStep] = useState<WizardStep>(preselectedStudentId ? "guide" : "student");
   const [selectedStudentId, setSelectedStudentId] = useState<string>(preselectedStudentId ?? "");
@@ -92,51 +101,71 @@ export default function MeasurementWizard({
   const buildSubmission = useCallback((): MeasurementSubmission => {
     const data: MeasurementSubmission = { studentId: selectedStudentId };
     
+    // Simple sizing fields (always available)
+    if (draft.clothingSize) data.clothingSize = draft.clothingSize;
+    if (draft.leotardSize) data.leotardSize = draft.leotardSize;
+    if (draft.shoeSize) data.shoeSize = draft.shoeSize;
+    if (draft.notes) data.notes = draft.notes;
+    
+    // Height (optional in both modes)
     if (draft.height) {
       data.heightCm = isMetric
         ? Number(draft.height)
         : ftInToCm(...parseHeightImperial(draft.height));
     }
-    if (draft.weight) {
-      data.weightKg = isMetric
-        ? Number(draft.weight)
-        : lbToKg(Number(draft.weight));
+    
+    // Full measurements (only in full mode)
+    if (!isSimple) {
+      if (draft.weight) {
+        data.weightKg = isMetric
+          ? Number(draft.weight)
+          : lbToKg(Number(draft.weight));
+      }
+      if (draft.chest) data.chestCm = isMetric ? Number(draft.chest) : inToCm(Number(draft.chest));
+      if (draft.waist) data.waistCm = isMetric ? Number(draft.waist) : inToCm(Number(draft.waist));
+      if (draft.hips) data.hipsCm = isMetric ? Number(draft.hips) : inToCm(Number(draft.hips));
+      if (draft.girth) data.girthCm = isMetric ? Number(draft.girth) : inToCm(Number(draft.girth));
+      if (draft.inseam) data.inseamCm = isMetric ? Number(draft.inseam) : inToCm(Number(draft.inseam));
     }
-    if (draft.chest) data.chestCm = isMetric ? Number(draft.chest) : inToCm(Number(draft.chest));
-    if (draft.waist) data.waistCm = isMetric ? Number(draft.waist) : inToCm(Number(draft.waist));
-    if (draft.hips) data.hipsCm = isMetric ? Number(draft.hips) : inToCm(Number(draft.hips));
-    if (draft.girth) data.girthCm = isMetric ? Number(draft.girth) : inToCm(Number(draft.girth));
-    if (draft.inseam) data.inseamCm = isMetric ? Number(draft.inseam) : inToCm(Number(draft.inseam));
-    if (draft.shoeSize) data.shoeSize = draft.shoeSize;
-    if (draft.notes) data.notes = draft.notes;
     
     return data;
-  }, [draft, isMetric, selectedStudentId]);
+  }, [draft, isMetric, isSimple, selectedStudentId]);
 
   const validateMeasurements = useCallback((): boolean => {
     const errors: Record<string, string> = {};
-    const range = isMetric
-      ? { height: [40, 250], weight: [2, 250], body: [10, 200] }
-      : { height: [16, 98], weight: [4, 550], body: [4, 80] };
     
-    const check = (key: string, val: string, [min, max]: [number, number], label: string) => {
-      if (!val) return;
-      const n = Number(val);
-      if (isNaN(n) || n < min) errors[key] = `${label} too low`;
-      else if (n > max) errors[key] = `${label} too high`;
-    };
+    // In simple mode, only height gets numeric validation (other fields are text)
+    if (draft.height) {
+      const range = isMetric ? [40, 250] as [number, number] : [16, 98] as [number, number];
+      const n = Number(draft.height);
+      if (isNaN(n) || n < range[0]) errors.height = "Height too low";
+      else if (n > range[1]) errors.height = "Height too high";
+    }
+    
+    // Full mode: validate all body measurements
+    if (!isSimple) {
+      const range = isMetric
+        ? { height: [40, 250], weight: [2, 250], body: [10, 200] }
+        : { height: [16, 98], weight: [4, 550], body: [4, 80] };
+      
+      const check = (key: string, val: string, [min, max]: [number, number], label: string) => {
+        if (!val) return;
+        const n = Number(val);
+        if (isNaN(n) || n < min) errors[key] = `${label} too low`;
+        else if (n > max) errors[key] = `${label} too high`;
+      };
 
-    check("height", draft.height, range.height, isMetric ? "Height" : "Height");
-    check("weight", draft.weight, range.weight, isMetric ? "Weight" : "Weight");
-    check("chest", draft.chest, range.body, "Chest");
-    check("waist", draft.waist, range.body, "Waist");
-    check("hips", draft.hips, range.body, "Hips");
-    check("girth", draft.girth, range.body, "Girth");
-    check("inseam", draft.inseam, range.body, "Inseam");
+      check("weight", draft.weight, range.weight, isMetric ? "Weight" : "Weight");
+      check("chest", draft.chest, range.body, "Chest");
+      check("waist", draft.waist, range.body, "Waist");
+      check("hips", draft.hips, range.body, "Hips");
+      check("girth", draft.girth, range.body, "Girth");
+      check("inseam", draft.inseam, range.body, "Inseam");
+    }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [draft, isMetric]);
+  }, [draft, isMetric, isSimple]);
 
   const handleSubmit = async () => {
     if (!validateMeasurements()) return;
@@ -277,58 +306,90 @@ export default function MeasurementWizard({
             <div className="space-y-5">
               <div className="rounded-xl border border-amber-200/70 bg-amber-50/50 p-4">
                 <Sparkles className="h-5 w-5 text-amber-600 mb-2" />
-                <p className="text-sm font-medium">How to measure your child</p>
+                <p className="text-sm font-medium">
+                  {isSimple ? "Quick sizing for your child" : "How to measure your child"}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Follow these guidelines for accurate measurements. Use a soft fabric measuring tape for best results.
-                  All values will be converted to the studio's preferred units automatically.
+                  {isSimple
+                    ? "Answer a few simple questions about your child's clothing sizes. The studio will use this to recommend the best costume fit. Full body measurements can be added by studio staff if needed."
+                    : "Follow these guidelines for accurate measurements. Use a soft fabric measuring tape for best results. All values will be converted to the studio's preferred units automatically."}
                 </p>
               </div>
 
-              {/* Measurement guides */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {MEASUREMENT_GUIDES.map((guide) => (
-                  <div key={guide.label} className="rounded-xl border border-amber-200/50 bg-white p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-                        <guide.icon className="h-4 w-4" />
+              {/* Measurement guides — only in full mode */}
+              {!isSimple && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {MEASUREMENT_GUIDES.map((guide) => (
+                      <div key={guide.label} className="rounded-xl border border-amber-200/50 bg-white p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                            <guide.icon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">{guide.label}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                              {guide.description}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold">{guide.label}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                          {guide.description}
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {/* Quick tips */}
-              <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4">
-                <p className="text-sm font-semibold mb-2">Tips for accuracy</p>
-                <ul className="space-y-1.5 text-xs text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Have your child stand straight with feet together
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Measure over light clothing (leotard or thin t-shirt)
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Keep the tape snug but not tight — don't compress the skin
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    For girth: measure from shoulder, down through crotch, back up to same shoulder
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Take each measurement twice and use the average
-                  </li>
-                </ul>
-              </div>
+                  {/* Quick tips */}
+                  <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4">
+                    <p className="text-sm font-semibold mb-2">Tips for accuracy</p>
+                    <ul className="space-y-1.5 text-xs text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                        Have your child stand straight with feet together
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                        Measure over light clothing (leotard or thin t-shirt)
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                        Keep the tape snug but not tight — don't compress the skin
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                        For girth: measure from shoulder, down through crotch, back up to same shoulder
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                        Take each measurement twice and use the average
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {/* In simple mode: a shorter tips section */}
+              {isSimple && (
+                <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4">
+                  <p className="text-sm font-semibold mb-2">What you'll need</p>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                      Your child's current clothing size (check tags on well-fitting clothes)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                      Leotard or costume size if known (optional)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                      Shoe size
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                      Approximate height if you know it (optional)
+                    </li>
+                  </ul>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 pt-2">
                 <button
@@ -342,63 +403,121 @@ export default function MeasurementWizard({
                   onClick={() => setStep("measure")}
                   className="flex-1 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600"
                 >
-                  Start Measuring
-                  <ChevronRight className="inline-block ml-1 h-4 w-4" />
+                  {isSimple ? "Enter Sizes" : "Start Measuring"}
+                  <ChevronRight className="inline-block mr-1 h-4 w-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Step 3: Enter Measurements ──────────────────────── */}
+          {/* ── Step 3: Enter Measurements / Sizing ─────────────── */}
           {step === "measure" && (
             <div className="space-y-4">
               <div className="rounded-xl border border-amber-200/70 bg-amber-50/50 p-4">
                 <Ruler className="h-5 w-5 text-amber-600 mb-2" />
-                <p className="text-sm font-medium">Enter measurements for {selectedStudent?.name}</p>
+                <p className="text-sm font-medium">
+                  {isSimple ? `Sizing info for ${selectedStudent?.name}` : `Enter measurements for ${selectedStudent?.name}`}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  All values are in <strong>{isMetric ? "centimetres (cm) & kilograms (kg)" : "inches (in) & pounds (lb)"}</strong>.
-                  You can change your unit preference in settings.
+                  {isSimple
+                    ? <>Choose the closest match for your child's current sizes. Leave blank anything you're not sure about.</>
+                    : <>All values are in <strong>{isMetric ? "centimetres (cm) & kilograms (kg)" : "inches (in) & pounds (lb)"}</strong>. You can change your unit preference in settings.</>}
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                {MEASUREMENT_FIELDS.map((field) => {
-                  const val = draft[field.key] ?? "";
-                  const err = validationErrors[field.key];
-                  const unitLabel = field.unitLabel(isMetric);
-                  return (
-                    <div key={field.key}>
-                      <label className="text-sm font-medium">
-                        {field.label}
-                        {field.required && <span className="text-destructive ml-0.5">*</span>}
-                      </label>
-                      <div className="relative mt-1">
-                        <input
-                          type={field.type}
-                          inputMode="decimal"
-                          value={val}
-                          onChange={(e) => updateDraft(field.key, e.target.value)}
-                          placeholder={field.placeholder(isMetric)}
-                          className={cn(
-                            "w-full rounded-lg border bg-white px-3 py-2.5 pr-14 text-sm",
-                            "focus:outline-none focus:ring-1",
-                            err
-                              ? "border-rose-300 focus:border-rose-400 focus:ring-rose-400"
-                              : "border-amber-200 focus:border-amber-400 focus:ring-amber-400",
-                          )}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          {unitLabel}
-                        </span>
-                      </div>
-                      {err && <p className="text-xs text-rose mt-1">{err}</p>}
+              {/* Simple mode: sizing dropdowns */}
+              {isSimple && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SimpleSizingField
+                    label="Clothing Size"
+                    value={draft.clothingSize ?? ""}
+                    onChange={(v) => updateDraft("clothingSize", v)}
+                    options={CLOTHING_SIZE_OPTIONS}
+                    icon={Shirt}
+                  />
+                  <SimpleSizingField
+                    label="Leotard / Costume Size"
+                    value={draft.leotardSize ?? ""}
+                    onChange={(v) => updateDraft("leotardSize", v)}
+                    options={CLOTHING_SIZE_OPTIONS}
+                    icon={Shirt}
+                    optional
+                  />
+                  <SimpleSizingField
+                    label="Shoe Size"
+                    value={draft.shoeSize ?? ""}
+                    onChange={(v) => updateDraft("shoeSize", v)}
+                    options={SHOE_SIZE_OPTIONS}
+                    icon={Ruler}
+                  />
+                  {/* Height (optional numeric) */}
+                  <div>
+                    <label className="text-sm font-medium">Height <span className="text-xs text-muted-foreground">(optional)</span></label>
+                    <div className="relative mt-1">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={draft.height ?? ""}
+                        onChange={(e) => updateDraft("height", e.target.value)}
+                        placeholder={isMetric ? "e.g. 135" : "e.g. 54"}
+                        className={cn(
+                          "w-full rounded-lg border bg-white px-3 py-2.5 pr-14 text-sm",
+                          "focus:outline-none focus:ring-1",
+                          validationErrors.height
+                            ? "border-rose-300 focus:border-rose-400 focus:ring-rose-400"
+                            : "border-amber-200 focus:border-amber-400 focus:ring-amber-400",
+                        )}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        {isMetric ? "cm" : "in"}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
+                    {validationErrors.height && <p className="text-xs text-rose mt-1">{validationErrors.height}</p>}
+                  </div>
+                </div>
+              )}
 
-              {/* Height helper for imperial */}
-              {!isMetric && (
+              {/* Full mode: all body measurement fields */}
+              {!isSimple && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {MEASUREMENT_FIELDS.map((field) => {
+                    const val = draft[field.key] ?? "";
+                    const err = validationErrors[field.key];
+                    const unitLabel = field.unitLabel(isMetric);
+                    return (
+                      <div key={field.key}>
+                        <label className="text-sm font-medium">
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-0.5">*</span>}
+                        </label>
+                        <div className="relative mt-1">
+                          <input
+                            type={field.type}
+                            inputMode="decimal"
+                            value={val}
+                            onChange={(e) => updateDraft(field.key, e.target.value)}
+                            placeholder={field.placeholder(isMetric)}
+                            className={cn(
+                              "w-full rounded-lg border bg-white px-3 py-2.5 pr-14 text-sm",
+                              "focus:outline-none focus:ring-1",
+                              err
+                                ? "border-rose-300 focus:border-rose-400 focus:ring-rose-400"
+                                : "border-amber-200 focus:border-amber-400 focus:ring-amber-400",
+                            )}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            {unitLabel}
+                          </span>
+                        </div>
+                        {err && <p className="text-xs text-rose mt-1">{err}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Height helper for imperial (full mode only) */}
+              {!isMetric && !isSimple && (
                 <div className="rounded-lg border border-amber-200/30 bg-amber-50/20 p-3 text-xs text-muted-foreground">
                   <strong>Height in imperial:</strong> Enter total inches (e.g., 54 for 4 ft 6 in).
                   The wizard will convert this to feet/inches on the review screen.
@@ -411,7 +530,7 @@ export default function MeasurementWizard({
                 <textarea
                   value={draft.notes ?? ""}
                   onChange={(e) => updateDraft("notes", e.target.value)}
-                  placeholder="E.g., measured wearing dance shoes, child was fidgety..."
+                  placeholder={isSimple ? "Any special sizing concerns or preferences..." : "E.g., measured wearing dance shoes, child was fidgety..."}
                   rows={2}
                   className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
                 />
@@ -449,7 +568,9 @@ export default function MeasurementWizard({
           {/* ── Step 4: Review ───────────────────────────────────── */}
           {step === "review" && (
             <div className="space-y-4">
-              <h4 className="font-display text-lg font-semibold">Review measurements</h4>
+              <h4 className="font-display text-lg font-semibold">
+                {isSimple ? "Review sizing info" : "Review measurements"}
+              </h4>
               <p className="text-sm text-muted-foreground">
                 Please double-check these values before submitting to the studio.
               </p>
@@ -461,7 +582,26 @@ export default function MeasurementWizard({
                   <span className="text-sm font-medium">{selectedStudent?.name}</span>
                 </div>
 
-                {MEASUREMENT_FIELDS.map((field) => {
+                {/* Simple sizing review */}
+                {isSimple && <>
+                  {draft.clothingSize && <ReviewRow icon={Shirt} label="Clothing Size" value={draft.clothingSize} />}
+                  {draft.leotardSize && <ReviewRow icon={Shirt} label="Leotard / Costume Size" value={draft.leotardSize} />}
+                  {draft.shoeSize && <ReviewRow icon={Ruler} label="Shoe Size" value={draft.shoeSize} />}
+                  {draft.height && (
+                    <ReviewRow
+                      icon={Ruler}
+                      label="Height"
+                      value={(() => {
+                        const prevH = prevMeasurement?.heightCm;
+                        const currH = isMetric ? Number(draft.height) : ftInToCm(...parseHeightImperial(draft.height));
+                        return formatHeight(currH, units);
+                      })()}
+                    />
+                  )}
+                </>}
+
+                {/* Full measurement review */}
+                {!isSimple && MEASUREMENT_FIELDS.map((field) => {
                   const rawVal = draft[field.key];
                   if (!rawVal) return null;
                   const numVal = Number(rawVal);
@@ -481,7 +621,6 @@ export default function MeasurementWizard({
                           <span className="text-xs text-muted-foreground/60 line-through">{prevFormatted}</span>
                         )}
                         <span className="text-sm font-semibold">{formatted}</span>
-                        {/* Growth indicator */}
                         {prevMeasurement && field.getPrevValue(prevMeasurement) != null && numVal !== 0 && (
                           <GrowthArrow
                             current={numVal}
@@ -506,13 +645,13 @@ export default function MeasurementWizard({
                 {/* Empty state */}
                 {Object.values(draft).filter((v) => v).length === 0 && (
                   <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    No measurements entered. Go back to add some.
+                    {isSimple ? "No sizing info entered. Go back to add some." : "No measurements entered. Go back to add some."}
                   </div>
                 )}
               </div>
 
               {/* Previous measurements comparison */}
-              {prevMeasurement && (
+              {prevMeasurement && !isSimple && (
                 <div className="rounded-xl border border-amber-200/50 bg-amber-50/20 p-4">
                   <p className="text-sm font-semibold mb-3">Previous Measurements</p>
                   <div className="grid grid-cols-4 gap-2">
@@ -570,10 +709,13 @@ export default function MeasurementWizard({
                 <Check className="h-8 w-8 text-teal" />
               </div>
               <div>
-                <h4 className="font-display text-xl font-semibold">Measurements submitted!</h4>
+                <h4 className="font-display text-xl font-semibold">
+                  {isSimple ? "Sizing info submitted!" : "Measurements submitted!"}
+                </h4>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Your measurements for {selectedStudent?.name} have been sent to the studio for review.
-                  You'll be notified when they're approved.
+                  {isSimple
+                    ? `Your sizing info for ${selectedStudent?.name} has been sent to the studio. Staff will use this for costume sizing.`
+                    : `Your measurements for ${selectedStudent?.name} have been sent to the studio for review. You'll be notified when they're approved.`}
                 </p>
               </div>
               <div className="rounded-lg border border-amber-200 bg-amber-50/30 p-4 text-left">
@@ -581,19 +723,23 @@ export default function MeasurementWizard({
                 <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Studio staff will review and approve your measurements
+                    {isSimple
+                      ? "Studio staff will review your sizing info and recommend costume sizes"
+                      : "Studio staff will review and approve your measurements"}
                   </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    AI auto-sizing will recommend the best costume size
-                  </li>
+                  {!isSimple && (
+                    <li className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
+                      AI auto-sizing will recommend the best costume size
+                    </li>
+                  )}
                   <li className="flex items-start gap-2">
                     <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
                     You'll be able to approve or request a different size
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="h-3.5 w-3.5 text-teal mt-0.5 shrink-0" />
-                    Submit updated measurements any time your child grows
+                    Submit updated info any time your child grows
                   </li>
                 </ul>
               </div>
@@ -663,6 +809,12 @@ function parseHeightImperial(raw: string): [number, number] {
 
 function measurementToDraft(m: StudentMeasurement, units: "metric" | "imperial"): MeasurementDraft {
   const d: MeasurementDraft = {};
+  // Simple sizing fields (always populate)
+  if (m.clothingSize) d.clothingSize = m.clothingSize;
+  if (m.leotardSize) d.leotardSize = m.leotardSize;
+  if (m.shoeSize) d.shoeSize = m.shoeSize;
+  if (m.notes) d.notes = m.notes;
+  // Body measurements
   if (units === "metric") {
     if (m.heightCm != null) d.height = String(Math.round(m.heightCm));
     if (m.weightKg != null) d.weight = String(Math.round(m.weightKg));
@@ -680,8 +832,6 @@ function measurementToDraft(m: StudentMeasurement, units: "metric" | "imperial")
     if (m.girthCm != null) d.girth = String(cmToIn(m.girthCm));
     if (m.inseamCm != null) d.inseam = String(cmToIn(m.inseamCm));
   }
-  if (m.shoeSize) d.shoeSize = m.shoeSize;
-  if (m.notes) d.notes = m.notes;
   return d;
 }
 

@@ -49,6 +49,7 @@ export const studio: Studio = {
   },
   settings: {
     preferredUnits: "imperial",
+    measurementCollectionMode: "parent_size_only",
     regional: {
       country: "US",
       timezone: "America/Los_Angeles",
@@ -735,12 +736,12 @@ export const costumeAssignments: CostumeAssignment[] = [
 /* ── Student Measurements — sample measurement profiles ─────────── */
 
 export const studentMeasurements: StudentMeasurement[] = [
-  { id: "sm_s1", studioId: studio.id, studentId: "s1", heightCm: 132.5, weightKg: 28.0, chestCm: 64.0, waistCm: 56.0, hipsCm: 68.0, girthCm: 118.0, inseamCm: 58.0, shoeSize: "1", status: "approved", measuredAt: daysAgo(30), createdAt: daysAgo(30) },
-  { id: "sm_s2", studioId: studio.id, studentId: "s2", heightCm: 145.0, weightKg: 35.0, chestCm: 72.0, waistCm: 62.0, hipsCm: 76.0, girthCm: 132.0, inseamCm: 64.0, shoeSize: "3", status: "approved", measuredAt: daysAgo(25), createdAt: daysAgo(25) },
-  { id: "sm_s3", studioId: studio.id, studentId: "s3", heightCm: 128.0, weightKg: 25.0, chestCm: 60.0, waistCm: 52.0, hipsCm: 64.0, girthCm: 112.0, inseamCm: 54.0, shoeSize: "13", status: "pending", submittedBy: "cg_primary_p3", createdAt: daysAgo(3) },
-  { id: "sm_s5", studioId: studio.id, studentId: "s5", heightCm: 160.0, weightKg: 48.0, chestCm: 82.0, waistCm: 68.0, hipsCm: 88.0, girthCm: 148.0, inseamCm: 72.0, shoeSize: "6", status: "approved", measuredAt: daysAgo(20), createdAt: daysAgo(20) },
-  { id: "sm_s7", studioId: studio.id, studentId: "s7", heightCm: 140.0, weightKg: 32.0, chestCm: 68.0, waistCm: 58.0, hipsCm: 72.0, girthCm: 126.0, inseamCm: 60.0, shoeSize: "2", status: "draft", createdAt: daysAgo(1) },
-  { id: "sm_s10", studioId: studio.id, studentId: "s10", heightCm: 155.0, weightKg: 42.0, chestCm: 78.0, waistCm: 65.0, hipsCm: 84.0, girthCm: 140.0, inseamCm: 68.0, shoeSize: "5", status: "approved", measuredAt: daysAgo(15), createdAt: daysAgo(15) },
+  { id: "sm_s1", studioId: studio.id, studentId: "s1", clothingSize: "Child Medium", leotardSize: "Child Medium", heightCm: 132.5, weightKg: 28.0, chestCm: 64.0, waistCm: 56.0, hipsCm: 68.0, girthCm: 118.0, inseamCm: 58.0, shoeSize: "1", source: "studio", status: "approved", measuredAt: daysAgo(30), measuredBy: "Mara Delgado", createdAt: daysAgo(30) },
+  { id: "sm_s2", studioId: studio.id, studentId: "s2", clothingSize: "Child Large", leotardSize: "Child Large", heightCm: 145.0, weightKg: 35.0, chestCm: 72.0, waistCm: 62.0, hipsCm: 76.0, girthCm: 132.0, inseamCm: 64.0, shoeSize: "3", source: "studio", status: "approved", measuredAt: daysAgo(25), measuredBy: "Theo Nakamura", createdAt: daysAgo(25) },
+  { id: "sm_s3", studioId: studio.id, studentId: "s3", clothingSize: "Child Small", shoeSize: "13", source: "parent", status: "size_provided", submittedBy: "cg_primary_p3", createdAt: daysAgo(3) },
+  { id: "sm_s5", studioId: studio.id, studentId: "s5", clothingSize: "Adult Small", leotardSize: "Adult Small", heightCm: 160.0, weightKg: 48.0, chestCm: 82.0, waistCm: 68.0, hipsCm: 88.0, girthCm: 148.0, inseamCm: 72.0, shoeSize: "6", source: "hybrid", status: "approved", measuredAt: daysAgo(20), measuredBy: "Sasha Berg", createdAt: daysAgo(20) },
+  { id: "sm_s7", studioId: studio.id, studentId: "s7", clothingSize: "Child Medium", shoeSize: "2", heightCm: 140.0, source: "parent", status: "parent_submitted", submittedBy: "cg_primary_p1", createdAt: daysAgo(1) },
+  { id: "sm_s10", studioId: studio.id, studentId: "s10", clothingSize: "Child Large", heightCm: 155.0, weightKg: 42.0, chestCm: 78.0, waistCm: 65.0, hipsCm: 84.0, girthCm: 140.0, inseamCm: 68.0, shoeSize: "5", source: "studio", status: "approved", measuredAt: daysAgo(15), measuredBy: "Priya Anand", createdAt: daysAgo(15) },
 ];
 
 /* ── Sizing Charts — vendor size references ─────────────────────── */
