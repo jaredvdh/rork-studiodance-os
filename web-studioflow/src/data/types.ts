@@ -170,6 +170,7 @@ export interface Studio {
   brandColor: string;
   initials: string;
   logoUrl?: string;
+  bannerUrl?: string;
   vertical: Vertical;
   /** Structured studio address (replaces single city string for intl support). */
   address?: Address;

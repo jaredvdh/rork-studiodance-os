@@ -1,22 +1,35 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Camera, Check, CheckCircle, ExternalLink, Globe, Loader2, RefreshCw, Ruler, Save, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Camera,
+  Check,
+  CheckCircle,
+  ExternalLink,
+  Globe,
+  Image,
+  Loader2,
+  Palette,
+  RefreshCw,
+  Save,
+  ShieldAlert,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
-import { useUnitPreference } from "@/hooks/useUnitPreference";
-import type { Vertical, UnitSystem, CountryCode, CurrencyCode, DateFormat, TimeFormat, MeasurementSystem } from "@/data/types";
-import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology, MODULE_LABELS } from "@/data/terminology";
+import type { Vertical } from "@/data/types";
+import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology, MODULE_LABELS, type ModuleKey } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 import { getStripeConnectState, startStripeConnect } from "@/lib/stripe";
-import { uploadStudioLogo, removeStudioLogo } from "@/lib/storage";
+import { uploadStudioLogo, removeStudioLogo, uploadFile, STORAGE_BUCKETS, deleteFile } from "@/lib/storage";
 import {
   ALL_COUNTRIES,
-  COUNTRY_CONFIGS,
   CURRENCY_CONFIGS,
   countryLabel,
   getCountryConfig,
-  type CountryConfig,
 } from "@/lib/locale";
 
 function initialsFrom(name: string): string {
@@ -36,16 +49,31 @@ const BRAND_COLORS = [
   { label: "Amber", value: "32 82% 48%", swatch: "hsl(32 82% 48%)" },
   { label: "Forest", value: "152 46% 36%", swatch: "hsl(152 46% 36%)" },
   { label: "Slate", value: "220 12% 40%", swatch: "hsl(220 12% 40%)" },
+  { label: "Rose gold", value: "350 25% 72%", swatch: "hsl(350 25% 72%)" },
+  { label: "Lavender", value: "270 35% 58%", swatch: "hsl(270 35% 58%)" },
+  { label: "Coral", value: "16 82% 52%", swatch: "hsl(16 82% 52%)" },
+  { label: "Midnight", value: "240 16% 18%", swatch: "hsl(240 16% 18%)" },
 ];
 
 export default function Settings() {
   const { studio, updateStudio } = useStudio();
   const fileRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
+
+  // Track original studio state so we know what changed
+  const original = useMemo(() => ({ ...studio, settings: { ...studio.settings } }), []);
+
   const [name, setName] = useState(studio.name);
   const [tagline, setTagline] = useState(studio.tagline);
   const [city, setCity] = useState(studio.city);
+  const [brandColor, setBrandColor] = useState(studio.brandColor);
+  const [customColorInput, setCustomColorInput] = useState("");
+  const [featureToggles, setFeatureToggles] = useState<Record<string, boolean>>(
+    studio.settings?.featureToggles ?? {},
+  );
 
   const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,12 +84,8 @@ export default function Settings() {
       updateStudio({ logoUrl: url });
       toast.success("Logo uploaded to cloud storage");
     } catch {
-      // Fallback to base64 for development
       const reader = new FileReader();
-      reader.onload = () => {
-        const url = reader.result as string;
-        updateStudio({ logoUrl: url });
-      };
+      reader.onload = () => updateStudio({ logoUrl: reader.result as string });
       reader.readAsDataURL(file);
       toast("Logo saved locally (cloud storage unavailable)");
     } finally {
@@ -72,7 +96,6 @@ export default function Settings() {
 
   const handleRemoveLogo = async () => {
     try {
-      // Try to remove from storage if it's a Supabase URL
       if (studio.logoUrl?.includes("supabase")) {
         const path = studio.logoUrl.split("/").slice(-2).join("/");
         await removeStudioLogo(path);
@@ -82,23 +105,137 @@ export default function Settings() {
     toast("Logo removed");
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerUploading(true);
+    try {
+      const result = await uploadFile(STORAGE_BUCKETS.STUDIO_LOGOS, file, studio.id, "banner");
+      updateStudio({ bannerUrl: result.publicUrl });
+      toast.success("Banner uploaded to cloud storage");
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => updateStudio({ bannerUrl: reader.result as string });
+      reader.readAsDataURL(file);
+      toast("Banner saved locally (cloud storage unavailable)");
+    } finally {
+      setBannerUploading(false);
+    }
+    e.target.value = "";
+  };
+
+  const handleRemoveBanner = async () => {
+    try {
+      if (studio.bannerUrl?.includes("supabase")) {
+        const path = studio.bannerUrl.split("/").slice(-2).join("/");
+        await deleteFile(STORAGE_BUCKETS.STUDIO_LOGOS, path);
+      }
+    } catch { /* ignore */ }
+    updateStudio({ bannerUrl: undefined });
+    toast("Banner removed");
+  };
+
+  const handleCustomColorApply = () => {
+    const trimmed = customColorInput.trim();
+    if (!trimmed) return;
+
+    // Support HSL format: "H S% L%" (e.g. "220 60% 45%")
+    const hslMatch = trimmed.match(/^(\d{1,3})\s+(\d{1,3})%\s+(\d{1,3})%$/);
+    if (hslMatch) {
+      const [, h, s, l] = hslMatch;
+      const color = `${h} ${s}% ${l}%`;
+      setBrandColor(color);
+      updateStudio({ brandColor: color });
+      setCustomColorInput("");
+      toast.success("Custom brand colour applied");
+      return;
+    }
+
+    // Support hex: "#rrggbb"
+    const hexMatch = trimmed.match(/^#?([0-9a-fA-F]{6})$/);
+    if (hexMatch) {
+      const hex = hexMatch[1];
+      const r = parseInt(hex.slice(0, 2), 16) / 255;
+      const g = parseInt(hex.slice(2, 4), 16) / 255;
+      const b = parseInt(hex.slice(4, 6), 16) / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      let hVal = 0;
+      let sVal = 0;
+      if (max !== min) {
+        const d = max - min;
+        sVal = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === r) hVal = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+        else if (max === g) hVal = ((b - r) / d + 2) * 60;
+        else hVal = ((r - g) / d + 4) * 60;
+      }
+      const color = `${Math.round(hVal)} ${Math.round(sVal * 100)}% ${Math.round(l * 100)}%`;
+      setBrandColor(color);
+      updateStudio({ brandColor: color });
+      setCustomColorInput("");
+      toast.success("Custom brand colour applied");
+      return;
+    }
+
+    toast.error("Enter a hex colour (#e85d75) or HSL (350 74% 60%)");
+  };
+
+  const handleToggleFeature = (key: ModuleKey, enabled: boolean) => {
+    const next = { ...featureToggles, [key]: enabled };
+    setFeatureToggles(next);
+  };
+
   const handleSave = () => {
-    updateStudio({
-      name: name.trim() || "StudioFlow",
-      tagline: tagline.trim(),
-      city: city.trim(),
-      initials: initialsFrom(name.trim() || "SF"),
-    });
-    toast("Studio branding updated");
+    const updates: Record<string, unknown> = {};
+    const n = name.trim() || "StudioFlow";
+    const t = tagline.trim();
+    const c = city.trim();
+    if (n !== studio.name) updates.name = n;
+    if (t !== studio.tagline) updates.tagline = t;
+    if (c !== studio.city) updates.city = c;
+    if (n !== studio.name || t !== studio.tagline || c !== studio.city) {
+      updates.initials = initialsFrom(n);
+    }
+    if (brandColor !== studio.brandColor) {
+      updates.brandColor = brandColor;
+    }
+
+    // Check if feature toggles changed
+    const origToggles = original.settings?.featureToggles ?? {};
+    const togglesChanged = Object.keys({ ...origToggles, ...featureToggles }).some(
+      (k) => (origToggles[k] ?? true) !== (featureToggles[k] ?? true),
+    );
+    if (togglesChanged) {
+      updates.settings = {
+        ...studio.settings,
+        featureToggles: featureToggles,
+      };
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast("No changes to save");
+      return;
+    }
+
+    updateStudio(updates as Parameters<typeof updateStudio>[0]);
+    toast.success("Settings saved");
   };
 
   const changed =
     name !== studio.name ||
     tagline !== studio.tagline ||
-    city !== studio.city;
+    city !== studio.city ||
+    brandColor !== studio.brandColor ||
+    (() => {
+      const origToggles = original.settings?.featureToggles ?? {};
+      return Object.keys({ ...origToggles, ...featureToggles }).some(
+        (k) => (origToggles[k] ?? true) !== (featureToggles[k] ?? true),
+      );
+    })();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 animate-float-up">
+    <div className="mx-auto max-w-2xl space-y-8 pb-12 animate-float-up">
       {/* Page heading */}
       <div>
         <h2 className="font-display text-2xl font-semibold tracking-tight">Studio settings</h2>
@@ -108,68 +245,33 @@ export default function Settings() {
       </div>
 
       {/* Logo */}
-      <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold">Studio logo</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Appears in the sidebar, parent portal, and printed materials.
-            </p>
-          </div>
-        </div>
+      <ImageUploadSection
+        title="Studio logo"
+        description="Appears in the sidebar, parent portal, and printed materials."
+        imageUrl={studio.logoUrl}
+        initials={studio.initials}
+        uploading={logoUploading}
+        onUpload={handleLogoUpload}
+        onRemove={handleRemoveLogo}
+        fileRef={fileRef}
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        helpText="PNG, JPEG, WebP or SVG. Square images work best."
+      />
 
-        <div className="mt-5 flex items-start gap-5">
-          {/* Preview */}
-          <div
-            className={cn(
-              "grid h-20 w-20 shrink-0 place-items-center rounded-2xl overflow-hidden",
-              !studio.logoUrl && "bg-primary",
-            )}
-          >
-            {studio.logoUrl ? (
-              <img
-                src={studio.logoUrl}
-                alt="Studio logo"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="font-display text-2xl font-semibold text-primary-foreground">
-                {studio.initials}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={logoUploading}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
-            >
-              {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-              {logoUploading ? "Uploading…" : studio.logoUrl ? "Change logo" : "Upload logo"}
-            </button>
-            {studio.logoUrl && (
-              <button
-                onClick={handleRemoveLogo}
-                className="ml-2 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Remove
-              </button>
-            )}
-            <p className="text-[12px] text-muted-foreground">
-              PNG, JPEG, WebP or SVG. Square images work best.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Banner */}
+      <ImageUploadSection
+        title="Portal banner"
+        description="Hero image shown on your public registration page and parent portal. Use a wide photo of your studio space or students."
+        imageUrl={studio.bannerUrl}
+        initials={undefined}
+        uploading={bannerUploading}
+        onUpload={handleBannerUpload}
+        onRemove={handleRemoveBanner}
+        fileRef={bannerRef}
+        accept="image/png,image/jpeg,image/webp"
+        helpText="PNG, JPEG or WebP. 1200×400 or wider recommended."
+        wide
+      />
 
       {/* Studio info */}
       <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
@@ -228,7 +330,7 @@ export default function Settings() {
         <div>
           <h3 className="text-sm font-semibold">Studio type</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Changes how labels appear throughout the app — Student/Athlete/Member, Instructor/Coach/Teacher, and recital/competition/workshop naming.
+            Changes how labels appear throughout the app — Student/Athlete/Member, Instructor/Coach/Teacher, and event naming.
           </p>
         </div>
         <div className="mt-4">
@@ -246,6 +348,107 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* Brand colour */}
+      <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-rose/10">
+            <Palette className="h-4.5 w-4.5 text-rose" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Brand colour</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Used for the sidebar accent, buttons, and key interactive elements across the app.
+            </p>
+          </div>
+        </div>
+
+        {/* Live preview */}
+        <div className="mb-5 flex items-center gap-4 rounded-xl border border-border/60 bg-secondary/30 p-4">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+            Preview
+          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className="h-8 w-8 rounded-lg shadow-soft shrink-0"
+              style={{ backgroundColor: `hsl(${brandColor})` }}
+            />
+            <button
+              className="rounded-full px-4 py-1.5 text-[13px] font-semibold text-primary-foreground shadow-lift"
+              style={{ backgroundColor: `hsl(${brandColor})` }}
+            >
+              Sample button
+            </button>
+            <span
+              className="h-2 w-20 rounded-full shrink-0 opacity-60"
+              style={{ backgroundColor: `hsl(${brandColor})` }}
+            />
+            <span className="font-mono text-xs text-muted-foreground">{brandColor}</span>
+          </div>
+        </div>
+
+        {/* Preset swatches */}
+        <div className="flex flex-wrap gap-2.5 mb-5">
+          {BRAND_COLORS.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => {
+                setBrandColor(c.value);
+                updateStudio({ brandColor: c.value });
+              }}
+              className={cn(
+                "relative grid h-10 w-10 place-items-center rounded-full transition",
+                brandColor === c.value
+                  ? "ring-2 ring-ring ring-offset-2 ring-offset-card"
+                  : "hover:scale-110",
+              )}
+              title={c.label}
+            >
+              <span
+                className="h-7 w-7 rounded-full shadow-soft"
+                style={{ backgroundColor: c.swatch }}
+              />
+              {brandColor === c.value && (
+                <Check className="absolute h-4 w-4 text-white drop-shadow" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom colour input */}
+        <div className="rounded-xl border border-border/60 bg-secondary/30 p-4">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-3">
+            Custom colour
+          </p>
+          <div className="flex items-center gap-2.5">
+            <input
+              type="text"
+              value={customColorInput}
+              onChange={(e) => setCustomColorInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCustomColorApply()}
+              placeholder="e.g. #e85d75 or 220 60% 45%"
+              className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm font-mono outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
+            />
+            <button
+              onClick={handleCustomColorApply}
+              disabled={!customColorInput.trim()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lift transition hover:opacity-90 disabled:opacity-40"
+            >
+              Apply
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Enter a hex code (#e85d75) or HSL values (350 74% 60%). Presets are applied instantly; this field lets you use any colour.
+          </p>
+        </div>
+      </section>
+
+      {/* Feature Toggles */}
+      <FeatureTogglesSection
+        featureToggles={featureToggles}
+        vertical={studio.vertical}
+        onToggle={handleToggleFeature}
+      />
+
       {/* Enabled Modules Preview */}
       <EnabledModulesSection />
 
@@ -257,39 +460,6 @@ export default function Settings() {
 
       {/* Stripe Connect */}
       <StripeConnectSection />
-
-      {/* Brand color */}
-      <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
-        <div>
-          <h3 className="text-sm font-semibold">Brand colour</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Used for the sidebar accent and key interactive elements.
-          </p>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          {BRAND_COLORS.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => updateStudio({ brandColor: c.value })}
-              className={cn(
-                "relative grid h-10 w-10 place-items-center rounded-full transition",
-                studio.brandColor === c.value
-                  ? "ring-2 ring-ring ring-offset-2 ring-offset-card"
-                  : "hover:scale-110",
-              )}
-              title={c.label}
-            >
-              <span
-                className="h-7 w-7 rounded-full shadow-soft"
-                style={{ backgroundColor: c.swatch }}
-              />
-              {studio.brandColor === c.value && (
-                <Check className="absolute h-4 w-4 text-white drop-shadow" />
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
 
       {/* Save */}
       <div className="flex items-center gap-3">
@@ -304,21 +474,223 @@ export default function Settings() {
         {changed && (
           <span className="text-xs text-muted-foreground">You have unsaved changes</span>
         )}
+        {!changed && (
+          <span className="text-xs text-muted-foreground">All changes saved</span>
+        )}
       </div>
     </div>
   );
 }
 
+/* ── Image upload section (logo + banner) ───────────────────────── */
+
+function ImageUploadSection({
+  title,
+  description,
+  imageUrl,
+  initials,
+  uploading,
+  onUpload,
+  onRemove,
+  fileRef,
+  accept,
+  helpText,
+  wide = false,
+}: {
+  title: string;
+  description: string;
+  imageUrl?: string;
+  initials?: string;
+  uploading: boolean;
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  accept: string;
+  helpText: string;
+  wide?: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+
+      {imageUrl ? (
+        <div className="mt-5 space-y-3">
+          <div
+            className={cn(
+              "overflow-hidden rounded-xl border border-border/60",
+              wide ? "aspect-[3/1]" : "h-20 w-20",
+            )}
+          >
+            <img
+              src={imageUrl}
+              alt={title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={accept}
+              className="hidden"
+              onChange={onUpload}
+            />
+            <button
+              onClick={() => (fileRef as React.RefObject<HTMLInputElement>).current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              {uploading ? "Uploading…" : "Change image"}
+            </button>
+            <button
+              onClick={onRemove}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5">
+          {initials ? (
+            <div className="flex items-start gap-5">
+              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-primary">
+                <span className="font-display text-2xl font-semibold text-primary-foreground">
+                  {initials}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <input
+                  ref={fileRef as React.RefObject<HTMLInputElement>}
+                  type="file"
+                  accept={accept}
+                  className="hidden"
+                  onChange={onUpload}
+                />
+                <button
+                  onClick={() => (fileRef as React.RefObject<HTMLInputElement>).current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {uploading ? "Uploading…" : "Upload image"}
+                </button>
+                <p className="text-[12px] text-muted-foreground">{helpText}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-secondary/30">
+                <div className="text-center">
+                  <Image className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-1 text-xs text-muted-foreground">No banner set</p>
+                </div>
+              </div>
+              <input
+                ref={fileRef as React.RefObject<HTMLInputElement>}
+                type="file"
+                accept={accept}
+                className="hidden"
+                onChange={onUpload}
+              />
+              <button
+                onClick={() => (fileRef as React.RefObject<HTMLInputElement>).current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                {uploading ? "Uploading…" : "Upload banner"}
+              </button>
+              <p className="text-[12px] text-muted-foreground">{helpText}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── Feature Toggles section ────────────────────────────────────── */
+
+function FeatureTogglesSection({
+  featureToggles,
+  vertical,
+  onToggle,
+}: {
+  featureToggles: Record<string, boolean>;
+  vertical: Vertical;
+  onToggle: (key: ModuleKey, enabled: boolean) => void;
+}) {
+  const term = getTerminology(vertical);
+  const allModules = term.enabledModules;
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber/10">
+          <CheckCircle className="h-4.5 w-4.5 text-amber" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold">Feature toggles</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Enable or disable modules throughout your dashboard. Hidden modules won't appear in the sidebar or navigation.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        {allModules.map((key) => {
+          const isToggled = featureToggles[key] ?? true; // default to enabled
+          return (
+            <div
+              key={key}
+              className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:bg-secondary/50"
+            >
+              <div>
+                <span className="text-sm font-medium">{MODULE_LABELS[key]}</span>
+                <span className="ml-2 text-[11px] text-muted-foreground">
+                  {isToggled ? "Visible in sidebar" : "Hidden"}
+                </span>
+              </div>
+              <button
+                onClick={() => onToggle(key, !isToggled)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                  isToggled ? "bg-primary" : "bg-muted",
+                )}
+                role="switch"
+                aria-checked={isToggled}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-4.5 w-4.5 rounded-full bg-white shadow-sm transition-transform",
+                    isToggled ? "translate-x-5.5" : "translate-x-1",
+                  )}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 text-[11px] text-muted-foreground">
+        Your default modules are determined by your studio type. You can override them here. Hidden modules won't lose any data — they're just hidden from view.
+      </p>
+    </section>
+  );
+}
+
+/* ── Unit Preference section ────────────────────────────────────── */
+
 function UnitPreferenceSection() {
   const { studio, updateStudio } = useStudio();
-  const current = (studio.settings?.preferredUnits ?? "metric") as UnitSystem;
-
-  const handleChange = (units: UnitSystem) => {
-    updateStudio({
-      settings: { ...studio.settings, preferredUnits: units },
-    });
-    toast.success(`Measurement units set to ${units === "metric" ? "Metric (cm/kg)" : "Imperial (ft-in/lb)"}`);
-  };
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
@@ -333,50 +705,55 @@ function UnitPreferenceSection() {
         {([
           { value: "metric" as const, label: "Metric", desc: "cm · kg", icon: "🇪🇺" },
           { value: "imperial" as const, label: "Imperial", desc: "ft/in · lb", icon: "🇺🇸" },
-        ]).map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => handleChange(opt.value)}
-            className={cn(
-              "flex flex-1 max-w-60 flex-col items-center gap-2 rounded-2xl border p-5 transition-all",
-              current === opt.value
-                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
-                : "border-border/70 bg-card hover:bg-secondary/50",
-            )}
-          >
-            <span className="text-2xl">{opt.icon}</span>
-            <div className="text-center">
-              <p className={cn(
-                "text-sm font-semibold",
-                current === opt.value && "text-primary",
-              )}>
-                {opt.label}
-              </p>
-              <p className="text-xs text-muted-foreground">{opt.desc}</p>
-            </div>
-            {current === opt.value && (
-              <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                Active
-              </span>
-            )}
-          </button>
-        ))}
+        ]).map((opt) => {
+          const current = (studio.settings?.preferredUnits ?? "metric") as string;
+          const active = current === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() =>
+                updateStudio({
+                  settings: { ...studio.settings, preferredUnits: opt.value },
+                })
+              }
+              className={cn(
+                "flex flex-1 max-w-60 flex-col items-center gap-2 rounded-2xl border p-5 transition-all",
+                active
+                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                  : "border-border/70 bg-card hover:bg-secondary/50",
+              )}
+            >
+              <span className="text-2xl">{opt.icon}</span>
+              <div className="text-center">
+                <p className={cn("text-sm font-semibold", active && "text-primary")}>{opt.label}</p>
+                <p className="text-xs text-muted-foreground">{opt.desc}</p>
+              </div>
+              {active && (
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  Active
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Example: 135 cm → {current === "metric" ? "135 cm" : "4 ft 5 in"} · 32 kg → {current === "metric" ? "32 kg" : "71 lb"}
-      </p>
     </section>
   );
 }
 
-/* ── Stripe Connect section ───────────────────────────────────────── */
+/* ── Stripe Connect section ─────────────────────────────────────── */
 
 function StripeConnectSection() {
   const { studio } = useStudio();
   const { data: state, isLoading, refetch } = useQuery({
     queryKey: ["stripe-connect", studio.id],
     queryFn: () => getStripeConnectState(studio.id),
-    refetchInterval: (query) => (query.state.data as Awaited<ReturnType<typeof getStripeConnectState>>)?.status === "pending" ? 5000 : false,
+    refetchInterval: (query) =>
+      query.state.data &&
+      typeof query.state.data === "object" &&
+      (query.state.data as Awaited<ReturnType<typeof getStripeConnectState>>).status === "pending"
+        ? 5000
+        : false,
   });
 
   const handleConnect = async () => {
@@ -428,7 +805,11 @@ function StripeConnectSection() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", config.chip)}>
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <StatusIcon className={cn("h-5 w-5", state?.status === "pending" && "animate-spin")} />}
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <StatusIcon className={cn("h-5 w-5", state?.status === "pending" && "animate-spin")} />
+            )}
           </div>
           <div>
             <h3 className="text-sm font-semibold">Stripe Connect</h3>
@@ -440,10 +821,14 @@ function StripeConnectSection() {
               {state?.status === "connected" && (
                 <>
                   {state?.chargesEnabled && (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">Charges enabled</span>
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                      Charges enabled
+                    </span>
                   )}
                   {state?.payoutsEnabled && (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">Payouts enabled</span>
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                      Payouts enabled
+                    </span>
                   )}
                 </>
               )}
@@ -475,81 +860,13 @@ function StripeConnectSection() {
   );
 }
 
-/* ── Regional Settings section ────────────────────────────────────── */
-
-const DATE_FORMAT_OPTIONS: { value: DateFormat; label: string; example: string }[] = [
-  { value: "DD/MM/YYYY", label: "DD/MM/YYYY", example: "05/06/2026" },
-  { value: "MM/DD/YYYY", label: "MM/DD/YYYY", example: "06/05/2026" },
-  { value: "YYYY-MM-DD", label: "YYYY-MM-DD", example: "2026-06-05" },
-];
-
-const TIME_FORMAT_OPTIONS: { value: TimeFormat; label: string; example: string }[] = [
-  { value: "12h", label: "12-hour", example: "2:30 PM" },
-  { value: "24h", label: "24-hour", example: "14:30" },
-];
-
-const MEASUREMENT_OPTIONS: { value: MeasurementSystem; label: string; desc: string }[] = [
-  { value: "metric", label: "Metric", desc: "cm · kg" },
-  { value: "imperial", label: "Imperial", desc: "ft/in · lb" },
-];
+/* ── Regional Settings section ──────────────────────────────────── */
 
 function RegionalSettingsSection() {
   const { studio, updateStudio } = useStudio();
   const regional = studio.settings?.regional;
   const country = regional?.country ?? "US";
   const countryCfg = getCountryConfig(country);
-
-  const handleCountryChange = (code: CountryCode) => {
-    const cfg = getCountryConfig(code);
-    updateStudio({
-      settings: {
-        ...studio.settings,
-        regional: {
-          country: code,
-          timezone: cfg.defaultTimezone,
-          currency: cfg.currency,
-          dateFormat: cfg.dateFormat,
-          timeFormat: cfg.timeFormat,
-          measurementSystem: (studio.settings?.preferredUnits ?? cfg.measurementSystem) as MeasurementSystem,
-        },
-        preferredUnits: cfg.measurementSystem,
-      },
-    });
-    toast.success(`Regional settings set to ${countryLabel(code)}`);
-  };
-
-  const handleCurrencyChange = (currency: CurrencyCode) => {
-    if (!regional) return;
-    updateStudio({
-      settings: { ...studio.settings, regional: { ...regional, currency } },
-    });
-    toast.success(`Currency set to ${currency}`);
-  };
-
-  const handleDateFormatChange = (dateFormat: DateFormat) => {
-    if (!regional) return;
-    updateStudio({
-      settings: { ...studio.settings, regional: { ...regional, dateFormat } },
-    });
-  };
-
-  const handleTimeFormatChange = (timeFormat: TimeFormat) => {
-    if (!regional) return;
-    updateStudio({
-      settings: { ...studio.settings, regional: { ...regional, timeFormat } },
-    });
-  };
-
-  const handleMeasurementChange = (measurementSystem: MeasurementSystem) => {
-    updateStudio({
-      settings: {
-        ...studio.settings,
-        preferredUnits: measurementSystem,
-        regional: regional ? { ...regional, measurementSystem } : undefined,
-      },
-    });
-    toast.success(`Measurement units set to ${measurementSystem === "metric" ? "Metric (cm/kg)" : "Imperial (ft-in/lb)"}`);
-  };
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
@@ -560,18 +877,35 @@ function RegionalSettingsSection() {
         <div>
           <h3 className="text-sm font-semibold">Regional settings</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Configures date formats, currency, time display, and measurement units across the entire platform.
+            Configures date formats, currency, time display, and measurement units across the platform.
           </p>
         </div>
       </div>
 
-      {/* Country selector */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-[13px] font-medium">Country</label>
           <select
             value={country}
-            onChange={(e) => handleCountryChange(e.target.value as CountryCode)}
+            onChange={(e) => {
+              const code = e.target.value as typeof country;
+              const cfg = getCountryConfig(code);
+              updateStudio({
+                settings: {
+                  ...studio.settings,
+                  regional: {
+                    country: code,
+                    timezone: cfg.defaultTimezone,
+                    currency: cfg.currency,
+                    dateFormat: cfg.dateFormat,
+                    timeFormat: cfg.timeFormat,
+                    measurementSystem: (studio.settings?.preferredUnits ?? cfg.measurementSystem) as "metric" | "imperial",
+                  },
+                  preferredUnits: cfg.measurementSystem,
+                },
+              });
+              toast.success(`Regional settings set to ${countryLabel(code)}`);
+            }}
             className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
           >
             {ALL_COUNTRIES.map((c) => (
@@ -580,125 +914,49 @@ function RegionalSettingsSection() {
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-muted-foreground">
-            Sets default currency, date format, and address label conventions.
-          </p>
         </div>
-
-        {/* Currency */}
         <div className="space-y-1.5">
           <label className="text-[13px] font-medium">Currency</label>
           <select
             value={regional?.currency ?? "USD"}
-            onChange={(e) => handleCurrencyChange(e.target.value as CurrencyCode)}
+            onChange={(e) => {
+              if (!regional) return;
+              updateStudio({
+                settings: { ...studio.settings, regional: { ...regional, currency: e.target.value as typeof regional.currency } },
+              });
+              toast.success(`Currency set to ${e.target.value}`);
+            }}
             className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
           >
-            {(Object.entries(CURRENCY_CONFIGS) as [CurrencyCode, typeof CURRENCY_CONFIGS[keyof typeof CURRENCY_CONFIGS]][]).map(([code, cfg]) => (
-              <option key={code} value={code}>
-                {cfg.symbol} {code} — {cfg.name}
-              </option>
-            ))}
+            {(Object.entries(CURRENCY_CONFIGS) as [string, typeof CURRENCY_CONFIGS[keyof typeof CURRENCY_CONFIGS]][]).map(
+              ([code, cfg]) => (
+                <option key={code} value={code}>
+                  {cfg.symbol} {code} — {cfg.name}
+                </option>
+              ),
+            )}
           </select>
-          <p className="text-[11px] text-muted-foreground">
-            All financial displays (billing, invoices, payroll, fees) use this currency.
-          </p>
         </div>
       </div>
 
-      {/* Date & time format */}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-[13px] font-medium">Date format</label>
-          <div className="flex gap-2">
-            {DATE_FORMAT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleDateFormatChange(opt.value)}
-                className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-center text-xs font-medium transition-all",
-                  (regional?.dateFormat ?? countryCfg.dateFormat) === opt.value
-                    ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
-                    : "border-border/70 bg-card hover:bg-secondary/50 text-muted-foreground",
-                )}
-              >
-                <div className="text-sm font-mono">{opt.example}</div>
-                <div className="mt-0.5 text-[10px]">{opt.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[13px] font-medium">Time format</label>
-          <div className="flex gap-2">
-            {TIME_FORMAT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleTimeFormatChange(opt.value)}
-                className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-center text-xs font-medium transition-all",
-                  (regional?.timeFormat ?? countryCfg.timeFormat) === opt.value
-                    ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
-                    : "border-border/70 bg-card hover:bg-secondary/50 text-muted-foreground",
-                )}
-              >
-                <div className="text-sm font-mono">{opt.example}</div>
-                <div className="mt-0.5 text-[10px]">{opt.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Address label preview */}
       <div className="mt-5 rounded-xl border border-border/60 bg-secondary/30 p-3.5">
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Address labels for {countryLabel(country)}</p>
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+          Address labels for {countryLabel(country)}
+        </p>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <span className="text-muted-foreground">State/Province field:</span>
+          <span className="text-muted-foreground">State/Province:</span>
           <span className="font-medium">{countryCfg.addressLabels.stateOrProvince}</span>
-          <span className="text-muted-foreground">Postal code field:</span>
+          <span className="text-muted-foreground">Postal code:</span>
           <span className="font-medium">{countryCfg.addressLabels.postalCode}</span>
           <span className="text-muted-foreground">Phone example:</span>
           <span className="font-medium font-mono">{countryCfg.phoneExample}</span>
-        </div>
-      </div>
-
-      {/* Measurement system */}
-      <div className="mt-5">
-        <label className="text-[13px] font-medium">Measurement system</label>
-        <div className="mt-2 flex gap-3">
-          {MEASUREMENT_OPTIONS.map((opt) => {
-            const active = (regional?.measurementSystem ?? "metric") === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleMeasurementChange(opt.value)}
-                className={cn(
-                  "flex flex-1 max-w-48 flex-col items-center gap-1.5 rounded-xl border p-3.5 transition-all",
-                  active
-                    ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
-                    : "border-border/70 bg-card hover:bg-secondary/50",
-                )}
-              >
-                <span className={cn("text-sm font-semibold", active && "text-primary")}>
-                  {opt.label}
-                </span>
-                <span className="text-[11px] text-muted-foreground">{opt.desc}</span>
-                {active && (
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                    Active
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
     </section>
   );
 }
 
-/* ── Enabled Modules Preview section ─────────────────────────────── */
+/* ── Enabled Modules Preview section ────────────────────────────── */
 
 function EnabledModulesSection() {
   const { studio } = useStudio();
@@ -718,24 +976,28 @@ function EnabledModulesSection() {
         </div>
       </div>
 
-      {/* Terminology preview */}
       <div className="mb-5 rounded-xl border border-border/60 bg-secondary/30 p-3.5">
         <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
           Terminology — how labels appear throughout the app
         </p>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <span className="text-muted-foreground">Participants:</span>
-          <span className="font-medium">{term.participant} / {term.participantPlural}</span>
+          <span className="font-medium">
+            {term.participant} / {term.participantPlural}
+          </span>
           <span className="text-muted-foreground">Instructors:</span>
-          <span className="font-medium">{term.instructor} / {term.instructorPlural}</span>
+          <span className="font-medium">
+            {term.instructor} / {term.instructorPlural}
+          </span>
           <span className="text-muted-foreground">{term.classStyle}:</span>
           <span className="font-medium">{term.styleCategories.join(", ")}</span>
           <span className="text-muted-foreground">Events:</span>
-          <span className="font-medium">{term.event} / {term.eventPlural}</span>
+          <span className="font-medium">
+            {term.event} / {term.eventPlural}
+          </span>
         </div>
       </div>
 
-      {/* Modules list */}
       <div className="grid gap-2 sm:grid-cols-2">
         {term.enabledModules.map((key) => (
           <div
@@ -749,7 +1011,8 @@ function EnabledModulesSection() {
       </div>
 
       <p className="mt-4 text-[11px] text-muted-foreground">
-        Navigation menus and dashboard cards reflect only enabled modules. To change which modules are available, select a different studio type above.
+        Navigation menus and dashboard cards reflect only enabled modules. To change which modules are available, select
+        a different studio type above.
       </p>
     </section>
   );
