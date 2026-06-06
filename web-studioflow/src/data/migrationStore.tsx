@@ -169,7 +169,13 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
   const uploadFile = useCallback(async (file: File) => {
     setWizard((prev) => ({ ...prev, file, step: 3 }));
     try {
-      const { rows, headers } = await parseFile(file);
+      const result = await parseFile(file);
+      // Use first sheet for single-sheet files (old migration flow)
+      const firstSheet = result.sheets[0];
+      if (!firstSheet) {
+        throw new Error("No sheets found in the file.");
+      }
+      const { rows, headers } = { rows: firstSheet.rows, headers: firstSheet.headers };
       setWizard((prev) => ({
         ...prev,
         headers,
@@ -410,7 +416,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
             additionalCaregivers: secondaryCg ? [secondaryCg] : [],
             childIds: [],
           };
-          newParents.push(parent);
+          newCaregivers.push(parent);
           snapshot.addedParentIds.push(caregiverId);
         }
 
@@ -435,7 +441,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         snapshot.addedStudentIds.push(studentId);
 
         // Link student to caregiver
-        const parent = newParents.find((p) => p.id === caregiverId)!;
+        const parent = newCaregivers.find((p) => p.id === caregiverId)!;
         parent.childIds.push(studentId);
       }
 
@@ -445,7 +451,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         return next;
       });
       setImportedCaregivers((prev) => {
-        const next = [...prev, ...newParents];
+        const next = [...prev, ...newCaregivers];
         saveImported(IMPORTED_CAREGIVERS_KEY, next);
         return next;
       });

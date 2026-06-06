@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Layers,
   Loader2,
 } from "lucide-react";
 
@@ -16,7 +17,7 @@ import type {
   ImportError,
 } from "@/data/migrationTypes";
 import { parseFile } from "@/lib/importer";
-import { autoMapFields, applyMappings } from "@/lib/fieldMapper";
+import { autoMapFields, applyMappings, validateMappings } from "@/lib/fieldMapper";
 import { validateImport } from "@/lib/validation";
 import { guessDataType } from "@/data/providerData";
 import { useMigration } from "@/data/migrationStore";
@@ -160,6 +161,17 @@ export default function MigrationWizard() {
   const [confirming, setConfirming] = useState(false);
   const [validating, setValidating] = useState(false);
 
+  // Multi-sheet state
+  const [pendingSheets, setPendingSheets] = useState<Array<{
+    fileName: string;
+    file: File;
+    sheetName: string;
+    headers: string[];
+    rowCount: number;
+    rows: ParsedRow[];
+  }> | null>(null);
+  const [selectedSheetIndices, setSelectedSheetIndices] = useState<Set<number>>(new Set());
+
   /* ── Navigation helpers ────────────────────────────────────────── */
 
   const goNext = useCallback(() => {
@@ -189,6 +201,41 @@ export default function MigrationWizard() {
     );
   }, []);
 
+  /* ── Helpers: create UploadedFile from rows ────────────────────── */
+
+  const createUploadedFile = useCallback(
+    (
+      file: File,
+      fileName: string,
+      headers: string[],
+      rows: ParsedRow[],
+      category?: ImportCategory,
+      sheetName?: string,
+    ): UploadedFile => {
+      const detectedType = category ?? guessDataType(headers);
+      const sampleRows = rows.slice(0, 5).map((r) => r.raw);
+      const rawMappings = autoMapFields(headers, sampleRows, detectedType);
+      // Run cross-field validation to catch obvious mismaps
+      const mappings = validateMappings(rawMappings, sampleRows);
+      const mappedRows = applyMappings(rows, mappings);
+
+      return {
+        id: `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        fileName: sheetName ? `${fileName} [${sheetName}]` : fileName,
+        fileSize: file.size,
+        rowCount: rows.length,
+        headers,
+        detectedType,
+        rows,
+        mappings,
+        mappedRows,
+        errors: [],
+      };
+    },
+    [],
+  );
+
   /* ── Step 4: Upload files ──────────────────────────────────────── */
 
   const handleAddFiles = useCallback(
@@ -198,39 +245,90 @@ export default function MigrationWizard() {
         const parsed: UploadedFile[] = [];
 
         for (const file of newFiles) {
-          const { rows, headers } = await parseFile(file);
-          const detectedType = guessDataType(headers);
-          const category = detectedType;
+          const result = await parseFile(file);
 
-          // Auto-map fields for this file
-          const sampleRows = rows.slice(0, 5).map((r) => r.raw);
-          const mappings = autoMapFields(headers, sampleRows, category);
-          const mappedRows = applyMappings(rows, mappings);
+          // If the file has multiple sheets, show sheet selection UI
+          if (result.sheets.length > 1) {
+            setPendingSheets(
+              result.sheets.map((sheet) => ({
+                fileName: result.fileName,
+                file,
+                sheetName: sheet.name,
+                headers: sheet.headers,
+                rowCount: sheet.rowCount,
+                rows: sheet.rows,
+              })),
+            );
+            // Select all sheets with data by default
+            setSelectedSheetIndices(
+              new Set(
+                result.sheets
+                  .map((s, i) => (s.rowCount > 0 ? i : -1))
+                  .filter((i) => i >= 0),
+              ),
+            );
+            setUploadLoading(false);
+            return; // Wait for user to confirm sheet selection
+          }
 
-          parsed.push({
-            id: `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            file,
-            fileName: file.name,
-            fileSize: file.size,
-            rowCount: rows.length,
-            headers,
-            detectedType,
-            rows,
-            mappings,
-            mappedRows,
-            errors: [],
-          });
+          // Single sheet — create file directly
+          const sheet = result.sheets[0];
+          if (sheet && sheet.rowCount > 0) {
+            parsed.push(
+              createUploadedFile(file, result.fileName, sheet.headers, sheet.rows),
+            );
+          }
         }
 
         setFiles((prev) => [...prev, ...parsed]);
       } catch (err) {
         console.error("Failed to parse file:", err);
       } finally {
-        setUploadLoading(false);
+        if (!pendingSheets) {
+          setUploadLoading(false);
+        }
       }
     },
-    [],
+    [createUploadedFile],
   );
+
+  /** Confirm sheet selection for multi-sheet file. */
+  const handleConfirmSheets = useCallback(() => {
+    if (!pendingSheets) return;
+
+    const parsed: UploadedFile[] = [];
+    for (const idx of selectedSheetIndices) {
+      const s = pendingSheets[idx];
+      if (s && s.rowCount > 0) {
+        parsed.push(
+          createUploadedFile(s.file, s.fileName, s.headers, s.rows, undefined, s.sheetName),
+        );
+      }
+    }
+
+    setFiles((prev) => [...prev, ...parsed]);
+    setPendingSheets(null);
+    setSelectedSheetIndices(new Set());
+    setUploadLoading(false);
+  }, [pendingSheets, selectedSheetIndices, createUploadedFile]);
+
+  const handleCancelSheets = useCallback(() => {
+    setPendingSheets(null);
+    setSelectedSheetIndices(new Set());
+    setUploadLoading(false);
+  }, []);
+
+  const toggleSheetSelection = useCallback((idx: number) => {
+    setSelectedSheetIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  }, []);
 
   const handleRemoveFile = useCallback((fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
@@ -241,9 +339,9 @@ export default function MigrationWizard() {
       setFiles((prev) =>
         prev.map((f) => {
           if (f.id !== fileId) return f;
-          // Re-run auto-map with new category
           const sampleRows = f.rows.slice(0, 5).map((r) => r.raw);
-          const mappings = autoMapFields(f.headers, sampleRows, newType);
+          const rawMappings = autoMapFields(f.headers, sampleRows, newType);
+          const mappings = validateMappings(rawMappings, sampleRows);
           const mappedRows = applyMappings(f.rows, mappings);
           return {
             ...f,
@@ -267,7 +365,12 @@ export default function MigrationWizard() {
           if (f.id !== fileId) return f;
           const mappings = f.mappings.map((m) =>
             m.spreadsheetColumn === col
-              ? { ...m, targetField, confidence: targetField === null ? 0 : 50 }
+              ? {
+                  ...m,
+                  targetField,
+                  confidence: targetField === null ? 0 : 50,
+                  matchReason: (targetField === null ? null : "manual") as const,
+                }
               : m,
           );
           const mappedRows = applyMappings(f.rows, mappings);
@@ -281,14 +384,14 @@ export default function MigrationWizard() {
   const handleAutoMap = useCallback(
     async (fileId: string) => {
       setAiLoading(true);
-      // Simulate AI re-mapping — could integrate real AI in future
       await new Promise((r) => setTimeout(r, 600));
       setFiles((prev) =>
         prev.map((f) => {
           if (f.id !== fileId) return f;
           const category = f.detectedType ?? "students";
           const sampleRows = f.rows.slice(0, 5).map((r) => r.raw);
-          const mappings = autoMapFields(f.headers, sampleRows, category);
+          const rawMappings = autoMapFields(f.headers, sampleRows, category);
+          const mappings = validateMappings(rawMappings, sampleRows);
           const mappedRows = applyMappings(f.rows, mappings);
           return { ...f, mappings, mappedRows, errors: [] };
         }),
@@ -313,6 +416,7 @@ export default function MigrationWizard() {
           ],
           mappedRows: f.mappedRows,
           category: f.detectedType ?? "students",
+          mappings: f.mappings,
         };
         const errors = validateImport(ctx);
         return { ...f, errors };
@@ -324,7 +428,6 @@ export default function MigrationWizard() {
 
   const handleConfirmImport = useCallback(() => {
     setConfirming(true);
-    // Brief delay to show loading state
     setTimeout(() => {
       let totalImported = 0;
       let totalSkipped = 0;
@@ -349,7 +452,7 @@ export default function MigrationWizard() {
   /* ── Forward button logic ──────────────────────────────────────── */
 
   const canGoForward = (() => {
-    if (confirming || validating) return false;
+    if (confirming || validating || !!pendingSheets) return false;
     switch (step) {
       case 1:
         return !!provider;
@@ -360,7 +463,6 @@ export default function MigrationWizard() {
       case 4:
         return files.length > 0;
       case 5:
-        // Allow advancing within files OR to next step if on last file
         return true;
       case 6: {
         const hasBlocking = files.some((f) =>
@@ -388,7 +490,6 @@ export default function MigrationWizard() {
       case 4:
         return "Map Fields";
       case 5: {
-        // Show different label if there are more files to map
         if (currentFileIndex < files.length - 1) {
           return "Next File";
         }
@@ -406,7 +507,6 @@ export default function MigrationWizard() {
   const handleForward = useCallback(() => {
     switch (step) {
       case 5:
-        // If there are more files to map, advance within step 5
         if (currentFileIndex < files.length - 1) {
           setCurrentFileIndex((i) => i + 1);
           return;
@@ -415,7 +515,6 @@ export default function MigrationWizard() {
         break;
       case 6: {
         setValidating(true);
-        // Small delay so UI updates
         setTimeout(() => {
           runValidationForAll();
           setValidating(false);
@@ -431,7 +530,7 @@ export default function MigrationWizard() {
       default:
         goNext();
     }
-  }, [step, currentFileIndex, files.length, goNext, runValidationForAll, handleConfirmImport]);
+  }, [step, currentFileIndex, files.length, goNext, runValidationForAll, handleConfirmImport, confirming]);
 
   /* ── Step 6 helpers ────────────────────────────────────────────── */
 
@@ -442,7 +541,6 @@ export default function MigrationWizard() {
   const handleAutoFix = useCallback(() => {
     setFiles((prev) =>
       prev.map((f) => {
-        // Simple auto-fix: trim whitespace and re-validate
         const cleanedRows = f.mappedRows.map((row) => {
           const cleaned: Record<string, string> = {};
           for (const [key, val] of Object.entries(row.mapped)) {
@@ -461,6 +559,7 @@ export default function MigrationWizard() {
           ],
           mappedRows: cleanedRows,
           category: f.detectedType ?? "students",
+          mappings: f.mappings,
         };
         const errors = validateImport(ctx);
         return { ...f, mappedRows: cleanedRows, errors };
@@ -474,6 +573,8 @@ export default function MigrationWizard() {
     setSelectedTypes([]);
     setFiles([]);
     setCurrentFileIndex(0);
+    setPendingSheets(null);
+    setSelectedSheetIndices(new Set());
   }, []);
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -482,6 +583,81 @@ export default function MigrationWizard() {
     <div className="mx-auto max-w-4xl py-8">
       <StepIndicator step={step} total={8} />
       <StepLabel step={step} />
+
+      {/* Multi-sheet selection modal */}
+      {pendingSheets && (
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-2xl border-2 border-primary/30 bg-card p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10">
+                <Layers className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Multiple sheets detected
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  &quot;{pendingSheets[0]?.fileName}&quot; contains {pendingSheets.length} sheets.
+                  Select which sheets to import.
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 space-y-2">
+              {pendingSheets.map((sheet, idx) => (
+                <label
+                  key={sheet.sheetName}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition",
+                    selectedSheetIndices.has(idx)
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border/60 bg-card hover:bg-muted/30",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSheetIndices.has(idx)}
+                    onChange={() => toggleSheetSelection(idx)}
+                    className="h-4 w-4 shrink-0 rounded accent-primary"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {sheet.sheetName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {sheet.rowCount} rows · {sheet.headers.length} columns
+                      {sheet.rowCount === 0 && (
+                        <span className="ml-1 text-amber-600">(empty sheet)</span>
+                      )}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleConfirmSheets}
+                disabled={selectedSheetIndices.size === 0}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                  selectedSheetIndices.size > 0
+                    ? "bg-primary text-primary-foreground shadow-lift hover:opacity-90"
+                    : "cursor-not-allowed bg-muted text-muted-foreground",
+                )}
+              >
+                Import {selectedSheetIndices.size} sheet{selectedSheetIndices.size !== 1 ? "s" : ""}
+              </button>
+              <button
+                onClick={handleCancelSheets}
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step 1: Provider Selection */}
       {step === 1 && (
@@ -583,7 +759,7 @@ export default function MigrationWizard() {
 
       <NavFooter
         step={step}
-        canGoBack={step > 1 && !confirming}
+        canGoBack={step > 1 && !confirming && !pendingSheets}
         canGoForward={canGoForward}
         onBack={goBack}
         onForward={handleForward}

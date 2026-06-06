@@ -1,4 +1,4 @@
-import type { ImportError } from "@/data/migrationTypes";
+import type { FieldMapping, ImportError } from "@/data/migrationTypes";
 import type { Class, Student, Teacher } from "@/data/types";
 
 export interface ValidationContext {
@@ -7,28 +7,54 @@ export interface ValidationContext {
   existingTeachers: Teacher[];
   mappedRows: Array<{ index: number; mapped: Record<string, string> }>;
   category: string;
+  /** Mappings for cross-field validation */
+  mappings?: FieldMapping[];
 }
 
-/** Normalize an email for comparison. */
+/* ── Normalisation helpers ───────────────────────────────────────── */
+
 function normEmail(e: string): string {
   return e.toLowerCase().trim();
 }
 
-/** Basic email format check. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/** Validate phone format internationally (E.164-compatible, lenient).
- *  Accepts: +1 formats, local formats, spaces, dashes. */
 function looksLikePhone(phone: string): boolean {
   const digits = phone.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15;
 }
 
-/** Check if a DOB string is a valid date and the person is between 0–100 years old. */
+function looksLikeEmail(val: string): boolean {
+  return isValidEmail(val.trim());
+}
+
+function looksLikeDate(val: string): boolean {
+  if (!val) return false;
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) return true;
+  // Also check common date patterns: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD
+  return /^\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4}$/.test(val.trim());
+}
+
+function looksLikeNumber(val: string): boolean {
+  if (!val) return false;
+  // Strip currency symbols and commas
+  const cleaned = val.trim().replace(/[$€£,\s]/g, "");
+  return !isNaN(Number(cleaned)) && cleaned.length > 0;
+}
+
+function looksLikeId(val: string): boolean {
+  if (!val) return false;
+  // IDs are typically alphanumeric, not natural language
+  const trimmed = val.trim();
+  // Has digits and is short (typical ID pattern)
+  return /\d/.test(trimmed) && trimmed.length <= 20;
+}
+
 function isValidDob(dob: string): boolean {
-  if (!dob) return true; // Optional field
+  if (!dob) return true;
   const d = new Date(dob);
   if (isNaN(d.getTime())) return false;
   const now = new Date();
@@ -36,12 +62,152 @@ function isValidDob(dob: string): boolean {
   return ageYears >= 0 && ageYears <= 100;
 }
 
-/** Run all validation checks on mapped rows against existing data. */
+/* ── Cross-field mapping validation ─────────────────────────────── */
+
+/**
+ * Detect obviously incorrect field mappings by comparing the column header
+ * semantics with the target field semantics, and by inspecting sample values.
+ */
+function validateMappingSemantics(
+  mappings: FieldMapping[],
+  sampleRows: Record<string, string>[],
+  errors: ImportError[],
+): void {
+  for (const m of mappings) {
+    if (!m.targetField) continue;
+
+    const colLower = m.spreadsheetColumn.toLowerCase();
+    const targetLower = m.targetField.toLowerCase();
+
+    // 1. Email column mapped to a name field
+    if (
+      (colLower.includes("email") || colLower.includes("e-mail")) &&
+      (targetLower.includes("name") && !targetLower.includes("email") && !targetLower.includes("contact"))
+    ) {
+      errors.push({
+        row: -1,
+        field: m.spreadsheetColumn,
+        message: `Column "${m.spreadsheetColumn}" looks like an email field but is mapped to "${m.targetField}" (a name field). This is likely incorrect.`,
+        severity: "error",
+      });
+    }
+
+    // 2. Phone column mapped to a name field
+    if (
+      (colLower.includes("phone") || colLower.includes("mobile") || colLower.includes("cell")) &&
+      (targetLower.includes("name") && !targetLower.includes("phone") && !targetLower.includes("emergency"))
+    ) {
+      errors.push({
+        row: -1,
+        field: m.spreadsheetColumn,
+        message: `Column "${m.spreadsheetColumn}" looks like a phone field but is mapped to "${m.targetField}" (a name/contact-name field). Verify this mapping.`,
+        severity: "warning",
+      });
+    }
+
+    // 3. Date column mapped to a phone field
+    if (
+      (colLower.includes("date") || colLower.includes("dob") || colLower.includes("birth")) &&
+      (targetLower.includes("phone") || targetLower.includes("mobile") || targetLower.includes("cell"))
+    ) {
+      errors.push({
+        row: -1,
+        field: m.spreadsheetColumn,
+        message: `Column "${m.spreadsheetColumn}" looks like a date field but is mapped to "${m.targetField}" (a phone field). This is likely incorrect.`,
+        severity: "error",
+      });
+    }
+
+    // 4. ID column mapped to a name field
+    if (
+      (colLower.includes("id") || colLower.includes("number") || colLower.includes("#")) &&
+      !colLower.includes("address") &&
+      (targetLower.includes("name") && !targetLower.includes("id"))
+    ) {
+      errors.push({
+        row: -1,
+        field: m.spreadsheetColumn,
+        message: `Column "${m.spreadsheetColumn}" looks like an identifier field but is mapped to "${m.targetField}" (a name field). Review this mapping.`,
+        severity: "warning",
+      });
+    }
+
+    // 5. Price/amount/rate column mapped to a contact field
+    if (
+      (colLower.includes("rate") || colLower.includes("price") || colLower.includes("amount") ||
+       colLower.includes("cost") || colLower.includes("fee") || colLower.includes("pay")) &&
+      (targetLower.includes("email") || targetLower.includes("phone") || targetLower.includes("contact"))
+    ) {
+      errors.push({
+        row: -1,
+        field: m.spreadsheetColumn,
+        message: `Column "${m.spreadsheetColumn}" looks like a monetary/rate field but is mapped to "${m.targetField}" (a contact field). Verify this mapping.`,
+        severity: "warning",
+      });
+    }
+  }
+
+  // 6. Check sample values to detect semantic mismatches
+  for (const m of mappings) {
+    if (!m.targetField || !m.sampleValues || m.sampleValues.length === 0) continue;
+
+    const targetLower = m.targetField.toLowerCase();
+    const firstVal = m.sampleValues[0] ?? "";
+
+    // If target is email but sample doesn't look like email
+    if (targetLower.includes("email") && firstVal && !looksLikeEmail(firstVal)) {
+      const allNonEmail = m.sampleValues.every((v) => v && !looksLikeEmail(v));
+      if (allNonEmail && m.sampleValues.length >= 2) {
+        errors.push({
+          row: -1,
+          field: m.spreadsheetColumn,
+          message: `"${m.spreadsheetColumn}" is mapped to "${m.targetField}" but sample values don't look like email addresses (e.g. "${firstVal.slice(0, 30)}"). Review this mapping.`,
+          severity: "error",
+        });
+      }
+    }
+
+    // If target is phone but sample looks like a date
+    if ((targetLower.includes("phone") || targetLower.includes("mobile")) && firstVal) {
+      const allLooksDate = m.sampleValues.every((v) => v && looksLikeDate(v) && !looksLikePhone(v));
+      if (allLooksDate && m.sampleValues.length >= 2) {
+        errors.push({
+          row: -1,
+          field: m.spreadsheetColumn,
+          message: `"${m.spreadsheetColumn}" is mapped to "${m.targetField}" but sample values look like dates (e.g. "${firstVal}"). Verify this mapping.`,
+          severity: "error",
+        });
+      }
+    }
+
+    // If target is a name field but samples look like IDs
+    if (targetLower.includes("name") && !targetLower.includes("id") && firstVal) {
+      const allLookLikeIds = m.sampleValues.every((v) => v && looksLikeId(v) && !/^[a-zA-Z\s]{3,}$/.test(v));
+      if (allLookLikeIds && m.sampleValues.length >= 2) {
+        errors.push({
+          row: -1,
+          field: m.spreadsheetColumn,
+          message: `"${m.spreadsheetColumn}" is mapped to "${m.targetField}" but sample values look like IDs (e.g. "${firstVal}"). A different mapping may be needed.`,
+          severity: "warning",
+        });
+      }
+    }
+  }
+}
+
+/* ── Main validation entry point ─────────────────────────────────── */
+
 export function validateImport(ctx: ValidationContext): ImportError[] {
   const errors: ImportError[] = [];
 
+  // Run cross-field mapping validation first
+  if (ctx.mappings && ctx.mappings.length > 0) {
+    const sampleRows = ctx.mappedRows.slice(0, 5).map((r) => r.mapped);
+    validateMappingSemantics(ctx.mappings, sampleRows, errors);
+  }
+
   // --- Student validations ---
-  if (ctx.category === "students") {
+  if (ctx.category === "students" || ctx.category === "caregivers") {
     validateStudents(ctx, errors);
   }
 
@@ -55,67 +221,88 @@ export function validateImport(ctx: ValidationContext): ImportError[] {
     validateInstructors(ctx, errors);
   }
 
+  // --- Enrolment validations ---
+  if (ctx.category === "enrolments") {
+    validateEnrolments(ctx, errors);
+  }
+
+  // --- Payment validations ---
+  if (ctx.category === "payments") {
+    validatePayments(ctx, errors);
+  }
+
   return errors;
 }
 
+/* ── Row-level validators ───────────────────────────────────────── */
+
 function validateStudents(ctx: ValidationContext, errors: ImportError[]): void {
-  const seenEmails = new Map<string, number>(); // email → first row index
+  const seenEmails = new Map<string, number>();
   const seenNames = new Map<string, number>();
 
   for (const row of ctx.mappedRows) {
     const { index, mapped } = row;
 
-    // Required: student name
-    if (!mapped.name || mapped.name.trim() === "") {
-      errors.push({ row: index, field: "name", message: "Student name is required", severity: "error" });
-    } else {
-      const nameNorm = mapped.name.trim().toLowerCase();
+    // Determine the effective name: prefer firstName+lastName, fall back to full name
+    const firstName = mapped.firstName?.trim();
+    const lastName = mapped.lastName?.trim();
+    const fullName = mapped.name?.trim();
+    const effectiveName = (firstName && lastName)
+      ? `${firstName} ${lastName}`
+      : fullName;
+
+    // Required: student name (either via firstName or name)
+    if (!effectiveName && !firstName && !fullName) {
+      errors.push({ row: index, field: "name", message: "Student name is required (map First Name + Last Name, or Full Name)", severity: "error" });
+    } else if (effectiveName) {
+      const nameNorm = effectiveName.toLowerCase();
       if (seenNames.has(nameNorm)) {
         errors.push({ row: index, field: "name", message: `Duplicate student name — also found in row ${seenNames.get(nameNorm)}`, severity: "warning" });
       }
       seenNames.set(nameNorm, index);
 
-      // Check against existing students
       const existingMatch = ctx.existingStudents.find(
         (s) => s.name.toLowerCase().trim() === nameNorm,
       );
       if (existingMatch) {
-        errors.push({ row: index, field: "name", message: `"${mapped.name}" already exists in your studio`, severity: "error" });
+        errors.push({ row: index, field: "name", message: `"${effectiveName}" already exists in your studio`, severity: "error" });
       }
     }
 
-    // Required: parent email
-    if (!mapped.parentEmail || mapped.parentEmail.trim() === "") {
-      errors.push({ row: index, field: "parentEmail", message: "Parent email is required", severity: "error" });
-    } else if (!isValidEmail(mapped.parentEmail.trim())) {
-      errors.push({ row: index, field: "parentEmail", message: `"${mapped.parentEmail}" doesn't look like a valid email`, severity: "error" });
+    // Required: caregiver email (check both parentEmail and primary caregiver variants)
+    const email = mapped.parentEmail?.trim() || mapped.email?.trim();
+    if (!email) {
+      errors.push({ row: index, field: "parentEmail", message: "Caregiver email is required", severity: "error" });
+    } else if (!isValidEmail(email)) {
+      errors.push({ row: index, field: "parentEmail", message: `"${email}" doesn't look like a valid email`, severity: "error" });
     } else {
-      const emailNorm = normEmail(mapped.parentEmail);
+      const emailNorm = normEmail(email);
       if (seenEmails.has(emailNorm)) {
         errors.push({ row: index, field: "parentEmail", message: `Duplicate email — also used in row ${seenEmails.get(emailNorm)}`, severity: "warning" });
       }
       seenEmails.set(emailNorm, index);
 
-      // Parent emails CAN be shared (siblings), so only flag as info, not error
       const parentShared = ctx.mappedRows.filter(
-        (r) => r.index !== index && normEmail(r.mapped.parentEmail ?? "") === emailNorm,
+        (r) => r.index !== index && normEmail(r.mapped.parentEmail ?? r.mapped.email ?? "") === emailNorm,
       );
       if (parentShared.length > 0 && !mapped.parentName) {
         errors.push({ row: index, field: "parentEmail", message: "Shared caregiver email — consider adding caregiver name for clarity", severity: "warning" });
       }
     }
 
-    // Optional: phone format (international, lenient)
-    if (mapped.parentPhone && mapped.parentPhone.trim() !== "") {
-      if (!looksLikePhone(mapped.parentPhone.trim())) {
-        errors.push({ row: index, field: "parentPhone", message: `"${mapped.parentPhone}" doesn't look like a valid phone number`, severity: "warning" });
+    // Optional: phone format
+    const phone = mapped.parentPhone?.trim() || mapped.phone?.trim();
+    if (phone) {
+      if (!looksLikePhone(phone)) {
+        errors.push({ row: index, field: "parentPhone", message: `"${phone}" doesn't look like a valid phone number`, severity: "warning" });
       }
     }
 
     // Optional: DOB validity
-    if (mapped.dob && mapped.dob.trim() !== "") {
-      if (!isValidDob(mapped.dob.trim())) {
-        errors.push({ row: index, field: "dob", message: `"${mapped.dob}" is not a valid date of birth`, severity: "warning" });
+    const dob = mapped.dob?.trim();
+    if (dob) {
+      if (!isValidDob(dob)) {
+        errors.push({ row: index, field: "dob", message: `"${dob}" is not a valid date of birth`, severity: "warning" });
       }
     }
   }
@@ -187,7 +374,11 @@ function validateInstructors(ctx: ValidationContext, errors: ImportError[]): voi
   for (const row of ctx.mappedRows) {
     const { index, mapped } = row;
 
-    if (!mapped.name || mapped.name.trim() === "") {
+    const effectiveName = (mapped.firstName && mapped.lastName)
+      ? `${mapped.firstName.trim()} ${mapped.lastName.trim()}`
+      : mapped.name?.trim();
+
+    if (!effectiveName) {
       errors.push({ row: index, field: "name", message: "Instructor name is required", severity: "error" });
     }
 
@@ -212,7 +403,41 @@ function validateInstructors(ctx: ValidationContext, errors: ImportError[]): voi
   }
 }
 
-/** Auto-fix common issues (trim whitespace, normalize empty fields). Returns cleaned rows. */
+function validateEnrolments(_ctx: ValidationContext, errors: ImportError[]): void {
+  for (const row of _ctx.mappedRows) {
+    const { index, mapped } = row;
+
+    if (!mapped.studentName && !mapped.studentId) {
+      errors.push({ row: index, field: "studentName", message: "Student name or ID is required for enrolment", severity: "error" });
+    }
+
+    if (!mapped.className && !mapped.classId) {
+      errors.push({ row: index, field: "className", message: "Class name or ID is required for enrolment", severity: "error" });
+    }
+  }
+}
+
+function validatePayments(_ctx: ValidationContext, errors: ImportError[]): void {
+  for (const row of _ctx.mappedRows) {
+    const { index, mapped } = row;
+
+    if (!mapped.studentName && !mapped.studentId) {
+      errors.push({ row: index, field: "studentName", message: "Student name or ID is required for payment records", severity: "error" });
+    }
+
+    if (mapped.amount && mapped.amount.trim() !== "") {
+      const amt = Number(mapped.amount.replace(/[$,\s]/g, ""));
+      if (isNaN(amt)) {
+        errors.push({ row: index, field: "amount", message: `"${mapped.amount}" is not a valid payment amount`, severity: "error" });
+      }
+    } else {
+      errors.push({ row: index, field: "amount", message: "Payment amount is required", severity: "error" });
+    }
+  }
+}
+
+/* ── Auto-fix ────────────────────────────────────────────────────── */
+
 export function autoFixRows(
   rows: Array<{ index: number; mapped: Record<string, string> }>,
 ): Array<{ index: number; mapped: Record<string, string> }> {

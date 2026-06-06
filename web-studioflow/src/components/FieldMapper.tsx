@@ -1,37 +1,82 @@
 import { useState } from "react";
 import {
   ArrowRight,
+  Check,
   ChevronDown,
   FileSpreadsheet,
+  Hash,
   Loader2,
   Search,
   Sparkles,
   HelpCircle,
+  Zap,
+  Type,
 } from "lucide-react";
-import type { FieldMapping, UploadedFile } from "@/data/migrationTypes";
+import type { FieldMapping, MatchReason } from "@/data/migrationTypes";
 import { cn } from "@/lib/utils";
-import { STUDENT_FIELDS, CLASS_FIELDS, INSTRUCTOR_FIELDS } from "@/data/migrationTypes";
+import { getFieldDefs } from "@/lib/fieldMapper";
 
 interface FieldMapperProps {
-  file: UploadedFile;
+  file: {
+    id: string;
+    fileName: string;
+    detectedType: string | null;
+    headers: string[];
+    rows: Array<{ index: number; raw: Record<string, string> }>;
+    mappings: FieldMapping[];
+  };
   onUpdateMapping: (fileId: string, col: string, targetField: string | null) => void;
   onAutoMap: (fileId: string) => void;
   aiLoading: boolean;
 }
 
-type FieldDef = { field: string; label: string; required: boolean; aliases: string[] };
+/* ── Match reason display helpers ────────────────────────────────── */
 
-const CATEGORY_FIELDS: Record<string, FieldDef[]> = {
-  students: STUDENT_FIELDS,
-  caregivers: STUDENT_FIELDS,
-  classes: CLASS_FIELDS,
-  instructors: INSTRUCTOR_FIELDS,
-  enrolments: [
-    { field: "studentName", label: "Student Name", required: true, aliases: ["student", "name", "student name"] },
-    { field: "studentEmail", label: "Student Email", required: false, aliases: ["email", "student email"] },
-    { field: "className", label: "Class Name", required: true, aliases: ["class", "class name", "course"] },
-  ],
+const MATCH_REASON_CONFIG: Record<Exclude<MatchReason, null>, { label: string; icon: typeof Check; className: string }> = {
+  exact: { label: "Exact Match", icon: Check, className: "bg-success/10 text-success border-success/30" },
+  synonym: { label: "Synonym Match", icon: Type, className: "bg-primary/10 text-primary border-primary/30" },
+  fuzzy: { label: "Fuzzy Match", icon: Search, className: "bg-amber-100 text-amber-800 border-amber-200" },
+  manual: { label: "Manual", icon: Hash, className: "bg-muted text-muted-foreground border-border/50" },
 };
+
+function getMatchReasonBadge(matchReason: MatchReason) {
+  if (!matchReason) return null;
+  const config = MATCH_REASON_CONFIG[matchReason];
+  if (!config) return null;
+  const Icon = config.icon;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+        config.className,
+      )}
+      title={config.label}
+    >
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
+}
+
+/* ── Confidence helpers ──────────────────────────────────────────── */
+
+function getConfidenceClass(confidence: number, matchReason: MatchReason) {
+  if (matchReason === "exact") return "bg-success/10 text-success border-success/30";
+  if (matchReason === "synonym") return "bg-primary/10 text-primary border-primary/30";
+  if (confidence >= 80) return "bg-success/10 text-success border-success/30";
+  if (confidence >= 50) return "bg-amber-100 text-amber-800 border-amber-200";
+  return "bg-muted text-muted-foreground border-border/50";
+}
+
+function getConfidenceLabel(confidence: number, matchReason: MatchReason) {
+  if (matchReason === "exact") return "High";
+  if (matchReason === "synonym") return "Good";
+  if (confidence >= 80) return "High";
+  if (confidence >= 50) return "Medium";
+  return "Needs review";
+}
+
+/* ── Component ───────────────────────────────────────────────────── */
 
 export default function FieldMapper({
   file,
@@ -42,23 +87,11 @@ export default function FieldMapper({
   const [editingCol, setEditingCol] = useState<string | null>(null);
 
   const category = file.detectedType ?? "students";
-  const availableFields = CATEGORY_FIELDS[category] ?? STUDENT_FIELDS;
+  const availableFields = getFieldDefs(category);
 
   const missingRequired = file.mappings.filter(
     (m) => m.isRequired && !m.targetField,
   );
-
-  const getConfidenceClass = (confidence: number) => {
-    if (confidence >= 80) return "bg-success/10 text-success border-success/30";
-    if (confidence >= 50) return "bg-amber-100 text-amber-800 border-amber-200";
-    return "bg-muted text-muted-foreground border-border/50";
-  };
-
-  const getConfidenceLabel = (confidence: number) => {
-    if (confidence >= 80) return "High";
-    if (confidence >= 50) return "Medium";
-    return "Needs review";
-  };
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -103,7 +136,7 @@ export default function FieldMapper({
         </div>
       )}
 
-      {/* Empty state for no mappings */}
+      {/* Empty state */}
       {file.mappings.length === 0 && (
         <div className="mb-6 rounded-2xl border border-border/50 bg-muted/20 p-10 text-center">
           <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-muted/40">
@@ -122,7 +155,7 @@ export default function FieldMapper({
       {/* Mapping table */}
       {file.mappings.length > 0 && (
         <div className="mb-6 overflow-hidden rounded-2xl border border-border/70 bg-card">
-          <div className="hidden grid-cols-[1fr_80px_auto_1fr] items-center gap-3 border-b border-border/60 bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+          <div className="hidden grid-cols-[1fr_120px_auto_1fr] items-center gap-3 border-b border-border/60 bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
             <span>Your column</span>
             <span className="text-center">Match</span>
             <span className="text-center">→</span>
@@ -132,7 +165,7 @@ export default function FieldMapper({
           {file.mappings.map((m) => (
             <div
               key={m.spreadsheetColumn}
-              className="flex flex-col gap-2 border-b border-border/30 px-4 py-3.5 last:border-b-0 sm:grid sm:grid-cols-[1fr_80px_auto_1fr] sm:items-center sm:gap-3 sm:px-5"
+              className="flex flex-col gap-2 border-b border-border/30 px-4 py-3.5 last:border-b-0 sm:grid sm:grid-cols-[1fr_120px_auto_1fr] sm:items-center sm:gap-3 sm:px-5"
             >
               {/* Source column */}
               <div className="min-w-0">
@@ -146,21 +179,23 @@ export default function FieldMapper({
                 )}
               </div>
 
-              {/* Confidence badge */}
-              <div className="flex justify-start sm:justify-center">
+              {/* Confidence + match reason badges */}
+              <div className="flex flex-wrap items-center gap-1 sm:flex-col sm:items-center">
                 {m.targetField && (
                   <span
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                      getConfidenceClass(m.confidence),
+                      getConfidenceClass(m.confidence, m.matchReason),
                     )}
                   >
-                    {getConfidenceLabel(m.confidence)}
+                    <Zap className="h-2.5 w-2.5" />
+                    {getConfidenceLabel(m.confidence, m.matchReason)}
                   </span>
                 )}
+                {getMatchReasonBadge(m.matchReason)}
               </div>
 
-              {/* Arrow (hidden on mobile, shown inline) */}
+              {/* Arrow */}
               <div className="hidden sm:flex sm:justify-center">
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
@@ -210,6 +245,24 @@ export default function FieldMapper({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Match legend */}
+      {file.mappings.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            {getMatchReasonBadge("exact")}
+            Column name matched a known field
+          </span>
+          <span className="inline-flex items-center gap-1">
+            {getMatchReasonBadge("synonym")}
+            Matched using a synonym or alias
+          </span>
+          <span className="inline-flex items-center gap-1">
+            {getMatchReasonBadge("fuzzy")}
+            Best guess — please verify
+          </span>
         </div>
       )}
 
