@@ -43,6 +43,9 @@ function useStudioId(): string {
  * 2. Supabase returned empty or errored.
  *
  * Real studios get empty arrays — never demo data.
+ *
+ * When `isDemo` is true, skip the Supabase query entirely to avoid
+ * 404 console noise from tables that haven't been migrated yet.
  */
 function useDualQuery<T>(
   key: string[],
@@ -53,15 +56,17 @@ function useDualQuery<T>(
   return useQuery({
     queryKey: key,
     queryFn: async (): Promise<T[]> => {
+      // Demo sessions use seeded local data — skip the Supabase round-trip
+      if (isDemo) return demoData;
+
       try {
         const { data, error } = await supabaseQuery();
         if (error) throw error;
         if (data && data.length > 0) return data as T[];
       } catch {
-        // Supabase failed
+        // Supabase failed — real studios get empty arrays, never demo data
       }
-      // Only fall back to demo data for demo sessions
-      return isDemo ? demoData : [];
+      return [];
     },
     staleTime: 30_000,
   });
