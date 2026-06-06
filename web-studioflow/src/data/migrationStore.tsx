@@ -60,6 +60,7 @@ const IMPORTED_STUDENTS_KEY = "studioflow_imported_students";
 const IMPORTED_CLASSES_KEY = "studioflow_imported_classes";
 const IMPORTED_TEACHERS_KEY = "studioflow_imported_teachers";
 const IMPORTED_PARENTS_KEY = "studioflow_imported_parents";
+const IMPORTED_CAREGIVERS_KEY = "studioflow_imported_caregivers";
 
 function loadHistory(): ImportJob[] {
   try {
@@ -139,7 +140,20 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
   const [importedStudents, setImportedStudents] = useState<Student[]>(() => loadImported<Student>(IMPORTED_STUDENTS_KEY));
   const [importedClasses, setImportedClasses] = useState<Class[]>(() => loadImported<Class>(IMPORTED_CLASSES_KEY));
   const [importedTeachers, setImportedTeachers] = useState<Teacher[]>(() => loadImported<Teacher>(IMPORTED_TEACHERS_KEY));
-  const [importedCaregivers, setImportedCaregivers] = useState<ParentAccount[]>(() => loadImported<ParentAccount>(IMPORTED_CAREGIVERS_KEY));
+  const [importedCaregivers, setImportedCaregivers] = useState<ParentAccount[]>(() => {
+    const fromCaregivers = loadImported<ParentAccount>(IMPORTED_CAREGIVERS_KEY);
+    if (fromCaregivers.length > 0) return fromCaregivers;
+
+    /* Backwards-compatible migration: load from old parents key once */
+    const fromParents = loadImported<ParentAccount>(IMPORTED_PARENTS_KEY);
+    if (fromParents.length > 0) {
+      saveImported(IMPORTED_CAREGIVERS_KEY, fromParents);
+      try { localStorage.removeItem(IMPORTED_PARENTS_KEY); } catch { /* ignore */ }
+      return fromParents;
+    }
+
+    return [];
+  });
   const [history, setHistory] = useState<ImportJob[]>(loadHistory);
   /** Snapshot of state before the most recent import (for rollback) */
   const [lastSnapshot, setLastSnapshot] = useState<ImportSnapshot | null>(null);
@@ -430,9 +444,9 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         saveImported(IMPORTED_STUDENTS_KEY, next);
         return next;
       });
-      setImportedParents((prev) => {
+      setImportedCaregivers((prev) => {
         const next = [...prev, ...newParents];
-        saveImported(IMPORTED_PARENTS_KEY, next);
+        saveImported(IMPORTED_CAREGIVERS_KEY, next);
         return next;
       });
     }
@@ -571,9 +585,9 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
       saveImported(IMPORTED_TEACHERS_KEY, next);
       return next;
     });
-    setImportedParents((prev) => {
+    setImportedCaregivers((prev) => {
       const next = prev.filter((p) => !snap.addedParentIds.includes(p.id));
-      saveImported(IMPORTED_PARENTS_KEY, next);
+      saveImported(IMPORTED_CAREGIVERS_KEY, next);
       return next;
     });
 
@@ -602,11 +616,11 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
       importedStudents,
       importedClasses,
       importedTeachers,
-      importedParents,
+      importedCaregivers,
       history,
       rollbackImport,
     }),
-    [wizard, importedStudents, importedClasses, importedTeachers, importedParents, history, goToStep, selectCategory, uploadFile, updateMapping, runValidation, buildPreview, confirmImport, resetWizard, rollbackImport],
+    [wizard, importedStudents, importedClasses, importedTeachers, importedCaregivers, history, goToStep, selectCategory, uploadFile, updateMapping, runValidation, buildPreview, confirmImport, resetWizard, rollbackImport],
   );
 
   return (
