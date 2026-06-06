@@ -24,7 +24,7 @@ import {
 import Modal from "@/components/Modal";
 import { recitalEvents } from "@/data/demo";
 import { classById, styleStyles, teacherName, useStudio, useStudioData, useTeachers, useCostumes, useTerminology } from "@/data/store";
-import type { AgeGroup, Class, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
+import type { AgeGroup, Class, ClassStyle, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
 import type { VerticalTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 import { resolveRegionalSettings, formatTimeRegional, formatDateRegional } from "@/lib/format";
@@ -564,6 +564,7 @@ export default function Recitals() {
                               currentPerfId={perf.id}
                               onAssign={(perfId) => assignToPerformance(c.id, perfId)}
                               teachers={teachers}
+                              term={term}
                             />
                           ))
                         )}
@@ -636,6 +637,7 @@ export default function Recitals() {
                           performances={activeEvent.performances}
                           onAssign={(perfId) => assignToPerformance(c.id, perfId)}
                           teachers={teachers}
+                          term={term}
                         />
                       );
                     })}
@@ -820,6 +822,7 @@ function RecitalClassCard({
   onRemoveFromRecital,
   onAssign,
   teachers,
+  term,
 }: {
   cls: Class;
   performances: RecitalPerformance[];
@@ -828,6 +831,7 @@ function RecitalClassCard({
   onRemoveFromRecital: () => void;
   onAssign: (perfId: string) => void;
   teachers: Teacher[];
+  term: ReturnType<typeof useTerminology>;
 }) {
   return (
     <div className="group flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 transition hover:border-border">
