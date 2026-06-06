@@ -1,0 +1,337 @@
+import { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  Bell,
+  CalendarDays,
+  CreditCard,
+  Signature,
+  Heart,
+  Home,
+  Loader2,
+  LogOut,
+  Megaphone,
+  Menu,
+  Search,
+  UserRound,
+  X,
+  Dumbbell,
+  Music,
+} from "lucide-react";
+
+import { useStudio } from "@/data/store";
+import { useAuth } from "@/hooks/useAuth";
+import { DemoBadge, isDemoSession } from "@/components/DemoBadge";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const nav = [
+  { to: "/member", label: "Dashboard", icon: Home, exact: true },
+  { to: "/member/schedule", label: "Schedule", icon: CalendarDays },
+  { to: "/member/classes", label: "Classes", icon: Dumbbell },
+  { to: "/member/payments", label: "Payments", icon: CreditCard },
+  { to: "/member/announcements", label: "Updates", icon: Megaphone },
+  { to: "/member/waivers", label: "Waivers", icon: Signature },
+  { to: "/member/profile", label: "Profile", icon: UserRound },
+];
+
+function StudioLogoMark() {
+  const { studio } = useStudio();
+  if (studio.logoUrl) {
+    return <img src={studio.logoUrl} alt={studio.name} className="h-full w-full object-cover" />;
+  }
+  return <>{studio.initials}</>;
+}
+
+function StudioName() {
+  const { studio } = useStudio();
+  return <>{studio.name}</>;
+}
+
+function getInitials(user: { name?: string; email: string } | null): string {
+  if (!user) return "??";
+  if (user.name) {
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return user.name.slice(0, 2).toUpperCase();
+  }
+  return user.email.slice(0, 2).toUpperCase();
+}
+
+function StudioLogo() {
+  const { studio } = useStudio();
+  return (
+    <NavLink to="/member" className="flex items-center gap-2.5 shrink-0">
+      <div className="grid h-9 w-9 place-items-center rounded-xl bg-teal text-white font-display text-base font-semibold overflow-hidden">
+        <StudioLogoMark />
+      </div>
+      <span className="font-display text-lg font-semibold tracking-tight hidden sm:block">
+        <StudioName />
+      </span>
+    </NavLink>
+  );
+}
+
+function MemberUserMenu() {
+  const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      navigate("/member/login", { replace: true });
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="grid h-9 w-9 place-items-center rounded-full bg-teal text-sm font-semibold text-white transition hover:opacity-85"
+          aria-label="Account menu"
+        >
+          {getInitials(user)}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
+          <div className="px-2 py-2">
+            <p className="text-sm font-semibold">{user?.name ?? "Member"}</p>
+            <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => { navigate("/member/profile"); setOpen(false); }}
+            className="gap-2.5"
+          >
+            <UserRound className="h-4 w-4 text-muted-foreground" />
+            My profile
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="gap-2.5 text-muted-foreground"
+          >
+            {isSigningOut ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+            {isSigningOut ? "Signing out…" : "Sign out"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
+  );
+}
+
+function MobileSignOut() {
+  const { signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      navigate("/member/login", { replace: true });
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleSignOut}
+      disabled={isSigningOut}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-rose-50 hover:text-rose-600"
+    >
+      {isSigningOut ? (
+        <Loader2 className="h-[18px] w-[18px] animate-spin" />
+      ) : (
+        <LogOut className="h-[18px] w-[18px]" />
+      )}
+      {isSigningOut ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
+
+interface MemberShellProps {
+  children: React.ReactNode;
+}
+
+export default function MemberShell({ children }: MemberShellProps) {
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const demo = isDemoSession();
+  const location = useLocation();
+
+  const isActive = (to: string, exact?: boolean) => {
+    if (exact) return location.pathname === to;
+    return location.pathname.startsWith(to);
+  };
+
+  return (
+    <div className="min-h-screen bg-member text-foreground">
+      {/* Top nav */}
+      <header className="sticky top-0 z-40 border-b border-teal/20 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="grid h-9 w-9 place-items-center rounded-lg text-foreground/60 hover:bg-teal/10 lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <StudioLogo />
+          {demo && <DemoBadge />}
+
+          {/* Desktop nav */}
+          <nav className="ml-8 hidden items-center gap-1 lg:flex">
+            {nav.map(({ to, label, icon: Icon, exact }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={() =>
+                  cn(
+                    "flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+                    isActive(to, exact)
+                      ? "bg-teal/10 text-teal"
+                      : "text-foreground/60 hover:text-foreground hover:bg-teal/5",
+                  )
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-teal/20 bg-white px-3 py-1.5 text-sm text-muted-foreground sm:flex">
+              <Search className="h-3.5 w-3.5" />
+              <input
+                placeholder="Find a class…"
+                className="w-32 bg-transparent outline-none placeholder:text-muted-foreground/60"
+              />
+            </div>
+            <button
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-teal/20 bg-white text-foreground/60 transition hover:bg-teal/5"
+              aria-label="Notifications"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose ring-2 ring-white" />
+            </button>
+            <MemberUserMenu />
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 w-72 bg-white animate-float-up">
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="absolute right-3 top-4 grid h-9 w-9 place-items-center rounded-full text-foreground/60 hover:bg-teal/10"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex flex-col gap-1 px-4 py-6 pt-14">
+              <NavLink
+                to="/member"
+                onClick={() => setMobileOpen(false)}
+                className="mb-4 flex items-center gap-3 px-2"
+              >
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal font-display text-lg font-semibold text-white overflow-hidden">
+                  <StudioLogoMark />
+                </div>
+                <div className="leading-tight">
+                  <p className="font-display text-base font-semibold"><StudioName /></p>
+                  <p className="text-xs text-muted-foreground">Member Portal</p>
+                </div>
+              </NavLink>
+              <p className="px-3 pb-2 pt-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Menu
+              </p>
+              {nav.map(({ to, label, icon: Icon, exact }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMobileOpen(false)}
+                  className={() =>
+                    cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                      isActive(to, exact)
+                        ? "bg-teal/10 text-teal shadow-sm"
+                        : "text-foreground/60 hover:bg-teal/5 hover:text-foreground",
+                    )
+                  }
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                  {label}
+                </NavLink>
+              ))}
+              <div className="mt-2 border-t border-teal/10 pt-2">
+                <MobileSignOut />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {demo && <DemoBadge variant="banner" className="-mx-4 -mt-6 mb-4 sm:-mx-6 lg:-mx-8" />}
+        {children}
+      </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-teal/10 bg-white/90 backdrop-blur-xl lg:hidden">
+        <div className="flex items-center justify-around py-1.5">
+          {nav.slice(0, 5).map(({ to, label, icon: Icon, exact }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={() =>
+                cn(
+                  "flex flex-col items-center gap-0.5 px-2 py-1.5 text-[10px] font-medium transition-colors rounded-lg min-w-0",
+                  isActive(to, exact)
+                    ? "text-teal"
+                    : "text-muted-foreground",
+                )
+              }
+            >
+              <Icon className="h-5 w-5" />
+              <span className="truncate max-w-[56px]">{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
