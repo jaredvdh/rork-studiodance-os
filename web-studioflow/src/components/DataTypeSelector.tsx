@@ -4,9 +4,9 @@ import { IMPORTABLE_DATA_TYPES, getImportableType } from "@/data/providerData";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  ready: { label: "Ready", className: "bg-success/10 text-success border-success/30" },
+  ready: { label: "CSV supported", className: "bg-success/10 text-success border-success/30" },
   optional: { label: "Optional", className: "bg-amber-100 text-amber-800 border-amber-200" },
-  "coming-soon": { label: "Coming soon", className: "bg-muted text-muted-foreground border-border/50" },
+  "coming-soon": { label: "CSV supported today", className: "bg-muted text-muted-foreground border-border/50" },
 };
 
 const ICON_MAP: Record<string, string> = {
@@ -113,7 +113,8 @@ export default function DataTypeSelector({
           <p className="text-left text-xs text-muted-foreground">
             <strong>Recommended:</strong> Start with Students/Members and Classes.
             You can import instructors and enrolments in later passes. Each data
-            type can be uploaded as a separate file or combined spreadsheet.
+            type can be uploaded as a separate file or combined spreadsheet. All
+            types support CSV/XLSX import today — no API access needed.
           </p>
         </div>
       </div>

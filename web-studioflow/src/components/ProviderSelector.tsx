@@ -1,10 +1,11 @@
-import { useState } from "react";
 import {
   ArrowRight,
   Check,
   FileSpreadsheet,
+  Globe,
   ShieldCheck,
   Sparkles,
+  Upload,
 } from "lucide-react";
 import type { MigrationProvider } from "@/data/migrationTypes";
 import { PROVIDERS } from "@/data/providerData";
@@ -44,7 +45,8 @@ export default function ProviderSelector({
       </h2>
       <p className="mx-auto mb-2 max-w-lg text-balance text-sm leading-relaxed text-muted-foreground">
         StudioFlow supports CSV and XLSX migration from most studio management
-        platforms. Select your current provider below.
+        platforms. No API access or technical setup required — just export your
+        data and upload it here.
       </p>
 
       {/* Reassurance badges */}
@@ -89,11 +91,16 @@ export default function ProviderSelector({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold">{provider.name}</p>
-                {!provider.hasGuidance && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Generic import
-                  </span>
-                )}
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                    provider.hasGuidance
+                      ? "bg-success/10 text-success"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {provider.hasGuidance ? "CSV/XLSX supported" : "CSV/XLSX import"}
+                </span>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
                 {provider.description}
@@ -121,15 +128,28 @@ export default function ProviderSelector({
         <ArrowRight className="h-4 w-4" />
       </button>
 
-      {/* Help CTA */}
-      <div className="mx-auto mt-8 max-w-md rounded-2xl border border-border/60 bg-gradient-to-br from-rose/5 to-amber-100 p-4 text-left">
+      {/* No API banner */}
+      <div className="mx-auto mt-8 max-w-md rounded-2xl border border-border/60 bg-muted/20 p-4 text-left">
         <div className="mb-1 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-rose" />
-          <p className="text-sm font-semibold">Need help?</p>
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-semibold">No API keys or developer setup needed</p>
         </div>
         <p className="text-xs text-muted-foreground">
-          Send us your exported files and we'll handle the migration for you —
-          free for all StudioFlow plans.
+          Every platform above lets you export your data as a CSV or Excel file
+          from the admin dashboard. No integrations, no IT tickets — just download
+          and upload.
+        </p>
+      </div>
+
+      {/* Concierge CTA */}
+      <div className="mx-auto mt-4 max-w-md rounded-2xl border border-border/60 bg-gradient-to-br from-rose/5 to-amber-100 p-4 text-left">
+        <div className="mb-1 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-rose" />
+          <p className="text-sm font-semibold">Prefer we do it for you?</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Send us your exported files and our team will handle the entire migration —
+          free on all StudioFlow plans.
         </p>
       </div>
     </div>

@@ -3,6 +3,8 @@ import {
   ArrowRight,
   Check,
   Clock,
+  HelpCircle,
+  Mail,
   RotateCcw,
   Sparkles,
   Users,
@@ -43,7 +45,7 @@ export default function ImportComplete({
       </div>
 
       <h2 className="mb-2 font-display text-3xl font-semibold tracking-tight text-foreground">
-        Import complete
+        Import complete!
       </h2>
       <p className="mb-8 text-sm text-muted-foreground">
         Your data has been imported successfully. Here's a summary.
@@ -84,6 +86,64 @@ export default function ImportComplete({
         ))}
       </div>
 
+      {/* What happens next? */}
+      <div className="mb-8 rounded-2xl border border-border/70 bg-card p-5 text-left">
+        <div className="mb-3 flex items-center gap-2">
+          <HelpCircle className="h-5 w-5 text-rose" />
+          <h3 className="font-display text-lg font-semibold">What happens next?</h3>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/10 text-[10px] font-bold text-success">
+              1
+            </span>
+            <div>
+              <p className="text-sm font-medium">Review imported records</p>
+              <p className="text-xs text-muted-foreground">
+                Check your students, classes, and instructors on their respective
+                pages. Everything is live and ready to use.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/10 text-[10px] font-bold text-success">
+              2
+            </span>
+            <div>
+              <p className="text-sm font-medium">Invite families to the portal</p>
+              <p className="text-xs text-muted-foreground">
+                Caregivers can log in to view schedules, sign waivers, and manage
+                their accounts. Send invites from the Students page.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/10 text-[10px] font-bold text-success">
+              3
+            </span>
+            <div>
+              <p className="text-sm font-medium">Set up billing (optional)</p>
+              <p className="text-xs text-muted-foreground">
+                Configure tuition, class fees, and payment schedules from the
+                Payments page when you're ready.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/10 text-[10px] font-bold text-success">
+              4
+            </span>
+            <div>
+              <p className="text-sm font-medium">Import more data anytime</p>
+              <p className="text-xs text-muted-foreground">
+                Run the migration wizard again for additional data types or
+                updated exports. No limit on imports.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Next actions */}
       <div className="space-y-3">
         <button
@@ -121,15 +181,41 @@ export default function ImportComplete({
         </button>
       </div>
 
-      {/* White-glove CTA */}
+      {/* Concierge: send us your export */}
       <div className="mt-10 rounded-2xl border border-border/60 bg-gradient-to-br from-rose/5 to-amber-100 p-5 text-left">
         <div className="mb-1 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-rose" />
-          <p className="text-sm font-semibold">Need help?</p>
+          <Mail className="h-4 w-4 text-rose" />
+          <p className="text-sm font-semibold">
+            Send us your export — we'll migrate it for you
+          </p>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          If you'd rather not go through the wizard, email us your exported CSV
+          or Excel files and our team will handle the entire migration — free on
+          all plans.
+        </p>
+        <button className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-background px-4 py-2 text-xs font-medium transition hover:bg-secondary">
+          <Mail className="h-3.5 w-3.5" />
+          Contact Support
+        </button>
+      </div>
+
+      {/* Need help? */}
+      <div className="mt-4 rounded-2xl border border-border/60 bg-muted/20 p-4 text-left">
+        <div className="mb-1 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-semibold">Something doesn't look right?</p>
         </div>
         <p className="text-xs text-muted-foreground">
-          If something doesn't look right, our support team can help. We offer
-          free migration assistance on all plans.
+          You can roll back this import from the Import History page at any
+          time. Visit{" "}
+          <button
+            onClick={() => navigate("/migration-history")}
+            className="underline transition hover:text-foreground"
+          >
+            Import History
+          </button>{" "}
+          to review or undo changes.
         </p>
       </div>
     </div>

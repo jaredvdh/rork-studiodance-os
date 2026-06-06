@@ -137,11 +137,11 @@ export const PROVIDERS: ProviderInfo[] = [
     id: "other",
     name: "Other Platform",
     description:
-      "Moving from a different studio platform? We support CSV and XLSX uploads from any system.",
+      "Moving from a different studio platform? We support CSV and XLSX uploads from any system — exports work today.",
     formats: ["CSV", "XLSX"],
     hasGuidance: false,
     notes:
-      "As long as you can export a CSV or Excel file, we can help migrate your data. Our smart field mapping works with any column headers.",
+      "Export your data as CSV or Excel from your current platform. Our smart field mapping works with any column headers. No API keys or developer setup needed — if you can export, you can migrate.",
     exportSteps: [
       "Export your data as CSV or Excel from your current platform.",
       "If your platform has separate exports for students, classes, and instructors, export each one.",

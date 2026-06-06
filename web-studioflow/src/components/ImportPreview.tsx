@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import {
+  AlertTriangle,
   ArrowRight,
   BookOpen,
   Briefcase,
@@ -8,6 +10,8 @@ import {
   Info,
   Link,
   Play,
+  ShieldCheck,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import type { UploadedFile } from "@/data/migrationTypes";
@@ -61,6 +65,20 @@ export default function ImportPreview({
   const totalRecords = fileSummaries.reduce((s, fs) => s + fs.cleanCount, 0);
   const totalBlocks = fileSummaries.reduce((s, fs) => s + fs.blockedCount, 0);
   const totalWarns = fileSummaries.reduce((s, fs) => s + fs.warnCount, 0);
+  const totalAllRows = fileSummaries.reduce((s, fs) => s + fs.file.rowCount, 0);
+
+  const confidenceScore = useMemo(() => {
+    if (totalAllRows === 0) return 0;
+    const penalty = totalBlocks * 3 + totalWarns * 0.5;
+    return Math.max(0, Math.round(100 - (penalty / totalAllRows) * 100));
+  }, [totalAllRows, totalBlocks, totalWarns]);
+
+  const confidenceLabel = useMemo(() => {
+    if (confidenceScore >= 95) return "Excellent";
+    if (confidenceScore >= 80) return "Good";
+    if (confidenceScore >= 60) return "Fair";
+    return "Needs attention";
+  }, [confidenceScore]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -89,6 +107,56 @@ export default function ImportPreview({
             )}
           </div>
         ))}
+      </div>
+
+      {/* Confidence score */}
+      <div className="mb-6 rounded-2xl border border-border/70 bg-card p-5">
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "grid h-12 w-12 shrink-0 place-items-center rounded-full",
+                confidenceScore >= 80
+                  ? "bg-success/10"
+                  : confidenceScore >= 60
+                    ? "bg-amber-100"
+                    : "bg-destructive/10",
+              )}
+            >
+              <TrendingUp
+                className={cn(
+                  "h-6 w-6",
+                  confidenceScore >= 80
+                    ? "text-success"
+                    : confidenceScore >= 60
+                      ? "text-amber-600"
+                      : "text-destructive",
+                )}
+              />
+            </div>
+            <div>
+              <p className="text-lg font-bold">
+                Migration Confidence:{" "}
+                <span
+                  className={cn(
+                    confidenceScore >= 80
+                      ? "text-success"
+                      : confidenceScore >= 60
+                        ? "text-amber-600"
+                        : "text-destructive",
+                  )}
+                >
+                  {confidenceLabel}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {totalRecords} clean records ready to import
+                {totalBlocks > 0 && ` · ${totalBlocks} blocked`}
+                {totalWarns > 0 && ` · ${totalWarns} warnings`}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bottom summary */}
@@ -124,18 +192,28 @@ export default function ImportPreview({
         </div>
       </div>
 
-      {/* Blocking error notice */}
-      {hasBlockingErrors && (
-        <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center">
-          <p className="text-sm font-medium text-destructive">
-            Some rows have blocking errors and will be skipped.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Go back to Validation or Field Mapping to fix them, or continue to
-            import only clean records.
-          </p>
+      {/* Strong warning before import */}
+      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm font-semibold text-amber-900">
+              Please review before importing
+            </p>
+            <p className="text-xs text-amber-700">
+              Imported records will be added to your studio. You can roll back
+              individual imports from the Import History page, but this should be
+              treated as a real data change.
+            </p>
+            {hasBlockingErrors && (
+              <p className="mt-2 text-xs font-medium text-destructive">
+                {totalBlocks} row{totalBlocks !== 1 ? "s have" : " has"} blocking
+                errors and will be skipped.
+              </p>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Action buttons */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">

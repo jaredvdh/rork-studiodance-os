@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Loader2,
 } from "lucide-react";
 
 import type {
@@ -47,23 +48,23 @@ const STEP_LABELS: Record<WizardStep, string> = {
 
 function StepIndicator({ step, total }: { step: WizardStep; total: number }) {
   return (
-    <div className="mb-10 flex items-center justify-center gap-1">
+    <div className="mb-6 flex items-center justify-center gap-0.5 overflow-x-auto px-2 sm:mb-10 sm:gap-1">
       {(Array.from({ length: total }, (_, i) => (i + 1) as WizardStep)).map((s) => (
-        <div key={s} className="flex items-center gap-1">
+        <div key={s} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <div
             className={cn(
-              "grid h-8 w-8 place-items-center rounded-full text-xs font-semibold transition-all duration-300",
+              "grid h-7 w-7 place-items-center rounded-full text-[10px] font-semibold transition-all duration-300 sm:h-8 sm:w-8 sm:text-xs",
               s === step && "bg-primary text-primary-foreground shadow-lift scale-110",
               s < step && "bg-success text-white",
               s > step && "bg-muted text-muted-foreground",
             )}
           >
-            {s < step ? <Check className="h-3.5 w-3.5" /> : s}
+            {s < step ? <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> : s}
           </div>
           {s < total && (
             <div
               className={cn(
-                "h-0.5 w-5 rounded-full transition-colors duration-300",
+                "h-0.5 w-3 rounded-full transition-colors duration-300 sm:w-5",
                 s < step ? "bg-success" : "bg-muted",
               )}
             />
@@ -156,6 +157,8 @@ export default function MigrationWizard() {
   const [importedCount, setImportedCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
   const [needsReviewCount, setNeedsReviewCount] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const [validating, setValidating] = useState(false);
 
   /* ── Navigation helpers ────────────────────────────────────────── */
 
@@ -164,8 +167,15 @@ export default function MigrationWizard() {
   }, []);
 
   const goBack = useCallback(() => {
+    // Step 5 has sub-navigation between files — go back within files first
     if (step === 5 && currentFileIndex > 0) {
       setCurrentFileIndex((i) => i - 1);
+      return;
+    }
+    // Step 5 → go back to step 4, reset file index
+    if (step === 5 && currentFileIndex === 0) {
+      setCurrentFileIndex(0);
+      setStep(4);
       return;
     }
     setStep((prev) => Math.max(prev - 1, 1) as WizardStep);
@@ -313,29 +323,33 @@ export default function MigrationWizard() {
   /* ── Step 7: Confirm import ────────────────────────────────────── */
 
   const handleConfirmImport = useCallback(() => {
-    let totalImported = 0;
-    let totalSkipped = 0;
-    let totalNeedsReview = 0;
+    setConfirming(true);
+    // Brief delay to show loading state
+    setTimeout(() => {
+      let totalImported = 0;
+      let totalSkipped = 0;
+      let totalNeedsReview = 0;
 
-    for (const f of files) {
-      const cleanCount = f.rowCount - f.errors.filter((e) => e.severity === "error").length;
-      const warnCount = f.errors.filter((e) => e.severity === "warning").length;
-      totalImported += cleanCount;
-      totalSkipped += f.errors.filter((e) => e.severity === "error").length;
-      totalNeedsReview += warnCount;
-    }
+      for (const f of files) {
+        const cleanCount = f.rowCount - f.errors.filter((e) => e.severity === "error").length;
+        const warnCount = f.errors.filter((e) => e.severity === "warning").length;
+        totalImported += cleanCount;
+        totalSkipped += f.errors.filter((e) => e.severity === "error").length;
+        totalNeedsReview += warnCount;
+      }
 
-    setImportedCount(totalImported);
-    setSkippedCount(totalSkipped);
-    setNeedsReviewCount(totalNeedsReview);
-
-    // For now, store mock confirmation; real import happens when Supabase is wired
-    setStep(8);
+      setImportedCount(totalImported);
+      setSkippedCount(totalSkipped);
+      setNeedsReviewCount(totalNeedsReview);
+      setConfirming(false);
+      setStep(8);
+    }, 800);
   }, [files]);
 
   /* ── Forward button logic ──────────────────────────────────────── */
 
   const canGoForward = (() => {
+    if (confirming || validating) return false;
     switch (step) {
       case 1:
         return !!provider;
@@ -346,13 +360,13 @@ export default function MigrationWizard() {
       case 4:
         return files.length > 0;
       case 5:
-        // All files must have been mapped (currentFileIndex at end)
-        return currentFileIndex >= files.length - 1;
+        // Allow advancing within files OR to next step if on last file
+        return true;
       case 6: {
         const hasBlocking = files.some((f) =>
           f.errors.some((e) => e.severity === "error"),
         );
-        return !hasBlocking || files.every((f) => f.rowCount > 0);
+        return !hasBlocking;
       }
       case 7:
         return true;
@@ -362,6 +376,8 @@ export default function MigrationWizard() {
   })();
 
   const forwardLabel = (() => {
+    if (confirming) return "Importing…";
+    if (validating) return "Validating…";
     switch (step) {
       case 1:
         return "Select Data Types";
@@ -371,8 +387,13 @@ export default function MigrationWizard() {
         return "Upload Files";
       case 4:
         return "Map Fields";
-      case 5:
+      case 5: {
+        // Show different label if there are more files to map
+        if (currentFileIndex < files.length - 1) {
+          return "Next File";
+        }
         return "Validate";
+      }
       case 6:
         return "Preview Import";
       case 7:
@@ -392,12 +413,20 @@ export default function MigrationWizard() {
         }
         goNext();
         break;
-      case 6:
-        runValidationForAll();
-        goNext();
+      case 6: {
+        setValidating(true);
+        // Small delay so UI updates
+        setTimeout(() => {
+          runValidationForAll();
+          setValidating(false);
+          goNext();
+        }, 400);
         break;
+      }
       case 7:
-        handleConfirmImport();
+        if (!confirming) {
+          handleConfirmImport();
+        }
         break;
       default:
         goNext();
@@ -554,7 +583,7 @@ export default function MigrationWizard() {
 
       <NavFooter
         step={step}
-        canGoBack={step > 1}
+        canGoBack={step > 1 && !confirming}
         canGoForward={canGoForward}
         onBack={goBack}
         onForward={handleForward}

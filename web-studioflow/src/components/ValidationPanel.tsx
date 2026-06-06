@@ -3,8 +3,11 @@ import {
   AlertTriangle,
   Check,
   Download,
+  FileSpreadsheet,
   Info,
+  ShieldCheck,
   Sparkles,
+  TrendingUp,
   X,
 } from "lucide-react";
 import type { ImportError, UploadedFile } from "@/data/migrationTypes";
@@ -61,9 +64,33 @@ export default function ValidationPanel({
   const cleanRows = useMemo(
     () =>
       totalRows -
-      new Set(blockingErrors.map((e) => `${e.row}-${e.field}`)).size,
+      new Set(blockingErrors.map((e) => e.row + "-" + e.field)).size,
     [totalRows, blockingErrors],
   );
+
+  /** Migration confidence score (0–100). */
+  const confidenceScore = useMemo(() => {
+    if (totalRows === 0) return 0;
+    const blockedRows = new Set(blockingErrors.map((e) => e.row)).size;
+    const warnedRows = new Set(warnings.map((e) => e.row)).size;
+    const penaltyPerBlocked = (100 / totalRows) * 3;
+    const penaltyPerWarning = (100 / totalRows) * 0.5;
+    return Math.max(0, Math.round(100 - blockedRows * penaltyPerBlocked - warnedRows * penaltyPerWarning));
+  }, [totalRows, blockingErrors, warnings]);
+
+  const confidenceLabel = useMemo(() => {
+    if (confidenceScore >= 95) return "Excellent";
+    if (confidenceScore >= 80) return "Good";
+    if (confidenceScore >= 60) return "Fair";
+    return "Needs attention";
+  }, [confidenceScore]);
+
+  const confidenceColor = useMemo(() => {
+    if (confidenceScore >= 95) return "text-success";
+    if (confidenceScore >= 80) return "text-success";
+    if (confidenceScore >= 60) return "text-amber-600";
+    return "text-destructive";
+  }, [confidenceScore]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -76,7 +103,7 @@ export default function ValidationPanel({
       </p>
 
       {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
           <p className="text-2xl font-bold text-foreground">{totalRows}</p>
           <p className="text-[11px] text-muted-foreground">Total rows</p>
@@ -103,9 +130,50 @@ export default function ValidationPanel({
           >
             {blockingErrors.length}
           </p>
-          <p className="text-[11px] text-muted-foreground">Issues found</p>
+          <p className="text-[11px] text-muted-foreground">Blocked</p>
+        </div>
+        <div
+          className={cn(
+            "rounded-2xl border p-4 text-center",
+            confidenceScore >= 80
+              ? "border-success/30 bg-success/5"
+              : confidenceScore >= 60
+                ? "border-amber-200 bg-amber-50"
+                : "border-destructive/30 bg-destructive/5",
+          )}
+        >
+          <div className="mx-auto mb-1 flex items-center justify-center gap-1">
+            <TrendingUp className={cn("h-4 w-4", confidenceColor)} />
+          </div>
+          <p className={cn("text-2xl font-bold", confidenceColor)}>
+            {confidenceScore}%
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {confidenceLabel}
+          </p>
         </div>
       </div>
+
+      {/* Confidence explanation */}
+      {confidenceScore < 95 && totalRows > 0 && (
+        <div className="mb-6 rounded-xl border border-border/60 bg-muted/20 p-4">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className={cn("mt-0.5 h-4 w-4 shrink-0", confidenceColor)} />
+            <div>
+              <p className={cn("text-sm font-semibold", confidenceColor)}>
+                Migration Confidence: {confidenceLabel}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {confidenceScore >= 80
+                  ? "Most of your data looks clean. A few warnings may need attention after import."
+                  : confidenceScore >= 60
+                    ? "Some records have issues. You can still import — flagged rows will be skipped or need review."
+                    : "Many records have issues. We recommend fixing blocking errors before importing."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Auto-fix button */}
       {allErrors.length > 0 && (
@@ -155,7 +223,7 @@ export default function ValidationPanel({
           {/* Blocking errors */}
           {blockingErrors.map((e, i) => (
             <div
-              key={`err-${i}`}
+              key={"err-" + i}
               className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-3"
             >
               <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
@@ -171,7 +239,7 @@ export default function ValidationPanel({
           {/* Warnings */}
           {warnings.map((w, i) => (
             <div
-              key={`warn-${i}`}
+              key={"warn-" + i}
               className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-100 p-3"
             >
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
@@ -187,7 +255,7 @@ export default function ValidationPanel({
           {/* Suggestions */}
           {suggestions.map((s, i) => (
             <div
-              key={`sug-${i}`}
+              key={"sug-" + i}
               className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 p-3"
             >
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -200,7 +268,7 @@ export default function ValidationPanel({
             </div>
           ))}
         </div>
-      ) : (
+      ) : files.length > 0 ? (
         <div className="rounded-2xl border border-success/30 bg-success/5 p-10 text-center">
           <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-success/10">
             <Check className="h-7 w-7 text-success" />
@@ -209,7 +277,20 @@ export default function ValidationPanel({
             Everything looks great!
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            No issues found in any uploaded file. You're ready to continue.
+            No issues found in any uploaded file. Migration confidence: 100%.
+            You're ready to continue.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border/50 bg-muted/20 p-10 text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-muted/40">
+            <FileSpreadsheet className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="text-lg font-semibold text-muted-foreground">
+            No files to validate
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload files in the previous step to run validation checks.
           </p>
         </div>
       )}

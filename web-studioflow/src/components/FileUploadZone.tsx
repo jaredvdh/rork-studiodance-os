@@ -199,7 +199,7 @@ export default function FileUploadZone({
           <div className="flex items-start gap-2">
             <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="text-xs text-muted-foreground">
-              <p className="mb-1 font-medium">Tips for best results:</p>
+              <p className="mb-1 font-medium">No files uploaded yet — tips for best results:</p>
               <ul className="list-inside list-disc space-y-0.5">
                 <li>Upload one file per data type (students, classes, instructors)</li>
                 <li>Make sure each file has a header row with column names</li>
