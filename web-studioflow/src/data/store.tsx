@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -87,10 +87,16 @@ export function EnrolmentsProvider({ children }: { children: React.ReactNode }) 
   const { data: supabaseEnrolments = [] } = useSupabaseEnrolments(isDemo);
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
   const [localMutations, setLocalMutations] = useState<Set<string>>(new Set());
+  const enrolInitialSyncDone = useRef(false);
 
   useEffect(() => {
-    setEnrolments(supabaseEnrolments);
-  }, [supabaseEnrolments]);
+    // Demo mode: sync once on initial load, then preserve local edits
+    // Real mode: always sync from Supabase after mutations
+    if (!enrolInitialSyncDone.current || !isDemo) {
+      setEnrolments(supabaseEnrolments);
+      enrolInitialSyncDone.current = true;
+    }
+  }, [supabaseEnrolments, isDemo]);
 
   // Merge local (optimistic) mutations on top of Supabase/demo data.
   // Key: `${studentId}:${classId}`
@@ -163,11 +169,16 @@ export function TeachersProvider({ children }: { children: React.ReactNode }) {
   const { data: supabaseTeachers = [] } = useSupabaseTeachers(isDemo);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const queryClient = useQueryClient();
+  const teacherInitialSyncDone = useRef(false);
 
-  // Sync from Supabase when data loads
+  // Demo mode: sync once on initial load, then preserve local edits
+  // Real mode: always sync from Supabase after mutations
   useEffect(() => {
-    setTeachers(supabaseTeachers);
-  }, [supabaseTeachers]);
+    if (!teacherInitialSyncDone.current || !isDemo) {
+      setTeachers(supabaseTeachers);
+      teacherInitialSyncDone.current = true;
+    }
+  }, [supabaseTeachers, isDemo]);
 
   const addTeacherMut = useAddTeacher();
   const updateTeacherMut = useUpdateTeacher();
@@ -177,27 +188,30 @@ export function TeachersProvider({ children }: { children: React.ReactNode }) {
     const tempId = `t${Date.now()}`;
     const optimistic: Teacher = { ...t, id: tempId, studioId: "" };
     setTeachers((prev) => [...prev, optimistic]);
+    if (isDemo) return;
     addTeacherMut.mutate(t, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
       onError: () => {
         setTeachers((prev) => prev.filter((x) => x.id !== tempId));
       },
     });
-  }, [addTeacherMut, queryClient]);
+  }, [addTeacherMut, queryClient, isDemo]);
 
   const removeTeacher = useCallback((id: string) => {
     setTeachers((prev) => prev.filter((t) => t.id !== id));
+    if (isDemo) return;
     removeTeacherMut.mutate(id, {
       onError: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
     });
-  }, [removeTeacherMut, queryClient]);
+  }, [removeTeacherMut, queryClient, isDemo]);
 
   const updateTeacher = useCallback((id: string, patch: Partial<Omit<Teacher, "id" | "studioId">>) => {
     setTeachers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    if (isDemo) return;
     updateTeacherMut.mutate({ id, patch }, {
       onError: () => queryClient.invalidateQueries({ queryKey: ["teachers"] }),
     });
-  }, [updateTeacherMut, queryClient]);
+  }, [updateTeacherMut, queryClient, isDemo]);
 
   return (
     <TeachersContext.Provider value={{ teachers, addTeacher, removeTeacher, updateTeacher }}>
@@ -229,10 +243,16 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   const { data: supabaseClasses = [] } = useSupabaseClasses(isDemo);
   const [classes, setClasses] = useState<Class[]>([]);
   const queryClient = useQueryClient();
+  const classInitialSyncDone = useRef(false);
 
+  // Demo mode: sync once on initial load, then preserve local edits
+  // Real mode: always sync from Supabase after mutations
   useEffect(() => {
-    setClasses(supabaseClasses);
-  }, [supabaseClasses]);
+    if (!classInitialSyncDone.current || !isDemo) {
+      setClasses(supabaseClasses);
+      classInitialSyncDone.current = true;
+    }
+  }, [supabaseClasses, isDemo]);
 
   const addClassMut = useAddClass();
   const updateClassMut = useUpdateClass();
@@ -242,27 +262,30 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
     const tempId = `c${Date.now()}`;
     const optimistic: Class = { ...c, id: tempId, studioId: "" };
     setClasses((prev) => [optimistic, ...prev]);
+    if (isDemo) return;
     addClassMut.mutate(c, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
       onError: () => {
         setClasses((prev) => prev.filter((x) => x.id !== tempId));
       },
     });
-  }, [addClassMut, queryClient]);
+  }, [addClassMut, queryClient, isDemo]);
 
   const removeClass = useCallback((id: string) => {
     setClasses((prev) => prev.filter((c) => c.id !== id));
+    if (isDemo) return;
     removeClassMut.mutate(id, {
       onError: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
     });
-  }, [removeClassMut, queryClient]);
+  }, [removeClassMut, queryClient, isDemo]);
 
   const updateClass = useCallback((id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => {
     setClasses((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    if (isDemo) return;
     updateClassMut.mutate({ id, patch }, {
       onError: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
     });
-  }, [updateClassMut, queryClient]);
+  }, [updateClassMut, queryClient, isDemo]);
 
   return (
     <ClassesContext.Provider value={{ classes, addClass, removeClass, updateClass }}>
