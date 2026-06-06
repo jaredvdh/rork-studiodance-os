@@ -29,8 +29,276 @@ import type {
   WaiverSignature,
   WaiverTemplate,
   WaiverVersion,
+  Vertical,
 } from "./types";
 import { SAFE_SECONDARY_DEFAULTS, type Address, type AddressSource } from "./types";
+
+/* ── Vertical-aware demo data generators ────────────────────────── */
+
+const VERTICAL_STUDIO_CONFIGS: Record<Vertical, { name: string; tagline: string; city: string; initials: string; brandColor: string }> = {
+  dance: { name: "Aurora Dance Academy", tagline: "Where every dancer finds their light", city: "Portland, OR", initials: "AD", brandColor: "350 74% 60%" },
+  yoga: { name: "Breath & Flow Yoga", tagline: "Find your practice, find yourself", city: "Portland, OR", initials: "BF", brandColor: "178 42% 42%" },
+  crossfit: { name: "Northside CrossFit", tagline: "Forged by fire, built by community", city: "Portland, OR", initials: "NX", brandColor: "32 82% 48%" },
+  gym: { name: "Iron Haven Fitness", tagline: "Your transformation starts here", city: "Portland, OR", initials: "IH", brandColor: "220 12% 40%" },
+  martial_arts: { name: "Zen Mountain Dojo", tagline: "Discipline · Respect · Mastery", city: "Portland, OR", initials: "ZM", brandColor: "245 48% 48%" },
+  music_school: { name: "Cascade Music Academy", tagline: "Where talent finds its voice", city: "Portland, OR", initials: "CM", brandColor: "350 74% 60%" },
+};
+
+export function getDemoStudio(vertical: Vertical): Studio {
+  const cfg = VERTICAL_STUDIO_CONFIGS[vertical];
+  return {
+    id: `stu_${vertical}`,
+    name: cfg.name,
+    tagline: cfg.tagline,
+    city: cfg.city,
+    brandColor: cfg.brandColor,
+    initials: cfg.initials,
+    vertical,
+    address: {
+      line1: "1422 NW Irving St",
+      city: "Portland",
+      stateOrProvince: "OR",
+      postalCode: "97209",
+      country: "US",
+    },
+    settings: {
+      preferredUnits: "imperial",
+      measurementCollectionMode: "parent_size_only",
+      regional: {
+        country: "US",
+        timezone: "America/Los_Angeles",
+        currency: "USD",
+        dateFormat: "MM/DD/YYYY",
+        timeFormat: "12h",
+        measurementSystem: "imperial",
+      },
+    },
+  };
+}
+
+const VERTICAL_TEACHER_POOLS: Record<Vertical, Array<{ name: string; styles: ClassStyle[]; skills: Array<{ name: string; category: string }>; email: string; hourlyRateCents: number; payType: "employee" | "1099" }>> = {
+  dance: [
+    { name: "Mara Delgado", styles: ["Ballet", "Lyrical"], skills: [{ name: "Ballet", category: "Dance" }, { name: "Lyrical", category: "Dance" }, { name: "Pointe", category: "Dance" }], email: "mara@aurora.dance", hourlyRateCents: 4500, payType: "employee" },
+    { name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], skills: [{ name: "Hip Hop", category: "Dance" }, { name: "Jazz", category: "Dance" }, { name: "Breaking", category: "Dance" }], email: "theo@aurora.dance", hourlyRateCents: 5000, payType: "1099" },
+    { name: "Priya Anand", styles: ["Contemporary", "Lyrical"], skills: [{ name: "Contemporary", category: "Dance" }, { name: "Lyrical", category: "Dance" }], email: "priya@aurora.dance", hourlyRateCents: 4000, payType: "employee" },
+    { name: "Jules Romano", styles: ["Tap", "Jazz"], skills: [{ name: "Tap", category: "Dance" }, { name: "Jazz", category: "Dance" }], email: "jules@aurora.dance", hourlyRateCents: 3500, payType: "1099" },
+    { name: "Sasha Berg", styles: ["Acro", "Ballet"], skills: [{ name: "Acro", category: "Dance" }, { name: "Ballet", category: "Dance" }], email: "sasha@aurora.dance", hourlyRateCents: 5500, payType: "employee" },
+  ],
+  yoga: [
+    { name: "Lena Oakes", styles: ["Vinyasa", "Power Yoga"], skills: [{ name: "Vinyasa", category: "Yoga" }, { name: "Power Yoga", category: "Yoga" }], email: "lena@breathflow.yoga", hourlyRateCents: 5500, payType: "1099" },
+    { name: "Ravi Kapoor", styles: ["Hatha", "Restorative"], skills: [{ name: "Hatha", category: "Yoga" }, { name: "Restorative", category: "Yoga" }], email: "ravi@breathflow.yoga", hourlyRateCents: 5000, payType: "1099" },
+    { name: "Maya Chen", styles: ["Yin", "Vinyasa"], skills: [{ name: "Yin", category: "Yoga" }, { name: "Vinyasa", category: "Yoga" }], email: "maya@breathflow.yoga", hourlyRateCents: 4800, payType: "employee" },
+    { name: "Sam Rivers", styles: ["Power Yoga", "Hatha"], skills: [{ name: "Power Yoga", category: "Yoga" }, { name: "Hatha", category: "Yoga" }], email: "sam@breathflow.yoga", hourlyRateCents: 4500, payType: "employee" },
+  ],
+  crossfit: [
+    { name: "Dom Reyes", styles: ["Strength", "Olympic Lifting"], skills: [{ name: "Strength", category: "CrossFit" }, { name: "Olympic Lifting", category: "CrossFit" }], email: "dom@northside.fit", hourlyRateCents: 6000, payType: "employee" },
+    { name: "Jess Park", styles: ["Conditioning", "Gymnastics"], skills: [{ name: "Conditioning", category: "CrossFit" }, { name: "Gymnastics", category: "CrossFit" }], email: "jess@northside.fit", hourlyRateCents: 5500, payType: "employee" },
+    { name: "Troy Mitchell", styles: ["Mobility", "Strength"], skills: [{ name: "Mobility", category: "CrossFit" }, { name: "Strength", category: "CrossFit" }], email: "troy@northside.fit", hourlyRateCents: 5000, payType: "1099" },
+  ],
+  gym: [
+    { name: "Marcus Stone", styles: ["Strength", "Conditioning"], skills: [{ name: "Strength", category: "Gym" }, { name: "Conditioning", category: "Gym" }], email: "marcus@ironhaven.fit", hourlyRateCents: 5000, payType: "employee" },
+    { name: "Tanya Ross", styles: ["Mobility", "Gymnastics"], skills: [{ name: "Mobility", category: "Gym" }, { name: "Gymnastics", category: "Gym" }], email: "tanya@ironhaven.fit", hourlyRateCents: 4500, payType: "1099" },
+    { name: "Chris Park", styles: ["Olympic Lifting", "Strength"], skills: [{ name: "Olympic Lifting", category: "Gym" }, { name: "Strength", category: "Gym" }], email: "chris@ironhaven.fit", hourlyRateCents: 5500, payType: "employee" },
+  ],
+  martial_arts: [
+    { name: "Sensei Tanaka", styles: ["Advanced", "Sparring"], skills: [{ name: "Advanced", category: "Martial Arts" }, { name: "Sparring", category: "Martial Arts" }], email: "tanaka@zenmountain.do", hourlyRateCents: 6000, payType: "employee" },
+    { name: "Kenji Mori", styles: ["Intermediate", "Grading Prep"], skills: [{ name: "Intermediate", category: "Martial Arts" }, { name: "Grading Prep", category: "Martial Arts" }], email: "kenji@zenmountain.do", hourlyRateCents: 4800, payType: "1099" },
+    { name: "Aiko Saito", styles: ["Beginner", "Intermediate"], skills: [{ name: "Beginner", category: "Martial Arts" }, { name: "Intermediate", category: "Martial Arts" }], email: "aiko@zenmountain.do", hourlyRateCents: 4200, payType: "employee" },
+  ],
+  music_school: [
+    { name: "Claire Beaumont", styles: ["Piano", "Voice"], skills: [{ name: "Piano", category: "Music" }, { name: "Voice", category: "Music" }], email: "claire@cascade.music", hourlyRateCents: 6500, payType: "employee" },
+    { name: "Diego Fuentes", styles: ["Guitar", "Drums"], skills: [{ name: "Guitar", category: "Music" }, { name: "Drums", category: "Music" }], email: "diego@cascade.music", hourlyRateCents: 5500, payType: "1099" },
+    { name: "Yuki Tanaka", styles: ["Violin", "Piano"], skills: [{ name: "Violin", category: "Music" }, { name: "Piano", category: "Music" }], email: "yuki@cascade.music", hourlyRateCents: 6000, payType: "employee" },
+    { name: "Omar Brooks", styles: ["Voice", "Guitar"], skills: [{ name: "Voice", category: "Music" }, { name: "Guitar", category: "Music" }], email: "omar@cascade.music", hourlyRateCents: 5000, payType: "1099" },
+  ],
+};
+
+const VERTICAL_CLASS_TEMPLATES: Record<Vertical, Array<{ name: string; style: ClassStyle; ageGroup: AgeGroup; day: WeekDay; startTime: string; durationMins: number; room: string; capacity: number; priceCents: number; inRecital: boolean }>> = {
+  dance: [
+    { name: "Tiny Tots Ballet", style: "Ballet", ageGroup: "Tiny Tots", day: "Mon", startTime: "16:00", durationMins: 45, room: "Studio A", capacity: 12, priceCents: 8500, inRecital: true },
+    { name: "Junior Hip Hop", style: "Hip Hop", ageGroup: "Junior", day: "Mon", startTime: "17:00", durationMins: 60, room: "Studio B", capacity: 18, priceCents: 9500, inRecital: true },
+    { name: "Senior Contemporary", style: "Contemporary", ageGroup: "Senior", day: "Tue", startTime: "18:30", durationMins: 75, room: "Studio A", capacity: 16, priceCents: 11000, inRecital: true },
+    { name: "Intermediate Jazz", style: "Jazz", ageGroup: "Intermediate", day: "Tue", startTime: "17:00", durationMins: 60, room: "Studio B", capacity: 16, priceCents: 9500, inRecital: true },
+    { name: "Adult Tap Social", style: "Tap", ageGroup: "Adult", day: "Wed", startTime: "19:30", durationMins: 60, room: "Studio C", capacity: 20, priceCents: 7500, inRecital: false },
+    { name: "Junior Lyrical", style: "Lyrical", ageGroup: "Junior", day: "Wed", startTime: "16:30", durationMins: 60, room: "Studio A", capacity: 16, priceCents: 9500, inRecital: true },
+    { name: "Senior Hip Hop Crew", style: "Hip Hop", ageGroup: "Senior", day: "Thu", startTime: "18:00", durationMins: 90, room: "Studio B", capacity: 20, priceCents: 12500, inRecital: true },
+    { name: "Acro Foundations", style: "Acro", ageGroup: "Intermediate", day: "Thu", startTime: "16:30", durationMins: 60, room: "Studio C", capacity: 12, priceCents: 10000, inRecital: false },
+    { name: "Pre-Pro Ballet", style: "Ballet", ageGroup: "Senior", day: "Fri", startTime: "17:30", durationMins: 90, room: "Studio A", capacity: 14, priceCents: 14000, inRecital: true },
+    { name: "Saturday Combo Jr.", style: "Jazz", ageGroup: "Junior", day: "Sat", startTime: "10:00", durationMins: 75, room: "Studio B", capacity: 18, priceCents: 10500, inRecital: true },
+  ],
+  yoga: [
+    { name: "Morning Vinyasa Flow", style: "Vinyasa", ageGroup: "Adult", day: "Mon", startTime: "07:00", durationMins: 60, room: "Main Studio", capacity: 24, priceCents: 1800, inRecital: false },
+    { name: "Gentle Hatha", style: "Hatha", ageGroup: "All Levels", day: "Mon", startTime: "09:30", durationMins: 75, room: "Main Studio", capacity: 20, priceCents: 2000, inRecital: false },
+    { name: "Power Hour", style: "Power Yoga", ageGroup: "Adult", day: "Tue", startTime: "06:30", durationMins: 60, room: "Main Studio", capacity: 28, priceCents: 1800, inRecital: false },
+    { name: "Yin & Meditation", style: "Yin", ageGroup: "All Levels", day: "Tue", startTime: "19:00", durationMins: 90, room: "Small Studio", capacity: 16, priceCents: 2200, inRecital: false },
+    { name: "Restorative Yoga", style: "Restorative", ageGroup: "Adult", day: "Wed", startTime: "18:00", durationMins: 75, room: "Main Studio", capacity: 20, priceCents: 2000, inRecital: false },
+    { name: "Lunchtime Vinyasa", style: "Vinyasa", ageGroup: "Adult", day: "Thu", startTime: "12:00", durationMins: 45, room: "Main Studio", capacity: 24, priceCents: 1500, inRecital: false },
+    { name: "Weekend Warrior Flow", style: "Power Yoga", ageGroup: "Adult", day: "Sat", startTime: "09:00", durationMins: 90, room: "Main Studio", capacity: 28, priceCents: 2500, inRecital: false },
+  ],
+  crossfit: [
+    { name: "Dawn Patrol WOD", style: "Conditioning", ageGroup: "Adult", day: "Mon", startTime: "06:00", durationMins: 60, room: "Box", capacity: 20, priceCents: 22000, inRecital: false },
+    { name: "Strength & Conditioning", style: "Strength", ageGroup: "Adult", day: "Mon", startTime: "07:30", durationMins: 60, room: "Box", capacity: 18, priceCents: 22000, inRecital: false },
+    { name: "Olympic Lifting Clinic", style: "Olympic Lifting", ageGroup: "Intermediate", day: "Tue", startTime: "17:30", durationMins: 90, room: "Box", capacity: 12, priceCents: 18000, inRecital: false },
+    { name: "Gymnastics Skills", style: "Gymnastics", ageGroup: "All Levels", day: "Wed", startTime: "18:00", durationMins: 60, room: "Box", capacity: 16, priceCents: 15000, inRecital: false },
+    { name: "Mobility & Recovery", style: "Mobility", ageGroup: "All Levels", day: "Thu", startTime: "07:00", durationMins: 45, room: "Box", capacity: 22, priceCents: 12000, inRecital: false },
+    { name: "Hero WOD Saturday", style: "Conditioning", ageGroup: "Adult", day: "Sat", startTime: "09:00", durationMins: 75, room: "Box", capacity: 24, priceCents: 16000, inRecital: false },
+  ],
+  gym: [
+    { name: "Early Bird Strength", style: "Strength", ageGroup: "Adult", day: "Mon", startTime: "06:30", durationMins: 60, room: "Weight Room", capacity: 20, priceCents: 12000, inRecital: false },
+    { name: "HIIT Conditioning", style: "Conditioning", ageGroup: "Adult", day: "Mon", startTime: "09:00", durationMins: 45, room: "Cardio Floor", capacity: 24, priceCents: 10000, inRecital: false },
+    { name: "Olympic Lifting 101", style: "Olympic Lifting", ageGroup: "Intermediate", day: "Tue", startTime: "17:30", durationMins: 60, room: "Weight Room", capacity: 14, priceCents: 14000, inRecital: false },
+    { name: "Bodyweight Mastery", style: "Gymnastics", ageGroup: "All Levels", day: "Wed", startTime: "18:30", durationMins: 45, room: "Studio", capacity: 18, priceCents: 9000, inRecital: false },
+    { name: "Stretch & Recover", style: "Mobility", ageGroup: "All Levels", day: "Fri", startTime: "08:00", durationMins: 45, room: "Studio", capacity: 22, priceCents: 8000, inRecital: false },
+    { name: "Weekend Warrior", style: "Conditioning", ageGroup: "Adult", day: "Sat", startTime: "10:00", durationMins: 60, room: "Cardio Floor", capacity: 24, priceCents: 11000, inRecital: false },
+  ],
+  martial_arts: [
+    { name: "Beginners' Foundation", style: "Beginner", ageGroup: "All Levels", day: "Mon", startTime: "17:00", durationMins: 60, room: "Dojo", capacity: 20, priceCents: 12000, inRecital: false },
+    { name: "Intermediate Kata", style: "Intermediate", ageGroup: "Intermediate", day: "Tue", startTime: "18:00", durationMins: 75, room: "Dojo", capacity: 16, priceCents: 14000, inRecital: false },
+    { name: "Advanced Sparring", style: "Sparring", ageGroup: "Senior", day: "Wed", startTime: "19:00", durationMins: 90, room: "Dojo", capacity: 14, priceCents: 16000, inRecital: false },
+    { name: "Grading Preparation", style: "Grading Prep", ageGroup: "All Levels", day: "Thu", startTime: "17:30", durationMins: 60, room: "Dojo", capacity: 18, priceCents: 13000, inRecital: false },
+    { name: "Junior Warriors", style: "Beginner", ageGroup: "Junior", day: "Sat", startTime: "10:00", durationMins: 45, room: "Dojo", capacity: 22, priceCents: 10000, inRecital: false },
+  ],
+  music_school: [
+    { name: "Piano Beginners", style: "Piano", ageGroup: "Junior", day: "Mon", startTime: "15:30", durationMins: 30, room: "Room 1", capacity: 1, priceCents: 12000, inRecital: true },
+    { name: "Intermediate Piano", style: "Piano", ageGroup: "Intermediate", day: "Mon", startTime: "17:00", durationMins: 45, room: "Room 1", capacity: 1, priceCents: 16000, inRecital: true },
+    { name: "Guitar Group", style: "Guitar", ageGroup: "Junior", day: "Tue", startTime: "16:00", durationMins: 45, room: "Room 2", capacity: 6, priceCents: 10000, inRecital: true },
+    { name: "Voice Studio", style: "Voice", ageGroup: "All Levels", day: "Tue", startTime: "17:00", durationMins: 45, room: "Room 3", capacity: 1, priceCents: 14000, inRecital: true },
+    { name: "Violin Ensemble", style: "Violin", ageGroup: "Intermediate", day: "Wed", startTime: "16:00", durationMins: 60, room: "Room 2", capacity: 8, priceCents: 11000, inRecital: true },
+    { name: "Drum Circle", style: "Drums", ageGroup: "All Levels", day: "Thu", startTime: "18:00", durationMins: 60, room: "Room 4", capacity: 10, priceCents: 9000, inRecital: false },
+    { name: "Advanced Piano", style: "Piano", ageGroup: "Senior", day: "Fri", startTime: "16:00", durationMins: 60, room: "Room 1", capacity: 1, priceCents: 18000, inRecital: true },
+    { name: "Saturday Music Makers", style: "Voice", ageGroup: "Tiny Tots", day: "Sat", startTime: "10:00", durationMins: 30, room: "Room 3", capacity: 10, priceCents: 8000, inRecital: false },
+  ],
+};
+
+const VERTICAL_ANNOUNCEMENT_TEMPLATES: Record<Vertical, Array<{ title: string; body: string; scope: AnnouncementScope; audience: string; reach: number; daysAgoVal: number }>> = {
+  dance: [
+    { title: "Spring Recital rehearsal — May 25th", body: "All recital classes have a mandatory dress rehearsal at the Benson Theatre. Arrive 30 minutes early with full costume and hair done.", scope: "Recital", audience: "8 recital classes", reach: 121, daysAgoVal: 1 },
+    { title: "Jazz Class cancelled tonight", body: "Due to a facilities issue, tonight's Intermediate Jazz is cancelled. A make-up class will be scheduled next week.", scope: "Emergency", audience: "Intermediate Jazz", reach: 14, daysAgoVal: 2 },
+    { title: "Costumes due next week", body: "Final costume payments are due Friday. Please complete your balance in the parent portal to secure your dancer's costume.", scope: "Studio-wide", audience: "All families", reach: 42, daysAgoVal: 4 },
+    { title: "New Acro Foundations spots open", body: "We've opened 4 additional spots in Acro Foundations on Thursdays. Enrol now through the portal.", scope: "Studio-wide", audience: "All families", reach: 42, daysAgoVal: 8 },
+  ],
+  yoga: [
+    { title: "Summer Solstice Workshop — June 21", body: "Join us for a special 2-hour solstice practice with live music. Early bird pricing until June 10th.", scope: "Studio-wide", audience: "All members", reach: 85, daysAgoVal: 1 },
+    { title: "New Yin & Meditation class added", body: "Due to popular demand, we've added a Wednesday evening Yin & Meditation class starting next week.", scope: "Studio-wide", audience: "All members", reach: 85, daysAgoVal: 3 },
+    { title: "Class Pass update", body: "Reminder: unused class passes expire at the end of this month. Check your account for remaining credits.", scope: "Studio-wide", audience: "All members", reach: 85, daysAgoVal: 5 },
+  ],
+  crossfit: [
+    { title: "Murph Challenge — Memorial Day", body: "Join us Monday for the annual Murph WOD. Heats start at 8am. Sign up on the whiteboard to reserve your spot.", scope: "Studio-wide", audience: "All athletes", reach: 64, daysAgoVal: 1 },
+    { title: "Olympic Lifting Seminar", body: "Coach Dom is running a 2-day clean & jerk seminar this weekend. Limited to 12 athletes. $40 registration.", scope: "Studio-wide", audience: "All athletes", reach: 64, daysAgoVal: 3 },
+    { title: "Benchmark testing week", body: "Next week is benchmark testing. We'll be retesting Fran, Grace, and Helen. Track your progress on the app.", scope: "Studio-wide", audience: "All athletes", reach: 64, daysAgoVal: 6 },
+  ],
+  gym: [
+    { title: "Summer Body Challenge", body: "8-week transformation challenge starts Monday. $500 prize for the winner. Sign up at the front desk.", scope: "Studio-wide", audience: "All members", reach: 58, daysAgoVal: 2 },
+    { title: "New HIIT class time", body: "We've added a 7am HIIT class on Tuesdays and Thursdays starting next week. Limited to 24 spots.", scope: "Studio-wide", audience: "All members", reach: 58, daysAgoVal: 4 },
+  ],
+  martial_arts: [
+    { title: "Belt grading — June 15th", body: "Registration for the June belt grading is now open. All eligible students must have their grading form signed by a parent or guardian by June 10th.", scope: "Studio-wide", audience: "All students", reach: 42, daysAgoVal: 1 },
+    { title: "Sparring safety equipment check", body: "All sparring students: please bring your protective gear to class this week for a mandatory equipment safety check.", scope: "Class", audience: "Sparring classes", reach: 18, daysAgoVal: 3 },
+    { title: "Dojo spring cleaning", body: "We're organising a dojo clean-up day this Saturday. Volunteers welcome — pizza provided after!", scope: "Studio-wide", audience: "All students", reach: 42, daysAgoVal: 5 },
+  ],
+  music_school: [
+    { title: "Spring Recital programme finalised", body: "The recital running order is now available in the parent portal. Please confirm your child's participation by Friday.", scope: "Recital", audience: "Recital participants", reach: 45, daysAgoVal: 1 },
+    { title: "Instrument maintenance workshop", body: "Free workshop this Saturday: learn basic instrument care and tuning. All students welcome.", scope: "Studio-wide", audience: "All families", reach: 52, daysAgoVal: 3 },
+    { title: "Practice room schedule update", body: "Practice rooms are now available for booking via the parent portal. Book up to 2 hours per week per student.", scope: "Studio-wide", audience: "All families", reach: 52, daysAgoVal: 5 },
+  ],
+};
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+export function getDemoTeachers(vertical: Vertical): Teacher[] {
+  const studio = getDemoStudio(vertical);
+  const pool = VERTICAL_TEACHER_POOLS[vertical];
+  return pool.map((t, i) => ({
+    id: `t${i + 1}`,
+    studioId: studio.id,
+    name: t.name,
+    styles: t.styles,
+    skills: t.skills,
+    email: t.email,
+    phone: `+1 503 555 0${100 + i * 10}`,
+    address: "1422 NW Irving St, Portland, OR 97209",
+    status: "active" as const,
+    hireDate: `${2020 + (i % 3)}-0${(i % 9) + 1}-15`,
+    employeeId: `EMP-00${i + 1}`,
+    certifications: [{ name: "First Aid / CPR", issuedAt: "2025-08-20", expiresAt: "2027-08-20" }],
+    hourlyRateCents: t.hourlyRateCents,
+    payType: t.payType,
+  }));
+}
+
+export function getDemoClasses(vertical: Vertical): Class[] {
+  const studio = getDemoStudio(vertical);
+  const teachers = getDemoTeachers(vertical);
+  const templates = VERTICAL_CLASS_TEMPLATES[vertical];
+  return templates.map((t, i) => {
+    const enrolled = Math.round(t.capacity * (0.5 + Math.random() * 0.45));
+    const waitlist = enrolled >= t.capacity ? Math.ceil(Math.random() * 5) : 0;
+    return {
+      id: `c${i + 1}`,
+      studioId: studio.id,
+      name: t.name,
+      style: t.style,
+      ageGroup: t.ageGroup,
+      day: t.day,
+      startTime: t.startTime,
+      durationMins: t.durationMins,
+      room: t.room,
+      teacherId: teachers[i % teachers.length].id,
+      capacity: t.capacity,
+      enrolled,
+      waitlist,
+      inRecital: t.inRecital,
+      priceCents: t.priceCents,
+    };
+  });
+}
+
+export function getDemoAnnouncements(vertical: Vertical): Announcement[] {
+  const studio = getDemoStudio(vertical);
+  const templates = VERTICAL_ANNOUNCEMENT_TEMPLATES[vertical];
+  return templates.map((t, i) => ({
+    id: `a${i + 1}`,
+    studioId: studio.id,
+    title: t.title,
+    body: t.body,
+    scope: t.scope,
+    sentAt: daysAgo(t.daysAgoVal),
+    audience: t.audience,
+    reach: t.reach,
+  }));
+}
+
+export function getDemoRecitalEvents(vertical: Vertical): RecitalEvent[] {
+  const studio = getDemoStudio(vertical);
+  const eventLabel = vertical === "dance" ? "Spring Showcase 2026" : vertical === "music_school" ? "Spring Recital 2026" : "";
+  const venue = vertical === "dance" ? "Benson Theatre" : vertical === "music_school" ? "Cascade Concert Hall" : "";
+  if (vertical !== "dance" && vertical !== "music_school") return [];
+  const classes = getDemoClasses(vertical).filter((c) => c.inRecital);
+  const performances = classes.map((c, i) => ({
+    id: `p${i + 1}`,
+    studioId: studio.id,
+    name: `Act ${i + 1} — ${c.name}`,
+    classIds: [c.id],
+    order: i + 1,
+    startTime: `${19 + Math.floor(i / 2)}:${i % 2 === 0 ? "00" : "30"}`,
+    costumeNote: vertical === "dance" ? (i % 2 === 0 ? "Pink tutus and ballet slippers" : "Neon accents and white sneakers") : undefined,
+  }));
+  return [{
+    id: "r1",
+    studioId: studio.id,
+    name: eventLabel,
+    date: "2026-06-15T19:00:00Z",
+    venue,
+    costumeDeadline: vertical === "dance" ? "2026-05-30T00:00:00Z" : undefined,
+    performances,
+  }];
+}
+
+// ── Backward-compatible static exports (dance default) ────────────
 
 export const studio: Studio = {
   id: "stu_aurora",

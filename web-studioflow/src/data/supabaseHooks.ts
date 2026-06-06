@@ -4,10 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/studioStore";
 import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument, Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, VendorOrderItem, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict } from "@/data/types";
 import {
+  getDemoAnnouncements,
+  getDemoClasses,
+  getDemoTeachers,
+  getDemoStudio,
+  getDemoRecitalEvents,
   announcements as demoAnnouncements,
-  classes as demoClasses,
   students as demoStudents,
-  teachers as demoTeachers,
   parentAccounts as demoParents,
   studio as defaultStudio,
   invoices as demoInvoices,
@@ -28,6 +31,8 @@ import {
   reusableCostumes as demoReusableCostumes,
   costumeRentals as demoCostumeRentals,
   quickChangeConflicts as demoQuickChangeConflicts,
+  classes as demoClasses,
+  teachers as demoTeachers,
 } from "@/data/demo";
 
 /* ── Helpers ──────────────────────────────────────────────────── */
@@ -82,8 +87,10 @@ function formatError(err: unknown): string {
 
 export function useSupabaseStudio(isDemo: boolean) {
   const studioId = useStudioId();
+  const { studio: currentStudio } = useStudio();
+  const demoStudio = getDemoStudio(currentStudio.vertical);
   return useDualQuery<Studio>(
-    ["studio", studioId],
+    ["studio", studioId, currentStudio.vertical],
     async () => {
       const { data, error } = await supabase
         .from("studios")
@@ -93,7 +100,7 @@ export function useSupabaseStudio(isDemo: boolean) {
       if (error || !data) return { data: null, error };
       return { data: [{ id: data.id, name: data.name, tagline: data.tagline ?? "", city: data.city ?? "", brandColor: data.brand_color ?? "", initials: data.initials ?? "", logoUrl: data.logo_url ?? undefined, vertical: (data.vertical as Studio["vertical"]) ?? "dance" }], error: null };
     },
-    [defaultStudio],
+    [demoStudio],
     isDemo,
   );
 }
@@ -102,14 +109,16 @@ export function useSupabaseStudio(isDemo: boolean) {
 
 export function useSupabaseTeachers(isDemo: boolean) {
   const studioId = useStudioId();
+  const { studio: currentStudio } = useStudio();
+  const vTeachers = getDemoTeachers(currentStudio.vertical);
   return useDualQuery<Teacher>(
-    ["teachers", studioId],
+    ["teachers", studioId, currentStudio.vertical],
     async () => {
       const { data, error } = await supabase.from("teachers").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
       return { data: data.map((t) => ({ id: t.id, studioId: t.studio_id, name: t.name, styles: t.styles as Teacher["styles"], email: t.email, hourlyRateCents: t.hourly_rate_cents ?? undefined, payType: (t.pay_type as Teacher["payType"]) ?? undefined })), error: null };
     },
-    demoTeachers,
+    vTeachers,
     isDemo,
   );
 }
@@ -166,14 +175,16 @@ export function useRemoveTeacher() {
 
 export function useSupabaseClasses(isDemo: boolean) {
   const studioId = useStudioId();
+  const { studio: currentStudio } = useStudio();
+  const vClasses = getDemoClasses(currentStudio.vertical);
   return useDualQuery<Class>(
-    ["classes", studioId],
+    ["classes", studioId, currentStudio.vertical],
     async () => {
       const { data, error } = await supabase.from("classes").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
       return { data: data.map((c) => ({ id: c.id, studioId: c.studio_id, name: c.name, style: c.style as Class["style"], ageGroup: (c.age_group as Class["ageGroup"]) ?? "Junior", day: (c.day as Class["day"]) ?? "Mon", startTime: c.start_time ?? "17:00", durationMins: c.duration_mins ?? 60, room: c.room ?? "Studio A", teacherId: c.teacher_id ?? "", capacity: c.capacity ?? 15, enrolled: c.enrolled ?? 0, waitlist: c.waitlist ?? 0, inRecital: c.in_recital ?? false, priceCents: c.price_cents ?? 9500 })), error: null };
     },
-    demoClasses,
+    vClasses,
     isDemo,
   );
 }
