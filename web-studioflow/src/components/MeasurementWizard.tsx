@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -924,6 +925,113 @@ const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     getPrevValue: () => undefined,
   },
 ];
+
+/* ── Simple sizing field component ────────────────────────────────── */
+
+/** Clothing size options for children's dancewear. */
+const CLOTHING_SIZE_OPTIONS = [
+  "",
+  "2T",
+  "3T",
+  "4T",
+  "5T",
+  "XXS (3-4)",
+  "XS (4-5)",
+  "XS (5-6)",
+  "S (6-7)",
+  "S (7-8)",
+  "M (8-10)",
+  "M (10-12)",
+  "L (12-14)",
+  "L (14-16)",
+  "XL (16-18)",
+  "XXL (18-20)",
+  "Adult XS",
+  "Adult S",
+  "Adult M",
+  "Adult L",
+  "Adult XL",
+] as const;
+
+/** Shoe size options for children and youth. */
+const SHOE_SIZE_OPTIONS = [
+  "",
+  "Toddler 5",
+  "Toddler 6",
+  "Toddler 7",
+  "Toddler 8",
+  "Toddler 9",
+  "Toddler 10",
+  "Child 11",
+  "Child 12",
+  "Child 13",
+  "Youth 1",
+  "Youth 1.5",
+  "Youth 2",
+  "Youth 2.5",
+  "Youth 3",
+  "Youth 3.5",
+  "Youth 4",
+  "Youth 4.5",
+  "Youth 5",
+  "Youth 5.5",
+  "Youth 6",
+  "Youth 6.5",
+  "Youth 7",
+  "Adult 5",
+  "Adult 6",
+  "Adult 7",
+  "Adult 8",
+  "Adult 9",
+  "Adult 10",
+  "Adult 11",
+  "Adult 12",
+] as const;
+
+interface SimpleSizingFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly string[];
+  icon: React.ComponentType<{ className?: string }>;
+  optional?: boolean;
+}
+
+/** A labelled dropdown for simple sizing selections (clothing size, shoe size, etc.). */
+function SimpleSizingField({ label, value, onChange, options, icon: Icon, optional }: SimpleSizingFieldProps) {
+  return (
+    <div>
+      <label className="text-sm font-medium">
+        {label}
+        {optional && <span className="text-xs text-muted-foreground ml-1">(optional)</span>}
+      </label>
+      <div className="relative mt-1">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(
+            "w-full rounded-lg border border-amber-200 bg-white py-2.5 pl-9 pr-8 text-sm",
+            "appearance-none focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+            "transition-colors",
+            !value && "text-muted-foreground",
+          )}
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt || `Select ${label.toLowerCase()}…`}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5">
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ── Measurement guide content ───────────────────────────────────── */
 
