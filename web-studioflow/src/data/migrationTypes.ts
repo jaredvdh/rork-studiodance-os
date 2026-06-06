@@ -96,9 +96,9 @@ export interface ImportTemplate {
 /** Known target fields for the field mapping engine. */
 export const STUDENT_FIELDS: Array<{ field: string; label: string; required: boolean; aliases: string[] }> = [
   { field: "name", label: "Student Name", required: true, aliases: ["student", "dancer", "child", "participant", "member", "athlete", "first name", "full name"] },
-  { field: "parentName", label: "Parent / Guardian Name", required: false, aliases: ["parent", "guardian", "mother", "father", "caregiver", "contact name"] },
-  { field: "parentEmail", label: "Parent / Guardian Email", required: true, aliases: ["email", "parent email", "guardian email", "contact email", "e-mail"] },
-  { field: "parentPhone", label: "Parent Phone", required: false, aliases: ["phone", "telephone", "mobile", "cell", "contact phone", "phone number"] },
+  { field: "parentName", label: "Caregiver Name", required: false, aliases: ["parent", "guardian", "mother", "father", "caregiver", "contact name"] },
+  { field: "parentEmail", label: "Caregiver Email", required: true, aliases: ["email", "parent email", "guardian email", "contact email", "e-mail"] },
+  { field: "parentPhone", label: "Caregiver Phone", required: false, aliases: ["phone", "telephone", "mobile", "cell", "contact phone", "phone number"] },
   { field: "parentAddress", label: "Parent Address", required: false, aliases: ["address", "street", "home address"] },
   { field: "dob", label: "Date of Birth", required: false, aliases: ["birthday", "birth date", "age", "date of birth", "born"] },
   { field: "allergies", label: "Allergies", required: false, aliases: ["allergy", "allergic", "food allergies"] },

@@ -642,7 +642,7 @@ export function useSupabaseInvoices(isDemo: boolean) {
     async () => {
       const { data, error } = await supabase.from("invoices").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
-      return { data: data.map((i) => ({ id: i.id, studioId: i.studio_id, studentName: i.student_name, parentName: i.parent_name ?? "", description: i.description ?? "", amountCents: i.amount_cents ?? 0, status: (i.status as Invoice["status"]) ?? "due", dueDate: i.due_date ?? "" })), error: null };
+      return { data: data.map((i) => ({ id: i.id, studioId: i.studio_id, studentName: i.student_name, caregiverName: i.parent_name ?? "", description: i.description ?? "", amountCents: i.amount_cents ?? 0, status: (i.status as Invoice["status"]) ?? "due", dueDate: i.due_date ?? "" })), error: null };
     },
     demoInvoices,
     isDemo,
@@ -657,7 +657,7 @@ export function useAddInvoice() {
       const insert: Record<string, unknown> = {
         studio_id: studioId,
         student_name: inv.studentName,
-        parent_name: inv.parentName,
+        parent_name: inv.caregiverName,
         description: inv.description,
         amount_cents: inv.amountCents,
         status: inv.status,
@@ -681,7 +681,7 @@ export function useUpdateInvoice() {
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<Invoice, "id" | "studioId">> }) => {
       const updates: Record<string, unknown> = {};
       if (patch.studentName !== undefined) updates.student_name = patch.studentName;
-      if (patch.parentName !== undefined) updates.parent_name = patch.parentName;
+      if (patch.caregiverName !== undefined) updates.parent_name = patch.caregiverName;
       if (patch.description !== undefined) updates.description = patch.description;
       if (patch.amountCents !== undefined) updates.amount_cents = patch.amountCents;
       if (patch.status !== undefined) updates.status = patch.status;
@@ -698,7 +698,7 @@ export function useUpdateInvoice() {
 export function useSupabaseParents(isDemo: boolean) {
   const studioId = useStudioId();
   return useDualQuery<ParentAccount>(
-    ["parents", studioId],
+    ["caregivers", studioId],
     async () => {
       const { data, error } = await supabase.from("caregivers").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };

@@ -328,7 +328,7 @@ export interface Invoice {
   id: string;
   studioId: string;
   studentName: string;
-  parentName: string;
+  caregiverName: string;
   description: string;
   amountCents: number;
   status: PaymentStatus;
@@ -554,7 +554,6 @@ export function isAddressEmpty(addr?: Address | string | null): boolean {
 /** Audit-log entry for caregiver lifecycle events. */
 export interface CaregiverAuditEvent {
   id: string;
-  caregiverId: string;
   caregiverId: string;
   timestamp: string;
   event: string;

@@ -101,7 +101,7 @@ function validateStudents(ctx: ValidationContext, errors: ImportError[]): void {
         (r) => r.index !== index && normEmail(r.mapped.parentEmail ?? "") === emailNorm,
       );
       if (parentShared.length > 0 && !mapped.parentName) {
-        errors.push({ row: index, field: "parentEmail", message: "Shared parent email — consider adding parent name for clarity", severity: "warning" });
+        errors.push({ row: index, field: "parentEmail", message: "Shared caregiver email — consider adding caregiver name for clarity", severity: "warning" });
       }
     }
 

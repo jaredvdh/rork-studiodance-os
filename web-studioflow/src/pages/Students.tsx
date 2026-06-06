@@ -59,7 +59,7 @@ export default function Students() {
   const rows = useMemo(() => {
     return students.filter((s) => {
       const q = query.toLowerCase();
-      const match = s.name.toLowerCase().includes(q) || s.parentName.toLowerCase().includes(q);
+      const match = s.name.toLowerCase().includes(q) || s.caregiverName.toLowerCase().includes(q);
       if (!match) return false;
       if (filter === "waiver") return s.waiver !== "signed";
       if (filter === "overdue") return s.payment === "overdue";
@@ -142,8 +142,8 @@ export default function Students() {
                 </div>
               </div>
               <div className="hidden min-w-0 md:block">
-                <p className="truncate text-sm">{s.parentName}</p>
-                <p className="truncate text-xs text-muted-foreground">{s.parentEmail}</p>
+                <p className="truncate text-sm">{s.caregiverName}</p>
+                <p className="truncate text-xs text-muted-foreground">{s.caregiverEmail}</p>
               </div>
               <span className="hidden text-sm text-foreground/70 md:block">{s.classIds.length} {s.classIds.length === 1 ? "class" : "classes"}</span>
               <span className="hidden md:block">
@@ -212,7 +212,7 @@ export default function Students() {
             </div>
             {drawerTab === "profile" ? (
             <div className="space-y-5 px-6 py-6">
-              <DetailRow label="Parent / Guardian" value={selected.parentName} sub={selected.parentEmail} />
+              <DetailRow label="Parent / Guardian" value={selected.caregiverName} sub={selected.caregiverEmail} />
               <CaregiverSection student={selected} />
               <DetailRow label="Attendance rate" value={`${Math.round(selected.attendanceRate * 100)}%`} />
               <div>
@@ -582,7 +582,7 @@ function CaregiverMini({ caregiver, label }: { caregiver: Caregiver; label: stri
 }
 
 function CaregiverSection({ student }: { student: Student }) {
-  const parentAcct: ParentAccount | undefined = parentAccounts.find((p) => p.id === student.parentId);
+  const parentAcct: ParentAccount | undefined = parentAccounts.find((p) => p.id === student.caregiverId);
   if (!parentAcct) return null;
   const additional = parentAcct.additionalCaregivers ?? [];
   const allCaregivers = additional.filter((a) => a.status !== "removed");

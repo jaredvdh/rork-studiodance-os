@@ -28,7 +28,7 @@ export async function aiChat(messages: Array<{ role: "system" | "user"; content:
 export async function aiSuggestMappings(headers: string[]): Promise<Record<string, string>> {
   const prompt = `You are a data migration assistant for a studio management SaaS. Given these CSV column headers, suggest the best StudioFlow field mapping for each.
 
-Available StudioFlow fields: name, parentName, parentEmail, parentPhone, parentAddress, dob, allergies, medicalNotes, emergencyContact, emergencyPhone, style, ageGroup, day, startTime, durationMins, room, capacity, teacherName, priceCents, email, styles, hourlyRateCents, payType, className, studentName, studentEmail, secondary_first_name, secondary_last_name, secondary_relationship, secondary_email, secondary_phone
+Available StudioFlow fields: name, caregiverName, caregiverEmail, caregiverPhone, caregiverAddress, dob, allergies, medicalNotes, emergencyContact, emergencyPhone, style, ageGroup, day, startTime, durationMins, room, capacity, teacherName, priceCents, email, styles, hourlyRateCents, payType, className, studentName, studentEmail, secondary_first_name, secondary_last_name, secondary_relationship, secondary_email, secondary_phone
 
 CSV headers:
 ${headers.join("\n")}

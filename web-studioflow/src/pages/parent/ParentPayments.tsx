@@ -57,7 +57,7 @@ function NoBillingAccess() {
 
 /* ── Add card component ────────────────────────────────────────────── */
 
-function AddCardForm({ parentId, onClose }: { parentId: string; onClose: () => void }) {
+function AddCardForm({ caregiverId, onClose }: { caregiverId: string; onClose: () => void }) {
   const qc = useQueryClient();
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -81,14 +81,14 @@ function AddCardForm({ parentId, onClose }: { parentId: string; onClose: () => v
           expYear: 2000 + Number(expiry.split("/")[1]),
           isDefault: true,
         };
-        await savePaymentMethod(parentId, `seti_sim_${Date.now()}`);
+        await savePaymentMethod(caregiverId, `seti_sim_${Date.now()}`);
         toast.success(`${card.brand === "visa" ? "Visa" : "Mastercard"} ending in ${card.last4} added`);
       } else {
-        const { clientSecret } = await createSetupIntent(parentId);
+        const { clientSecret } = await createSetupIntent(caregiverId);
         // In production, Stripe Elements would handle this
         toast.info("Payment method flow requires Stripe Elements — simulated");
       }
-      qc.invalidateQueries({ queryKey: ["payment-methods", parentId] });
+      qc.invalidateQueries({ queryKey: ["payment-methods", caregiverId] });
       onClose();
     } catch {
       toast.error("Failed to add payment method");
@@ -201,7 +201,7 @@ export default function ParentPayments() {
   // Filter invoices for this family
   const myInvoices = allInvoices.filter((i) =>
     myStudents.some((s) => s.name === i.studentName) ||
-    myStudents.some((s) => `${s.parentName}` === i.parentName),
+    myStudents.some((s) => `${s.caregiverName}` === i.caregiverName),
   );
 
   const filtered = filter === "all" ? myInvoices : myInvoices.filter((i) => i.status === filter);
@@ -345,7 +345,7 @@ export default function ParentPayments() {
 
       {/* Add card form */}
       {showAddCard && (
-        <AddCardForm parentId={parent?.id ?? ""} onClose={() => setShowAddCard(false)} />
+        <AddCardForm caregiverId={parent?.id ?? ""} onClose={() => setShowAddCard(false)} />
       )}
 
       {/* Payment methods */}

@@ -206,9 +206,9 @@ export const parentAccounts: ParentAccount[] = [
     secondaryCaregiver: gregCg,
     additionalCaregivers: [gregCg, lenaCg],
     caregiverAuditLog: [
-      { id: "alog1", caregiverId: "cg_primary_p1", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 90).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
-      { id: "alog2", caregiverId: "cg_addl_greg", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 30).toISOString(), event: "caregiver_nominated", details: "Greg Walsh nominated as additional caregiver — separate household" },
-      { id: "alog3", caregiverId: "cg_addl_lena", parentId: "p1", timestamp: new Date(Date.now() - 86400000 * 15).toISOString(), event: "caregiver_nominated", details: "Lena Walsh nominated as additional caregiver — Greg & Lena's household" },
+      { id: "alog1", caregiverId: "cg_primary_p1", timestamp: new Date(Date.now() - 86400000 * 90).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
+      { id: "alog2", caregiverId: "cg_addl_greg", timestamp: new Date(Date.now() - 86400000 * 30).toISOString(), event: "caregiver_nominated", details: "Greg Walsh nominated as additional caregiver — separate household" },
+      { id: "alog3", caregiverId: "cg_addl_lena", timestamp: new Date(Date.now() - 86400000 * 15).toISOString(), event: "caregiver_nominated", details: "Lena Walsh nominated as additional caregiver — Greg & Lena's household" },
     ],
     childIds: ["s1", "s5"],
     householdAddress: addrWalsh,
@@ -222,7 +222,7 @@ export const parentAccounts: ParentAccount[] = [
     primaryCaregiver: makeCaregiver("cg_primary_p2", "Marcus", "Carter", "marcus.carter@email.com", "(555) 234-5678", "3821 SE Hawthorne Blvd", "Parent", "primary_caregiver", { addressSource: "household" }),
     additionalCaregivers: [],
     caregiverAuditLog: [
-      { id: "alog4", caregiverId: "cg_primary_p2", parentId: "p2", timestamp: new Date(Date.now() - 86400000 * 120).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
+      { id: "alog4", caregiverId: "cg_primary_p2", timestamp: new Date(Date.now() - 86400000 * 120).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
     ],
     childIds: ["s2"],
     householdAddress: addrCarter,
@@ -238,9 +238,9 @@ export const parentAccounts: ParentAccount[] = [
     secondaryCaregiver: rajCg,
     additionalCaregivers: [rajCg],
     caregiverAuditLog: [
-      { id: "alog5", caregiverId: "cg_primary_p3", parentId: "p3", timestamp: new Date(Date.now() - 86400000 * 80).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
-      { id: "alog6", caregiverId: "cg_secondary_p3", parentId: "p3", timestamp: new Date(Date.now() - 86400000 * 40).toISOString(), event: "caregiver_nominated", details: "Raj Patel nominated as secondary caregiver" },
-      { id: "alog7", caregiverId: "cg_secondary_p3", parentId: "p3", timestamp: new Date(Date.now() - 86400000 * 35).toISOString(), event: "billing_access_changed", details: "Billing and invoice payment enabled for Raj Patel" },
+      { id: "alog5", caregiverId: "cg_primary_p3", timestamp: new Date(Date.now() - 86400000 * 80).toISOString(), event: "caregiver_nominated", details: "Primary caregiver created at registration" },
+      { id: "alog6", caregiverId: "cg_secondary_p3", timestamp: new Date(Date.now() - 86400000 * 40).toISOString(), event: "caregiver_nominated", details: "Raj Patel nominated as secondary caregiver" },
+      { id: "alog7", caregiverId: "cg_secondary_p3", timestamp: new Date(Date.now() - 86400000 * 35).toISOString(), event: "billing_access_changed", details: "Billing and invoice payment enabled for Raj Patel" },
     ],
     childIds: ["s3"],
     householdAddress: addrPatel,
@@ -255,8 +255,8 @@ export const students: Student[] = Array.from({ length: 42 }).map((_, i) => {
   const firstName = pick(firstNames, i);
   const lastName = pick(lastNames, i * 3 + 1);
   const name = `${firstName} ${lastName}`;
-  const parentName = `${pick(parentFirst, i * 2)} ${pick(lastNames, i * 3 + 1)}`;
-  const parentId = parentAccounts[i % parentAccounts.length].id;
+  const caregiverName = `${pick(parentFirst, i * 2)} ${pick(lastNames, i * 3 + 1)}`;
+  const caregiverId = parentAccounts[i % parentAccounts.length].id;
   const enrolledClasses = classes.filter((_, ci) => (i + ci) % 4 === 0).slice(0, 2).map((c) => c.id);
   const waiverRoll = (i * 7) % 10;
   const payRoll = (i * 5) % 10;
@@ -270,9 +270,9 @@ export const students: Student[] = Array.from({ length: 42 }).map((_, i) => {
     legalLastName: lastName,
     preferredName: undefined,
     dob: new Date(2008 + (i % 12), (i * 3) % 12, ((i * 7) % 27) + 1).toISOString(),
-    parentId,
-    parentName,
-    parentEmail: `${parentFirst[i % parentFirst.length].toLowerCase()}.${(parentLast[i % parentLast.length] || "parent").toLowerCase()}@email.com`,
+    caregiverId,
+    caregiverName,
+    caregiverEmail: `${parentFirst[i % parentFirst.length].toLowerCase()}.${(parentLast[i % parentLast.length] || "parent").toLowerCase()}@email.com`,
     classIds: enrolledClasses.length ? enrolledClasses : [classes[i % classes.length].id],
     attendanceRate: Math.min(0.99, attendance),
     waiver: waiverRoll < 7 ? "signed" : waiverRoll < 9 ? "pending" : "missing",
@@ -297,7 +297,7 @@ export const invoices: Invoice[] = students
     id: `inv${i + 1}`,
     studioId: studio.id,
     studentName: s.name,
-    parentName: s.parentName,
+    caregiverName: s.caregiverName,
     description: i % 2 === 0 ? "May tuition" : "Recital costume + tuition",
     amountCents: s.balanceCents || 9500,
     status: s.payment,
@@ -477,8 +477,8 @@ export const waiverSignatures: WaiverSignature[] = students
         waiverTemplateId: templateId,
         waiverVersionId: version?.id ?? `wv_${templateId.replace("wt_", "")}_v1`,
         studentId: s.id,
-        caregiverId: `cg_primary_${s.parentId}`,
-        signerName: s.parentName,
+        caregiverId: `cg_primary_${s.caregiverId}`,
+        signerName: s.caregiverName,
         signerRelationship: "Parent",
         signatureType: "typed" as const,
         guardianAuthorityConfirmed: true,

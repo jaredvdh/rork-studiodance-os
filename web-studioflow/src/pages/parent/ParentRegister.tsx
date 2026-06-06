@@ -42,7 +42,7 @@ interface ChildForm {
 }
 
 interface RegistrationForm {
-  parentName: string;
+  caregiverName: string;
   email: string;
   phone: string;
   password: string;
@@ -71,7 +71,7 @@ export default function ParentRegister() {
   const [registerError, setRegisterError] = useState<string | null>(null);
 
   const [form, setForm] = useState<RegistrationForm>({
-    parentName: "",
+    caregiverName: "",
     email: "",
     phone: "",
     password: "",
@@ -114,7 +114,7 @@ export default function ParentRegister() {
     }));
 
   const canAdvance = (): boolean => {
-    if (step === 0) return form.parentName.trim() !== "" && form.email.trim() !== "" && form.password.length >= 6;
+    if (step === 0) return form.caregiverName.trim() !== "" && form.email.trim() !== "" && form.password.length >= 6;
     if (step === 1) return form.address.street.trim() !== "" && form.address.city.trim() !== "";
     if (step === 2) return form.children.length > 0 && form.children.every((c) => c.name.trim() !== "" && c.age.trim() !== "");
     return true;
@@ -130,7 +130,7 @@ export default function ParentRegister() {
       try {
         // 1. Create Supabase Auth account
         await signUpWithEmail(form.email.trim(), form.password, {
-          name: form.parentName.trim(),
+          name: form.caregiverName.trim(),
           role: "parent",
           studio_id: studio.id,
         });
@@ -140,13 +140,16 @@ export default function ParentRegister() {
         // is still null after signUp, email confirmation is needed.
         // We check below via the `user` from useAuth which updates reactively.
 
-        // 2. Persist parent + children to Supabase (runs regardless of confirmation)
+        // 2. Persist caregiver + children to Supabase (runs regardless of confirmation)
         const address = `${form.address.street}, ${form.address.city}, ${form.address.state} ${form.address.zip}`;
-        const parentId = `p_${Date.now()}`;
-        await supabase.from("parents").insert({
-          id: parentId,
+        const caregiverId = `cg_${Date.now()}`;
+        const [firstName, ...lastParts] = form.caregiverName.trim().split(" ");
+        await supabase.from("caregivers").insert({
+          id: caregiverId,
           studio_id: studio.id,
-          name: form.parentName.trim(),
+          name: form.caregiverName.trim(),
+          first_name: firstName,
+          last_name: lastParts.join(" ") || firstName,
           email: form.email.trim(),
           phone: form.phone.trim(),
           address,
@@ -154,6 +157,9 @@ export default function ParentRegister() {
           state: form.address.state,
           zip: form.address.zip,
           child_ids: [],
+          role: "primary_caregiver",
+          status: "active",
+          relationship_to_student: "Parent",
         });
 
         const childIds: string[] = [];
@@ -166,9 +172,9 @@ export default function ParentRegister() {
             studio_id: studio.id,
             name: child.name.trim(),
             dob: new Date(new Date().getFullYear() - Number(child.age || "0"), 0, 1).toISOString(),
-            parent_id: parentId,
-            parent_name: form.parentName.trim(),
-            parent_email: form.email.trim(),
+            caregiver_id: caregiverId,
+            caregiver_name: form.caregiverName.trim(),
+            caregiver_email: form.email.trim(),
             class_ids: [],
             attendance_rate: 1,
             waiver: "missing",
@@ -179,7 +185,7 @@ export default function ParentRegister() {
           });
         }
         if (childIds.length > 0) {
-          await supabase.from("parents").update({ child_ids: childIds }).eq("id", parentId);
+          await supabase.from("caregivers").update({ child_ids: childIds }).eq("id", caregiverId);
         }
 
         setSubmitted(true);
@@ -319,10 +325,10 @@ export default function ParentRegister() {
               <>
                 <Field
                   icon={User}
-                  label="Full name"
-                  placeholder="Your name"
-                  value={form.parentName}
-                  onChange={(v) => update("parentName", v)}
+                  label="Your name"
+                  placeholder="Full name"
+                  value={form.caregiverName}
+                  onChange={(v) => update("caregiverName", v)}
                   autoFocus
                 />
                 <Field

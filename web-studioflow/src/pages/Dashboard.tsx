@@ -348,7 +348,7 @@ export default function Dashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{s.name} enrolled</p>
-                  <p className="text-xs text-muted-foreground">{s.classIds.length} class{s.classIds.length !== 1 ? "es" : ""} · {s.parentName}</p>
+                  <p className="text-xs text-muted-foreground">{s.classIds.length} class{s.classIds.length !== 1 ? "es" : ""} · {s.caregiverName}</p>
                 </div>
               </Link>
             ))}

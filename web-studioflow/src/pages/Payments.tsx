@@ -105,7 +105,7 @@ function CreateInvoiceModal({
     // enrolmentId links the invoice to the specific enrolment for billing traceability.
     addInvoice({
       studentName: student?.name ?? "",
-      parentName: student?.parentName ?? "",
+      caregiverName: student?.caregiverName ?? "",
       description: desc,
       amountCents: Math.round(Number(amountCents)),
       status: "draft",
@@ -141,7 +141,7 @@ function CreateInvoiceModal({
             >
               <option value="">Select student…</option>
               {students.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} — {s.parentName}</option>
+                <option key={s.id} value={s.id}>{s.name} — {s.caregiverName}</option>
               ))}
             </select>
           </label>
@@ -248,7 +248,7 @@ export default function Payments() {
         id: i.id,
         studioId: i.studio_id,
         studentName: i.student_name,
-        parentName: i.parent_name,
+        caregiverName: i.parent_name,
         description: i.description ?? "",
         amountCents: i.amount_cents ?? 0,
         status: (i.status as InvoiceStatus) ?? "draft",
@@ -259,7 +259,7 @@ export default function Payments() {
         id: d.id,
         studioId: d.studioId,
         studentName: d.studentName,
-        parentName: d.parentName,
+        caregiverName: d.caregiverName,
         description: d.description,
         amountCents: d.amountCents,
         status: d.status as InvoiceStatus,
@@ -389,7 +389,7 @@ export default function Payments() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{inv.studentName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{inv.description} · {inv.parentName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{inv.description} · {inv.caregiverName}</p>
                   </div>
                   <div className="hidden text-right sm:block">
                     <p className="text-xs text-muted-foreground">Due</p>

@@ -477,8 +477,8 @@ export default function ChildRegistrationWizard({
 
           {step === "guardian" && (
             <GuardianStep
-              parentName={caregiverFullName(pc)}
-              parentEmail={pc.email}
+              caregiverName={caregiverFullName(pc)}
+              caregiverEmail={pc.email}
               guardianMode={guardianMode}
               setGuardianMode={setGuardianMode}
               activeCaregivers={activeCaregivers}
@@ -811,7 +811,7 @@ function ChildAddressForm({
    ═══════════════════════════════════════════════════════════════════ */
 
 function GuardianStep({
-  parentName, parentEmail,
+  caregiverName, caregiverEmail,
   guardianMode, setGuardianMode,
   activeCaregivers,
   selectedCaregiverId, setSelectedCaregiverId,
@@ -821,7 +821,7 @@ function GuardianStep({
   isBillingContact, setIsBillingContact,
   isPickupContact, setIsPickupContact,
 }: {
-  parentName: string; parentEmail: string;
+  caregiverName: string; caregiverEmail: string;
   guardianMode: "self" | "existing" | "new"; setGuardianMode: (v: "self" | "existing" | "new") => void;
   activeCaregivers: Caregiver[];
   selectedCaregiverId: string; setSelectedCaregiverId: (v: string) => void;
@@ -878,11 +878,11 @@ function GuardianStep({
         <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-200 text-amber-700 font-semibold text-sm">
-              {(parentName[0] ?? "") + (parentName.split(" ")[1]?.[0] ?? "")}
+              {(caregiverName[0] ?? "") + (caregiverName.split(" ")[1]?.[0] ?? "")}
             </div>
             <div>
-              <p className="font-semibold text-sm">{parentName}</p>
-              <p className="text-xs text-muted-foreground">{parentEmail}</p>
+              <p className="font-semibold text-sm">{caregiverName}</p>
+              <p className="text-xs text-muted-foreground">{caregiverEmail}</p>
             </div>
           </div>
         </div>

@@ -455,9 +455,9 @@ function StepMapping({
 
   const availableFields = [
     { value: "name", label: "Student Name" },
-    { value: "parentName", label: "Parent Name" },
-    { value: "parentEmail", label: "Parent Email" },
-    { value: "parentPhone", label: "Parent Phone" },
+    { value: "parentName", label: "Caregiver Name" },
+    { value: "parentEmail", label: "Caregiver Email" },
+    { value: "parentPhone", label: "Caregiver Phone" },
     { value: "parentAddress", label: "Parent Address" },
     { value: "dob", label: "Date of Birth" },
     { value: "allergies", label: "Allergies" },

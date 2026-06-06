@@ -291,38 +291,38 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
     if (category === "students") {
       const newStudents: Student[] = [];
       const newParents: ParentAccount[] = [];
-      const parentMap = new Map<string, string>(); // email → parentId
+      const caregiverMap = new Map<string, string>(); // email → caregiverId
 
       for (const row of mappedRows) {
         const name = row.mapped.name?.trim();
-        const parentName = row.mapped.parentName?.trim() || "Unknown Parent";
-        const parentEmail = row.mapped.parentEmail?.trim();
-        const parentPhone = row.mapped.parentPhone?.trim() || "";
-        const parentAddress = row.mapped.parentAddress?.trim() || "";
+        const caregiverName = row.mapped.parentName?.trim() || "Unknown Caregiver";
+        const caregiverEmail = row.mapped.parentEmail?.trim();
+        const caregiverPhone = row.mapped.parentPhone?.trim() || "";
+        const caregiverAddress = row.mapped.parentAddress?.trim() || "";
         const dob = row.mapped.dob?.trim() || "";
         const allergies = row.mapped.allergies?.trim() || undefined;
         const medicalNotes = row.mapped.medicalNotes?.trim() || undefined;
 
-        if (!name || !parentEmail) continue;
+        if (!name || !caregiverEmail) continue;
 
-        // Create or reuse parent
-        const emailNorm = parentEmail.toLowerCase();
-        let parentId = parentMap.get(emailNorm);
-        if (!parentId) {
-          parentId = `p_mig_${ts}_${newParents.length}`;
-          parentMap.set(emailNorm, parentId);
+        // Create or reuse caregiver
+        const emailNorm = caregiverEmail.toLowerCase();
+        let caregiverId = caregiverMap.get(emailNorm);
+        if (!caregiverId) {
+          caregiverId = `cg_mig_${ts}_${newParents.length}`;
+          caregiverMap.set(emailNorm, caregiverId);
 
           // Build the primary caregiver from imported data
-          const [firstName, ...lastParts] = parentName.split(" ");
+          const [firstName, ...lastParts] = caregiverName.split(" ");
           const lastName = lastParts.join(" ") || firstName;
           const primaryCg: Caregiver = {
-            id: `cg_primary_${parentId}`,
+            id: `cg_primary_${caregiverId}`,
             first_name: firstName,
             last_name: lastName,
             relationship_to_student: "Parent",
-            email: parentEmail,
-            phone: parentPhone,
-            address: parentAddress || undefined,
+            email: caregiverEmail,
+            phone: caregiverPhone,
+            address: caregiverAddress || undefined,
             status: "active",
             role: "primary_caregiver",
             receives_announcements: true,
@@ -344,7 +344,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
           if (secFirstName && secEmail) {
             const secLastName = row.mapped.secondaryLastName?.trim() || "";
             secondaryCg = {
-              id: `cg_secondary_${parentId}`,
+              id: `cg_secondary_${caregiverId}`,
               first_name: secFirstName,
               last_name: secLastName,
               relationship_to_student: row.mapped.secondaryRelationship?.trim() || "Parent",
@@ -363,15 +363,15 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
           }
 
           const parent: ParentAccount = {
-            id: parentId,
+            id: caregiverId,
             studioId: studio.id,
             primaryContact: {
               firstName,
               lastName,
               relationshipToStudent: "Parent",
-              email: parentEmail,
-              phone: parentPhone,
-              address: parentAddress || undefined,
+              email: caregiverEmail,
+              phone: caregiverPhone,
+              address: caregiverAddress || undefined,
               receivesEmails: true,
               receivesSMS: true,
               receivesBilling: true,
@@ -397,7 +397,7 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
             childIds: [],
           };
           newParents.push(parent);
-          snapshot.addedParentIds.push(parentId);
+          snapshot.addedParentIds.push(caregiverId);
         }
 
         const studentId = `s_mig_${ts}_${newStudents.length}`;
@@ -406,9 +406,9 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
           studioId: studio.id,
           name,
           dob: dob || new Date("2015-01-01").toISOString(),
-          parentId,
-          parentName,
-          parentEmail,
+          caregiverId,
+          caregiverName,
+          caregiverEmail,
           classIds: [],
           attendanceRate: 0,
           waiver: "pending",
@@ -420,8 +420,8 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
         newStudents.push(student);
         snapshot.addedStudentIds.push(studentId);
 
-        // Link student to parent
-        const parent = newParents.find((p) => p.id === parentId)!;
+        // Link student to caregiver
+        const parent = newParents.find((p) => p.id === caregiverId)!;
         parent.childIds.push(studentId);
       }
 
