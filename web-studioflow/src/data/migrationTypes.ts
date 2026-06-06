@@ -5,7 +5,10 @@ export type ImportCategory =
   | "classes"
   | "instructors"
   | "enrolments"
-  | "payments";
+  | "payments"
+  | "caregivers"
+  | "costumes"
+  | "attendance";
 
 export type ImportStatus =
   | "uploading"
@@ -16,7 +19,53 @@ export type ImportStatus =
   | "failed"
   | "rolled_back";
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** Now 8 wizard steps instead of 7. */
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/** Source platform / provider for the migration. */
+export type MigrationProvider =
+  | "jackrabbit"
+  | "mindbody"
+  | "wellnessliving"
+  | "dancestudio-pro"
+  | "momence"
+  | "acuity"
+  | "spreadsheet"
+  | "other";
+
+/** Status badge for each importable data type. */
+export type DataTypeStatus = "ready" | "optional" | "coming-soon";
+
+/** A selectable data type in the migration wizard. */
+export interface ImportableDataType {
+  id: ImportCategory;
+  label: string;
+  description: string;
+  status: DataTypeStatus;
+  icon: string;
+}
+
+/** An uploaded file with parsed metadata. */
+export interface UploadedFile {
+  id: string;
+  file: File;
+  fileName: string;
+  fileSize: number;
+  /** Detected row count after parsing */
+  rowCount: number;
+  /** Detected headers */
+  headers: string[];
+  /** Detected (or user-assigned) data type */
+  detectedType: ImportCategory | null;
+  /** Parsed rows */
+  rows: ParsedRow[];
+  /** Auto-mapped field mappings */
+  mappings: FieldMapping[];
+  /** Mapped rows after field mapping */
+  mappedRows: Array<{ index: number; mapped: Record<string, string> }>;
+  /** Validation errors for this file */
+  errors: ImportError[];
+}
 
 /** A single field mapping between a spreadsheet column and a StudioFlow field. */
 export interface FieldMapping {
@@ -43,6 +92,21 @@ export interface ParsedRow {
   index: number;
   raw: Record<string, string>;
   mapped: Record<string, string>;
+}
+
+/** Provider-specific export instructions. */
+export interface ProviderInfo {
+  id: MigrationProvider;
+  name: string;
+  description: string;
+  /** Steps to export data from this provider */
+  exportSteps: string[];
+  /** Supported file formats from this provider */
+  formats: string[];
+  /** Notes about this provider's export quirks */
+  notes: string;
+  /** Whether we have specific guidance */
+  hasGuidance: boolean;
 }
 
 /** Snapshot of what was added during an import — used for rollback. */
@@ -91,6 +155,21 @@ export interface ImportTemplate {
   fileName: string;
   columns: TemplateColumn[];
   sampleRows: Record<string, string>[];
+}
+
+/** Validation summary for the import preview. */
+export interface ValidationSummary {
+  totalRows: number;
+  cleanRows: number;
+  blockingErrors: number;
+  warnings: number;
+  suggestions: number;
+  categories: Array<{
+    category: ImportCategory;
+    ready: number;
+    warnings: number;
+    errors: number;
+  }>;
 }
 
 /** Known target fields for the field mapping engine. */

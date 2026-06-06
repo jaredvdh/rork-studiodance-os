@@ -1,58 +1,55 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUpCircle,
-  BookOpen,
   Check,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  FileSpreadsheet,
-  FileUp,
-  GraduationCap,
-  HelpCircle,
-  Link,
-  Loader2,
-  Play,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Upload,
-  UserRound,
-  Users,
-  X,
 } from "lucide-react";
 
+import type {
+  ImportCategory,
+  MigrationProvider,
+  ParsedRow,
+  UploadedFile,
+  WizardStep,
+  ImportError,
+} from "@/data/migrationTypes";
+import { parseFile } from "@/lib/importer";
+import { autoMapFields, applyMappings } from "@/lib/fieldMapper";
+import { validateImport } from "@/lib/validation";
+import { guessDataType } from "@/data/providerData";
 import { useMigration } from "@/data/migrationStore";
-import { useTeachers, useStudio } from "@/data/store";
-import { IMPORT_TEMPLATES } from "@/data/migrationTemplates";
-import { downloadTemplate } from "@/lib/importer";
-import { missingRequiredFields } from "@/lib/fieldMapper";
-import { aiSuggestMappings } from "@/lib/ai";
-import type { ImportCategory, FieldMapping, WizardStep } from "@/data/migrationTypes";
+import { useTeachers } from "@/data/store";
+import { classes as demoClasses, students as demoStudents, teachers as demoTeachers } from "@/data/demo";
 import { cn } from "@/lib/utils";
+
+import ProviderSelector from "@/components/ProviderSelector";
+import DataTypeSelector from "@/components/DataTypeSelector";
+import ExportInstructions from "@/components/ExportInstructions";
+import FileUploadZone from "@/components/FileUploadZone";
+import FieldMapper from "@/components/FieldMapper";
+import ValidationPanel from "@/components/ValidationPanel";
+import ImportPreview from "@/components/ImportPreview";
+import ImportComplete from "@/components/ImportComplete";
 
 /* ── Step indicator ───────────────────────────────────────────────── */
 
 const STEP_LABELS: Record<WizardStep, string> = {
-  1: "Welcome",
-  2: "Choose Data",
-  3: "Upload File",
-  4: "Map Fields",
-  5: "Validate",
-  6: "Preview",
-  7: "Complete",
+  1: "Provider",
+  2: "Data Types",
+  3: "Export Guide",
+  4: "Upload Files",
+  5: "Map Fields",
+  6: "Validate",
+  7: "Preview",
+  8: "Complete",
 };
 
-function StepIndicator({ step }: { step: WizardStep }) {
+function StepIndicator({ step, total }: { step: WizardStep; total: number }) {
   return (
-    <div className="mb-10 flex items-center justify-center gap-1.5">
-      {(Array.from({ length: 7 }, (_, i) => (i + 1) as WizardStep)).map((s) => (
-        <div key={s} className="flex items-center gap-1.5">
+    <div className="mb-10 flex items-center justify-center gap-1">
+      {(Array.from({ length: total }, (_, i) => (i + 1) as WizardStep)).map((s) => (
+        <div key={s} className="flex items-center gap-1">
           <div
             className={cn(
               "grid h-8 w-8 place-items-center rounded-full text-xs font-semibold transition-all duration-300",
@@ -63,10 +60,10 @@ function StepIndicator({ step }: { step: WizardStep }) {
           >
             {s < step ? <Check className="h-3.5 w-3.5" /> : s}
           </div>
-          {s < 7 && (
+          {s < total && (
             <div
               className={cn(
-                "h-0.5 w-6 rounded-full transition-colors duration-300",
+                "h-0.5 w-5 rounded-full transition-colors duration-300",
                 s < step ? "bg-success" : "bg-muted",
               )}
             />
@@ -80,890 +77,12 @@ function StepIndicator({ step }: { step: WizardStep }) {
 function StepLabel({ step }: { step: WizardStep }) {
   return (
     <p className="mb-8 text-center text-sm font-medium text-muted-foreground">
-      Step {step} of 7 — {STEP_LABELS[step]}
+      Step {step} of 8 — {STEP_LABELS[step]}
     </p>
   );
 }
 
-/* ── Step 1: Welcome ──────────────────────────────────────────────── */
-
-function StepWelcome({ onStart }: { onStart: () => void }) {
-  return (
-    <div className="mx-auto max-w-2xl text-center">
-      <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose/10 text-rose">
-        <Upload className="h-8 w-8" />
-      </div>
-
-      <h2 className="mb-3 font-display text-3xl font-semibold tracking-tight">
-        Migrate your studio into StudioFlow
-      </h2>
-      <p className="mx-auto mb-10 max-w-lg text-base leading-relaxed text-muted-foreground">
-        We'll help bring across your students, families, classes, and instructors.
-        Most studios finish in under 30 minutes.
-      </p>
-
-      {/* Supported formats */}
-      <div className="mb-8 grid grid-cols-3 gap-3">
-        {[
-          { label: "CSV", desc: "Spreadsheet export", icon: FileSpreadsheet },
-          { label: "Excel", desc: ".xlsx files", icon: FileSpreadsheet },
-          { label: "Google Sheets", desc: "Export as CSV", icon: FileSpreadsheet },
-        ].map(({ label, desc, icon: Icon }) => (
-          <div
-            key={label}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card p-4"
-          >
-            <Icon className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm font-semibold">{label}</p>
-            <p className="text-[11px] text-muted-foreground">{desc}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Coming soon */}
-      <div className="mb-10 rounded-2xl border border-dashed border-border/60 bg-muted/30 p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Direct imports — coming soon
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          {["Jackrabbit", "Mindbody", "WellnessLiving", "DanceStudio-Pro"].map(
-            (name) => (
-              <span
-                key={name}
-                className="rounded-full border border-border/50 bg-background px-3 py-1.5 text-xs text-muted-foreground"
-              >
-                {name}
-              </span>
-            ),
-          )}
-        </div>
-      </div>
-
-      {/* Privacy reassurance */}
-      <div className="mb-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <ShieldCheck className="h-3.5 w-3.5 text-success" />
-        Your data never leaves your browser. Nothing is uploaded to our servers.
-      </div>
-
-      <button
-        onClick={onStart}
-        className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-all hover:opacity-90"
-      >
-        Start Migration
-        <ArrowRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-/* ── Step 2: Choose Import Type ───────────────────────────────────── */
-
-const CATEGORY_INFO: Array<{
-  category: ImportCategory;
-  label: string;
-  desc: string;
-  icon: typeof Users;
-  available: boolean;
-}> = [
-  { category: "students", label: "Students & Families", desc: "Student profiles, parent contacts, medical notes, and emergency info", icon: Users, available: true },
-  { category: "classes", label: "Classes & Schedule", desc: "Class names, styles, schedule, rooms, capacity, and instructor assignments", icon: BookOpen, available: true },
-  { category: "instructors", label: "Instructors", desc: "Teaching staff with specialties, hourly rates, and pay type", icon: UserRound, available: true },
-  { category: "enrolments", label: "Enrolments", desc: "Link students to their classes after importing both", icon: Link, available: false },
-  { category: "payments", label: "Payments", desc: "Payment history, balances, and invoices", icon: FileSpreadsheet, available: false },
-];
-
-function StepChooseType({
-  onSelect,
-  selected,
-}: {
-  onSelect: (cat: ImportCategory) => void;
-  selected: ImportCategory | null;
-}) {
-  return (
-    <div className="mx-auto max-w-2xl">
-      <h2 className="mb-2 text-center font-display text-2xl font-semibold tracking-tight">
-        What would you like to import first?
-      </h2>
-      <p className="mb-8 text-center text-sm text-muted-foreground">
-        Import one section at a time. Start with Students & Families.
-      </p>
-
-      <div className="mb-8 grid gap-3">
-        {CATEGORY_INFO.map(({ category, label, desc, icon: Icon, available }) => (
-          <button
-            key={category}
-            disabled={!available}
-            onClick={() => available && onSelect(category)}
-            className={cn(
-              "flex items-start gap-4 rounded-2xl border p-4 text-left transition-all",
-              available
-                ? selected === category
-                  ? "border-primary bg-primary/5 shadow-soft"
-                  : "border-border/70 bg-card hover:border-primary/40 hover:shadow-soft"
-                : "cursor-not-allowed border-border/40 bg-muted/20 opacity-50",
-            )}
-          >
-            <div
-              className={cn(
-                "mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-                available ? "bg-rose/10 text-rose" : "bg-muted text-muted-foreground",
-              )}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold">{label}</p>
-                {!available && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Coming Soon
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {available && (
-                <>
-                  <DownloadTemplateBtn category={category} />
-                  {selected === category && (
-                    <Check className="h-5 w-5 text-primary" />
-                  )}
-                </>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Need help */}
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose/5 to-amber-100 p-5">
-        <div className="mb-1 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-rose" />
-          <p className="text-sm font-semibold">Need help?</p>
-        </div>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Download a template, fill it out, and upload. Each template includes
-          sample data and formatting guidance.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {IMPORT_TEMPLATES.filter((t) => t.category !== "payments").map((t) => (
-            <button
-              key={t.category}
-              onClick={() =>
-                downloadTemplate(
-                  t.columns.map((c) => c.label),
-                  t.sampleRows,
-                  t.fileName,
-                )
-              }
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-secondary"
-            >
-              <Download className="h-3 w-3" />
-              {t.name} template
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DownloadTemplateBtn({ category }: { category: ImportCategory }) {
-  const template = IMPORT_TEMPLATES.find((t) => t.category === category);
-  if (!template) return null;
-
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        downloadTemplate(
-          template.columns.map((c) => c.label),
-          template.sampleRows,
-          template.fileName,
-        );
-      }}
-      className="grid h-8 w-8 place-items-center rounded-lg border border-border/60 text-muted-foreground transition hover:bg-secondary"
-      title="Download template"
-    >
-      <Download className="h-3.5 w-3.5" />
-    </button>
-  );
-}
-
-/* ── Step 3: Upload File ──────────────────────────────────────────── */
-
-function StepUpload({
-  onFile,
-  file,
-  loading,
-  error,
-}: {
-  onFile: (file: File) => void;
-  file: File | null;
-  loading: boolean;
-  error: string | null;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragover, setDragover] = useState(false);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragover(false);
-      const f = e.dataTransfer.files[0];
-      if (f) onFile(f);
-    },
-    [onFile],
-  );
-
-  return (
-    <div className="mx-auto max-w-xl">
-      <h2 className="mb-2 text-center font-display text-2xl font-semibold tracking-tight">
-        Upload your spreadsheet
-      </h2>
-      <p className="mb-8 text-center text-sm text-muted-foreground">
-        Drag and drop a CSV or Excel file, or click to browse.
-      </p>
-
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
-        onDragLeave={() => setDragover(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          "relative cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition-all",
-          dragover
-            ? "border-primary bg-primary/5"
-            : file
-              ? "border-success/40 bg-success/5"
-              : "border-border/70 bg-card hover:border-primary/40",
-        )}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onFile(f);
-          }}
-        />
-
-        {loading ? (
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm font-medium">Parsing your file…</p>
-          </div>
-        ) : file ? (
-          <div className="flex flex-col items-center gap-2">
-            <div className="grid h-12 w-12 place-items-center rounded-xl bg-success/10 text-success">
-              <FileSpreadsheet className="h-6 w-6" />
-            </div>
-            <p className="text-sm font-semibold">{file.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {(file.size / 1024).toFixed(0)} KB
-            </p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                inputRef.current?.click();
-              }}
-              className="mt-2 text-xs font-medium text-primary hover:underline"
-            >
-              Choose a different file
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-rose/10 text-rose">
-              <FileUp className="h-7 w-7" />
-            </div>
-            <p className="text-sm font-semibold">
-              Drop your file here, or click to browse
-            </p>
-            <p className="text-xs text-muted-foreground">
-              CSV and Excel (.xlsx) supported
-            </p>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-center text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Help section */}
-      <details className="group mt-6 rounded-2xl border border-border/60 bg-card p-4">
-        <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground">
-          <HelpCircle className="h-4 w-4" />
-          Need help formatting your file?
-          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-          <p>
-            • Your spreadsheet should have a <strong>header row</strong> with
-            column names (e.g. "Student Name", "Parent Email").
-          </p>
-          <p>
-            • We'll automatically detect column names and match them to
-            StudioFlow fields in the next step.
-          </p>
-          <p>
-            • Download a template above to see the recommended format.
-          </p>
-        </div>
-      </details>
-    </div>
-  );
-}
-
-/* ── Step 4: Field Mapping ────────────────────────────────────────── */
-
-function StepMapping({
-  mappings,
-  headers,
-  rows,
-  onUpdateMapping,
-}: {
-  mappings: FieldMapping[];
-  headers: string[];
-  rows: Array<{ index: number; raw: Record<string, string> }>;
-  onUpdateMapping: (col: string, target: string | null) => void;
-}) {
-  const missing = missingRequiredFields(mappings);
-  const [editingCol, setEditingCol] = useState<string | null>(null);
-  const [aiMapping, setAiMapping] = useState(false);
-
-  async function handleAiAutoMap() {
-    setAiMapping(true);
-    try {
-      const suggestions = await aiSuggestMappings(headers);
-      for (const [header, field] of Object.entries(suggestions)) {
-        if (field) onUpdateMapping(header, field);
-      }
-    } catch {
-      // Silently fail — user can still map manually
-    } finally {
-      setAiMapping(false);
-    }
-  }
-
-  const availableFields = [
-    { value: "name", label: "Student Name" },
-    { value: "parentName", label: "Caregiver Name" },
-    { value: "parentEmail", label: "Caregiver Email" },
-    { value: "parentPhone", label: "Caregiver Phone" },
-    { value: "parentAddress", label: "Parent Address" },
-    { value: "dob", label: "Date of Birth" },
-    { value: "allergies", label: "Allergies" },
-    { value: "medicalNotes", label: "Medical Notes" },
-    { value: "emergencyContact", label: "Emergency Contact" },
-    { value: "emergencyPhone", label: "Emergency Phone" },
-    { value: "style", label: "Style / Type" },
-    { value: "ageGroup", label: "Age Group" },
-    { value: "day", label: "Day of Week" },
-    { value: "startTime", label: "Start Time" },
-    { value: "durationMins", label: "Duration (mins)" },
-    { value: "room", label: "Room" },
-    { value: "capacity", label: "Capacity" },
-    { value: "teacherName", label: "Instructor Name" },
-    { value: "priceCents", label: "Price" },
-    { value: "email", label: "Email" },
-    { value: "styles", label: "Styles / Specialties" },
-    { value: "hourlyRateCents", label: "Hourly Rate" },
-    { value: "payType", label: "Pay Type" },
-    { value: "className", label: "Class Name (for enrolment)" },
-    { value: "studentName", label: "Student Name (for enrolment)" },
-    { value: "studentEmail", label: "Student Email (for enrolment)" },
-  ];
-
-  return (
-    <div className="mx-auto max-w-3xl">
-      <h2 className="mb-2 text-center font-display text-2xl font-semibold tracking-tight">
-        Match your columns to StudioFlow fields
-      </h2>
-      <div className="mb-6 flex items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">
-          We've automatically matched most fields. Review and adjust as needed.
-        </p>
-        <button
-          type="button"
-          onClick={handleAiAutoMap}
-          disabled={aiMapping}
-          className="inline-flex items-center gap-1.5 rounded-full border border-rose/30 bg-rose/5 px-3 py-1.5 text-xs font-semibold text-rose transition hover:bg-rose/10 disabled:opacity-60"
-        >
-          {aiMapping ? (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Mapping…</>
-          ) : (
-            <><Sparkles className="h-3.5 w-3.5" /> AI Auto-Map</>
-          )}
-        </button>
-      </div>
-
-      {missing.length > 0 && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-100 p-3">
-          <p className="text-sm font-medium text-amber-900">
-            Required fields not mapped:{" "}
-            <span className="font-semibold">{missing.join(", ")}</span>
-          </p>
-        </div>
-      )}
-
-      {/* Mapping table */}
-      <div className="mb-6 overflow-hidden rounded-2xl border border-border/70 bg-card">
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 border-b border-border/60 bg-muted/40 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <span>Your spreadsheet column</span>
-          <span className="text-center">→</span>
-          <span>StudioFlow field</span>
-        </div>
-
-        {mappings.map((m) => (
-          <div
-            key={m.spreadsheetColumn}
-            className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border/30 px-4 py-3 last:border-b-0"
-          >
-            {/* Source column */}
-            <div>
-              <p className="text-sm font-medium">{m.spreadsheetColumn}</p>
-              {m.sampleValues.length > 0 && (
-                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                  e.g. {m.sampleValues.slice(0, 2).join(", ")}
-                </p>
-              )}
-            </div>
-
-            {/* Arrow + confidence */}
-            <div className="flex flex-col items-center gap-0.5">
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-              {m.targetField && m.confidence > 0 && (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                    m.confidence >= 80
-                      ? "bg-success/10 text-success"
-                      : m.confidence >= 50
-                        ? "bg-amber-100 text-amber-900"
-                        : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {m.confidence}% match
-                </span>
-              )}
-            </div>
-
-            {/* Target field */}
-            <div className="relative">
-              {editingCol === m.spreadsheetColumn ? (
-                <div className="flex items-center gap-1">
-                  <select
-                    value={m.targetField ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onUpdateMapping(m.spreadsheetColumn, val || null);
-                      setEditingCol(null);
-                    }}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    autoFocus
-                    onBlur={() => setEditingCol(null)}
-                  >
-                    <option value="">— Ignore column —</option>
-                    {availableFields.map((f) => (
-                      <option key={f.value} value={f.value}>
-                        {f.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setEditingCol(m.spreadsheetColumn)}
-                  className={cn(
-                    "w-full rounded-lg border px-2.5 py-1.5 text-left text-sm transition",
-                    m.targetField
-                      ? "border-success/40 bg-success/5 text-success"
-                      : "border-destructive/30 bg-destructive/5 text-destructive",
-                  )}
-                >
-                  {m.targetField
-                    ? availableFields.find((f) => f.value === m.targetField)?.label ?? m.targetField
-                    : "— Unmapped —"}
-                </button>
-              )}
-              {m.isRequired && (
-                <span className="mt-0.5 block text-[10px] font-medium text-rose">
-                  Required
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Data preview */}
-      <details className="group rounded-2xl border border-border/60 bg-card">
-        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground">
-          <Search className="h-4 w-4" />
-          Preview first 3 rows
-          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="overflow-x-auto px-4 pb-4">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border/40">
-                {headers.map((h) => (
-                  <th key={h} className="whitespace-nowrap px-2 py-1.5 text-left font-medium text-muted-foreground">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.slice(0, 3).map((row) => (
-                <tr key={row.index} className="border-b border-border/20 last:border-b-0">
-                  {headers.map((h) => (
-                    <td key={h} className="max-w-[150px] truncate whitespace-nowrap px-2 py-1.5">
-                      {row.raw[h] || "—"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-    </div>
-  );
-}
-
-/* ── Step 5: Validation ───────────────────────────────────────────── */
-
-function StepValidation({
-  errors,
-  totalRows,
-  onAutoFix,
-}: {
-  errors: import("@/data/migrationTypes").ImportError[];
-  totalRows: number;
-  onAutoFix: () => void;
-}) {
-  const errorsList = errors.filter((e) => e.severity === "error");
-  const warningsList = errors.filter((e) => e.severity === "warning");
-  const cleanRows = totalRows - new Set(errorsList.map((e) => e.row)).size;
-
-  return (
-    <div className="mx-auto max-w-3xl">
-      <h2 className="mb-2 text-center font-display text-2xl font-semibold tracking-tight">
-        Data Validation & Cleanup
-      </h2>
-      <p className="mb-8 text-center text-sm text-muted-foreground">
-        We've checked your data for common issues. Review before importing.
-      </p>
-
-      {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-          <p className="text-2xl font-bold text-foreground">{totalRows}</p>
-          <p className="text-[11px] text-muted-foreground">Total rows</p>
-        </div>
-        <div className="rounded-2xl border border-success/30 bg-success/5 p-4 text-center">
-          <p className="text-2xl font-bold text-success">{cleanRows}</p>
-          <p className="text-[11px] text-muted-foreground">Clean rows</p>
-        </div>
-        <div className={cn(
-          "rounded-2xl border p-4 text-center",
-          errorsList.length > 0 ? "border-destructive/30 bg-destructive/5" : "border-border/70 bg-card",
-        )}>
-          <p className={cn("text-2xl font-bold", errorsList.length > 0 ? "text-destructive" : "text-muted-foreground")}>
-            {errorsList.length}
-          </p>
-          <p className="text-[11px] text-muted-foreground">Issues found</p>
-        </div>
-      </div>
-
-      {/* Auto-fix button */}
-      {errorsList.length > 0 && (
-        <button
-          onClick={onAutoFix}
-          className="mb-6 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary"
-        >
-          <Sparkles className="h-4 w-4 text-rose" />
-          Auto-fix common issues (trim whitespace, format cleanup)
-        </button>
-      )}
-
-      {/* Error list */}
-      {errors.length > 0 ? (
-        <div className="space-y-2">
-          {errorsList.map((e, i) => (
-            <div
-              key={`err-${i}`}
-              className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-3"
-            >
-              <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-              <div>
-                <p className="text-sm font-medium text-destructive">
-                  Row {e.row} — {e.field}
-                </p>
-                <p className="text-xs text-muted-foreground">{e.message}</p>
-              </div>
-            </div>
-          ))}
-          {warningsList.map((w, i) => (
-            <div
-              key={`warn-${i}`}
-              className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-100 p-3"
-            >
-              <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-              <div>
-                <p className="text-sm font-medium text-amber-900">
-                  Row {w.row} — {w.field}
-                </p>
-                <p className="text-xs text-amber-700">{w.message}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-success/30 bg-success/5 p-8 text-center">
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-success/10">
-            <Check className="h-6 w-6 text-success" />
-          </div>
-          <p className="font-semibold text-success">All clear!</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            No issues found. Your data looks great.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Step 6: Preview / Relationship Linking ───────────────────────── */
-
-function StepPreview({ onConfirm }: { onConfirm: () => void }) {
-  const { state } = useMigration();
-  const preview = state.importPreview;
-
-  if (!preview) return null;
-
-  const hasErrors = state.errors.some((e) => e.severity === "error");
-
-  return (
-    <div className="mx-auto max-w-2xl">
-      <h2 className="mb-2 text-center font-display text-2xl font-semibold tracking-tight">
-        Import Summary
-      </h2>
-      <p className="mb-8 text-center text-sm text-muted-foreground">
-        Here's what will be added to your studio.
-      </p>
-
-      {/* Counts */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {preview.studentCount > 0 && (
-          <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-            <Users className="mx-auto mb-1 h-5 w-5 text-rose" />
-            <p className="text-xl font-bold">{preview.studentCount}</p>
-            <p className="text-[11px] text-muted-foreground">Students</p>
-          </div>
-        )}
-        {preview.parentCount > 0 && (
-          <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-            <Users className="mx-auto mb-1 h-5 w-5 text-gold" />
-            <p className="text-xl font-bold">{preview.parentCount}</p>
-            <p className="text-[11px] text-muted-foreground">Parents</p>
-          </div>
-        )}
-        {preview.classCount > 0 && (
-          <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-            <BookOpen className="mx-auto mb-1 h-5 w-5 text-plum" />
-            <p className="text-xl font-bold">{preview.classCount}</p>
-            <p className="text-[11px] text-muted-foreground">Classes</p>
-          </div>
-        )}
-        {preview.instructorCount > 0 && (
-          <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-            <UserRound className="mx-auto mb-1 h-5 w-5 text-teal" />
-            <p className="text-xl font-bold">{preview.instructorCount}</p>
-            <p className="text-[11px] text-muted-foreground">Instructors</p>
-          </div>
-        )}
-        {preview.enrolmentCount > 0 && (
-          <div className="rounded-2xl border border-border/70 bg-card p-4 text-center">
-            <Link className="mx-auto mb-1 h-5 w-5 text-success" />
-            <p className="text-xl font-bold">{preview.enrolmentCount}</p>
-            <p className="text-[11px] text-muted-foreground">Enrolments linked</p>
-          </div>
-        )}
-      </div>
-
-      {/* Linked enrolments */}
-      {preview.linkedEnrolments.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-border/60 bg-card p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Student → Class links
-          </p>
-          <div className="max-h-48 space-y-1.5 overflow-y-auto">
-            {preview.linkedEnrolments.map((link, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="font-medium">{link.studentName}</span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{link.className}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Linked assignments */}
-      {preview.linkedAssignments.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-border/60 bg-card p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Instructor → Class assignments
-          </p>
-          <div className="max-h-48 space-y-1.5 overflow-y-auto">
-            {preview.linkedAssignments.map((link, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="font-medium">{link.teacherName}</span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{link.className}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasErrors && (
-        <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-center text-sm text-destructive">
-          Some rows have errors and will be skipped. You can go back to fix them.
-        </div>
-      )}
-
-      <button
-        onClick={onConfirm}
-        disabled={hasErrors}
-        className={cn(
-          "inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold shadow-lift transition-all",
-          hasErrors
-            ? "cursor-not-allowed bg-muted text-muted-foreground"
-            : "bg-primary text-primary-foreground hover:opacity-90",
-        )}
-      >
-        <Play className="h-4 w-4" />
-        Confirm & Import Data
-      </button>
-
-      {hasErrors && (
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Go back to Step 5 to review and fix errors before importing.
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── Step 7: Confirmation ─────────────────────────────────────────── */
-
-function StepConfirmation() {
-  const { state, resetWizard } = useMigration();
-  const navigate = useNavigate();
-  const preview = state.importPreview;
-
-  return (
-    <div className="mx-auto max-w-xl text-center">
-      {/* Success animation */}
-      <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-full bg-success/10">
-        <Check className="h-10 w-10 text-success animate-float-up" />
-      </div>
-
-      <h2 className="mb-2 font-display text-3xl font-semibold tracking-tight">
-        Import Complete
-      </h2>
-      <p className="mb-8 text-sm text-muted-foreground">
-        Your data has been imported successfully.
-      </p>
-
-      {/* Summary stats */}
-      {preview && (
-        <div className="mb-8 grid grid-cols-2 gap-3">
-          {preview.studentCount > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card p-3">
-              <p className="text-lg font-bold">{preview.studentCount}</p>
-              <p className="text-xs text-muted-foreground">Students imported</p>
-            </div>
-          )}
-          {preview.parentCount > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card p-3">
-              <p className="text-lg font-bold">{preview.parentCount}</p>
-              <p className="text-xs text-muted-foreground">Parents linked</p>
-            </div>
-          )}
-          {preview.classCount > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card p-3">
-              <p className="text-lg font-bold">{preview.classCount}</p>
-              <p className="text-xs text-muted-foreground">Classes created</p>
-            </div>
-          )}
-          {preview.instructorCount > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card p-3">
-              <p className="text-lg font-bold">{preview.instructorCount}</p>
-              <p className="text-xs text-muted-foreground">Instructors added</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="space-y-3">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition hover:opacity-90"
-        >
-          Go to Dashboard
-        </button>
-        <button
-          onClick={() => navigate("/migration-history")}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-6 py-3 text-sm font-medium text-muted-foreground transition hover:bg-secondary"
-        >
-          Review Imported Data
-        </button>
-        <button
-          onClick={resetWizard}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-6 py-3 text-sm font-medium text-muted-foreground transition hover:bg-secondary"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Import More Data
-        </button>
-        <button
-          onClick={() => navigate("/migration-history")}
-          className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          Undo Last Import
-        </button>
-      </div>
-
-      {/* White-glove CTA */}
-      <div className="mt-10 rounded-2xl border border-border/60 bg-gradient-to-br from-rose/5 to-amber-100 p-5 text-left">
-        <div className="mb-1 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-rose" />
-          <p className="text-sm font-semibold">Need help migrating?</p>
-        </div>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Send us your spreadsheet exports and we'll help move your studio across.
-        </p>
-        <button className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-background px-4 py-2 text-xs font-medium transition hover:bg-secondary">
-          Contact Support
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Navigation Footer ────────────────────────────────────────────── */
+/* ── Nav Footer ───────────────────────────────────────────────────── */
 
 function NavFooter({
   step,
@@ -980,7 +99,7 @@ function NavFooter({
   onForward: () => void;
   forwardLabel?: string;
 }) {
-  if (step === 1 || step === 7) return null;
+  if (step === 1 || step === 8) return null;
 
   return (
     <div className="mt-10 flex items-center justify-between border-t border-border/40 pt-6">
@@ -999,7 +118,7 @@ function NavFooter({
       </button>
 
       <span className="text-xs text-muted-foreground">
-        Step {step} of 7
+        Step {step} of 8
       </span>
 
       <button
@@ -1019,129 +138,428 @@ function NavFooter({
   );
 }
 
-/* ── Main Wizard Component ────────────────────────────────────────── */
+/* ── Main Wizard ──────────────────────────────────────────────────── */
 
-function MigrationWizardInner() {
-  const ctx = useMigration();
-  const { state, goToStep, selectCategory, uploadFile, updateMapping, runValidation, buildPreview, confirmImport } = ctx;
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+export default function MigrationWizard() {
+  const navigate = useNavigate();
+  const migrationCtx = useMigration();
+  const teachersCtx = useTeachers();
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setUploadError(null);
-      setUploading(true);
+  /* ── Wizard state ──────────────────────────────────────────────── */
+  const [step, setStep] = useState<WizardStep>(1);
+  const [provider, setProvider] = useState<MigrationProvider | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<ImportCategory[]>([]);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+  const [skippedCount, setSkippedCount] = useState(0);
+  const [needsReviewCount, setNeedsReviewCount] = useState(0);
+
+  /* ── Navigation helpers ────────────────────────────────────────── */
+
+  const goNext = useCallback(() => {
+    setStep((prev) => Math.min(prev + 1, 8) as WizardStep);
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (step === 5 && currentFileIndex > 0) {
+      setCurrentFileIndex((i) => i - 1);
+      return;
+    }
+    setStep((prev) => Math.max(prev - 1, 1) as WizardStep);
+  }, [step, currentFileIndex]);
+
+  /* ── Step 2: Toggle data types ─────────────────────────────────── */
+
+  const toggleDataType = useCallback((dt: ImportCategory) => {
+    setSelectedTypes((prev) =>
+      prev.includes(dt) ? prev.filter((t) => t !== dt) : [...prev, dt],
+    );
+  }, []);
+
+  /* ── Step 4: Upload files ──────────────────────────────────────── */
+
+  const handleAddFiles = useCallback(
+    async (newFiles: File[]) => {
+      setUploadLoading(true);
       try {
-        await uploadFile(file);
-      } catch {
-        setUploadError("Could not parse this file. Make sure it's a valid CSV or Excel file.");
+        const parsed: UploadedFile[] = [];
+
+        for (const file of newFiles) {
+          const { rows, headers } = await parseFile(file);
+          const detectedType = guessDataType(headers);
+          const category = detectedType;
+
+          // Auto-map fields for this file
+          const sampleRows = rows.slice(0, 5).map((r) => r.raw);
+          const mappings = autoMapFields(headers, sampleRows, category);
+          const mappedRows = applyMappings(rows, mappings);
+
+          parsed.push({
+            id: `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            file,
+            fileName: file.name,
+            fileSize: file.size,
+            rowCount: rows.length,
+            headers,
+            detectedType,
+            rows,
+            mappings,
+            mappedRows,
+            errors: [],
+          });
+        }
+
+        setFiles((prev) => [...prev, ...parsed]);
+      } catch (err) {
+        console.error("Failed to parse file:", err);
       } finally {
-        setUploading(false);
+        setUploadLoading(false);
       }
     },
-    [uploadFile],
+    [],
   );
 
-  const handleBack = useCallback(() => {
-    if (state.step > 1) goToStep((state.step - 1) as WizardStep);
-  }, [state.step, goToStep]);
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+  }, []);
 
-  const handleForward = useCallback(() => {
-    switch (state.step) {
-      case 2:
-        if (!state.category) return;
-        goToStep(3);
-        break;
-      case 3:
-        goToStep(4);
-        break;
-      case 4:
-        // Run validation
-        runValidation();
-        break;
-      case 5:
-        buildPreview();
-        break;
-      case 6:
-        confirmImport();
-        break;
+  const handleChangeFileType = useCallback(
+    (fileId: string, newType: ImportCategory) => {
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id !== fileId) return f;
+          // Re-run auto-map with new category
+          const sampleRows = f.rows.slice(0, 5).map((r) => r.raw);
+          const mappings = autoMapFields(f.headers, sampleRows, newType);
+          const mappedRows = applyMappings(f.rows, mappings);
+          return {
+            ...f,
+            detectedType: newType,
+            mappings,
+            mappedRows,
+            errors: [],
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  /* ── Step 5: Field mapping ─────────────────────────────────────── */
+
+  const handleUpdateMapping = useCallback(
+    (fileId: string, col: string, targetField: string | null) => {
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id !== fileId) return f;
+          const mappings = f.mappings.map((m) =>
+            m.spreadsheetColumn === col
+              ? { ...m, targetField, confidence: targetField === null ? 0 : 50 }
+              : m,
+          );
+          const mappedRows = applyMappings(f.rows, mappings);
+          return { ...f, mappings, mappedRows, errors: [] };
+        }),
+      );
+    },
+    [],
+  );
+
+  const handleAutoMap = useCallback(
+    async (fileId: string) => {
+      setAiLoading(true);
+      // Simulate AI re-mapping — could integrate real AI in future
+      await new Promise((r) => setTimeout(r, 600));
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id !== fileId) return f;
+          const category = f.detectedType ?? "students";
+          const sampleRows = f.rows.slice(0, 5).map((r) => r.raw);
+          const mappings = autoMapFields(f.headers, sampleRows, category);
+          const mappedRows = applyMappings(f.rows, mappings);
+          return { ...f, mappings, mappedRows, errors: [] };
+        }),
+      );
+      setAiLoading(false);
+    },
+    [],
+  );
+
+  /* ── Step 6: Run validation ────────────────────────────────────── */
+
+  const runValidationForAll = useCallback(() => {
+    setFiles((prev) =>
+      prev.map((f) => {
+        const ctx = {
+          existingStudents: [...demoStudents, ...migrationCtx.importedStudents],
+          existingClasses: [...demoClasses, ...migrationCtx.importedClasses],
+          existingTeachers: [
+            ...demoTeachers,
+            ...migrationCtx.importedTeachers,
+            ...teachersCtx.teachers,
+          ],
+          mappedRows: f.mappedRows,
+          category: f.detectedType ?? "students",
+        };
+        const errors = validateImport(ctx);
+        return { ...f, errors };
+      }),
+    );
+  }, [migrationCtx.importedStudents, migrationCtx.importedClasses, migrationCtx.importedTeachers, teachersCtx.teachers]);
+
+  /* ── Step 7: Confirm import ────────────────────────────────────── */
+
+  const handleConfirmImport = useCallback(() => {
+    let totalImported = 0;
+    let totalSkipped = 0;
+    let totalNeedsReview = 0;
+
+    for (const f of files) {
+      const cleanCount = f.rowCount - f.errors.filter((e) => e.severity === "error").length;
+      const warnCount = f.errors.filter((e) => e.severity === "warning").length;
+      totalImported += cleanCount;
+      totalSkipped += f.errors.filter((e) => e.severity === "error").length;
+      totalNeedsReview += warnCount;
     }
-  }, [state.step, state.category, goToStep, runValidation, buildPreview, confirmImport]);
+
+    setImportedCount(totalImported);
+    setSkippedCount(totalSkipped);
+    setNeedsReviewCount(totalNeedsReview);
+
+    // For now, store mock confirmation; real import happens when Supabase is wired
+    setStep(8);
+  }, [files]);
+
+  /* ── Forward button logic ──────────────────────────────────────── */
 
   const canGoForward = (() => {
-    switch (state.step) {
-      case 2: return !!state.category;
-      case 3: return !!state.file;
-      case 4: return true;
-      case 5: return true;
-      case 6: return !state.errors.some((e) => e.severity === "error");
-      default: return true;
+    switch (step) {
+      case 1:
+        return !!provider;
+      case 2:
+        return selectedTypes.length > 0;
+      case 3:
+        return true;
+      case 4:
+        return files.length > 0;
+      case 5:
+        // All files must have been mapped (currentFileIndex at end)
+        return currentFileIndex >= files.length - 1;
+      case 6: {
+        const hasBlocking = files.some((f) =>
+          f.errors.some((e) => e.severity === "error"),
+        );
+        return !hasBlocking || files.every((f) => f.rowCount > 0);
+      }
+      case 7:
+        return true;
+      default:
+        return true;
     }
   })();
 
   const forwardLabel = (() => {
-    switch (state.step) {
-      case 3: return "Map Fields";
-      case 4: return "Validate Data";
-      case 5: return "Preview Import";
-      case 6: return "Confirm Import";
-      default: return "Continue";
+    switch (step) {
+      case 1:
+        return "Select Data Types";
+      case 2:
+        return "Export Guide";
+      case 3:
+        return "Upload Files";
+      case 4:
+        return "Map Fields";
+      case 5:
+        return "Validate";
+      case 6:
+        return "Preview Import";
+      case 7:
+        return "Confirm Import";
+      default:
+        return "Continue";
     }
   })();
 
-  return (
-    <div className="mx-auto max-w-3xl py-8">
-      <StepIndicator step={state.step} />
-      <StepLabel step={state.step} />
+  const handleForward = useCallback(() => {
+    switch (step) {
+      case 5:
+        // If there are more files to map, advance within step 5
+        if (currentFileIndex < files.length - 1) {
+          setCurrentFileIndex((i) => i + 1);
+          return;
+        }
+        goNext();
+        break;
+      case 6:
+        runValidationForAll();
+        goNext();
+        break;
+      case 7:
+        handleConfirmImport();
+        break;
+      default:
+        goNext();
+    }
+  }, [step, currentFileIndex, files.length, goNext, runValidationForAll, handleConfirmImport]);
 
-      {state.step === 1 && <StepWelcome onStart={() => goToStep(2)} />}
-      {state.step === 2 && (
-        <StepChooseType
-          selected={state.category}
-          onSelect={(cat) => selectCategory(cat)}
+  /* ── Step 6 helpers ────────────────────────────────────────────── */
+
+  const hasBlockingErrors = files.some((f) =>
+    f.errors.some((e) => e.severity === "error"),
+  );
+
+  const handleAutoFix = useCallback(() => {
+    setFiles((prev) =>
+      prev.map((f) => {
+        // Simple auto-fix: trim whitespace and re-validate
+        const cleanedRows = f.mappedRows.map((row) => {
+          const cleaned: Record<string, string> = {};
+          for (const [key, val] of Object.entries(row.mapped)) {
+            cleaned[key] = val.trim();
+          }
+          return { ...row, mapped: cleaned };
+        });
+
+        const ctx = {
+          existingStudents: [...demoStudents, ...migrationCtx.importedStudents],
+          existingClasses: [...demoClasses, ...migrationCtx.importedClasses],
+          existingTeachers: [
+            ...demoTeachers,
+            ...migrationCtx.importedTeachers,
+            ...teachersCtx.teachers,
+          ],
+          mappedRows: cleanedRows,
+          category: f.detectedType ?? "students",
+        };
+        const errors = validateImport(ctx);
+        return { ...f, mappedRows: cleanedRows, errors };
+      }),
+    );
+  }, [migrationCtx.importedStudents, migrationCtx.importedClasses, migrationCtx.importedTeachers, teachersCtx.teachers]);
+
+  const handleImportMore = useCallback(() => {
+    setStep(1);
+    setProvider(null);
+    setSelectedTypes([]);
+    setFiles([]);
+    setCurrentFileIndex(0);
+  }, []);
+
+  /* ── Render ────────────────────────────────────────────────────── */
+
+  return (
+    <div className="mx-auto max-w-4xl py-8">
+      <StepIndicator step={step} total={8} />
+      <StepLabel step={step} />
+
+      {/* Step 1: Provider Selection */}
+      {step === 1 && (
+        <ProviderSelector
+          selected={provider}
+          onSelect={setProvider}
+          onContinue={goNext}
         />
       )}
-      {state.step === 3 && (
-        <StepUpload
-          onFile={handleFile}
-          file={state.file}
-          loading={uploading}
-          error={uploadError}
+
+      {/* Step 2: Data Type Selection */}
+      {step === 2 && (
+        <DataTypeSelector
+          selectedTypes={selectedTypes}
+          onToggle={toggleDataType}
         />
       )}
-      {state.step === 4 && (
-        <StepMapping
-          mappings={state.mappings}
-          headers={state.headers}
-          rows={state.rows}
-          onUpdateMapping={updateMapping}
+
+      {/* Step 3: Export Instructions */}
+      {step === 3 && provider && (
+        <ExportInstructions provider={provider} />
+      )}
+
+      {/* Step 4: File Upload */}
+      {step === 4 && (
+        <FileUploadZone
+          files={files}
+          onAddFiles={handleAddFiles}
+          onRemoveFile={handleRemoveFile}
+          onChangeType={handleChangeFileType}
+          loading={uploadLoading}
         />
       )}
-      {state.step === 5 && (
-        <StepValidation
-          errors={state.errors}
-          totalRows={state.mappedRows.length}
-          onAutoFix={() => {
-            updateMapping("", null); // Trigger re-run
-            runValidation();
-          }}
+
+      {/* Step 5: Field Mapping (per file) */}
+      {step === 5 && files.length > 0 && (
+        <>
+          {/* File tabs */}
+          {files.length > 1 && (
+            <div className="mb-6 flex flex-wrap gap-2 justify-center">
+              {files.map((f, i) => (
+                <button
+                  key={f.id}
+                  onClick={() => setCurrentFileIndex(i)}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition",
+                    i === currentFileIndex
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  {f.fileName}
+                  {f.errors.length > 0 && (
+                    <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive/20 text-[10px] font-bold text-destructive">
+                      {f.errors.filter((e) => e.severity === "error").length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          <FieldMapper
+            file={files[currentFileIndex]}
+            onUpdateMapping={handleUpdateMapping}
+            onAutoMap={handleAutoMap}
+            aiLoading={aiLoading}
+          />
+        </>
+      )}
+
+      {/* Step 6: Validation */}
+      {step === 6 && (
+        <ValidationPanel
+          files={files}
+          onAutoFix={handleAutoFix}
         />
       )}
-      {state.step === 6 && <StepPreview onConfirm={() => confirmImport()} />}
-      {state.step === 7 && <StepConfirmation />}
+
+      {/* Step 7: Import Preview */}
+      {step === 7 && (
+        <ImportPreview
+          files={files}
+          onConfirm={handleConfirmImport}
+          onBack={goBack}
+          hasBlockingErrors={hasBlockingErrors}
+        />
+      )}
+
+      {/* Step 8: Import Complete */}
+      {step === 8 && (
+        <ImportComplete
+          files={files}
+          importedCount={importedCount}
+          skippedCount={skippedCount}
+          needsReviewCount={needsReviewCount}
+          onImportMore={handleImportMore}
+        />
+      )}
 
       <NavFooter
-        step={state.step}
-        canGoBack={state.step > 2}
+        step={step}
+        canGoBack={step > 1}
         canGoForward={canGoForward}
-        onBack={handleBack}
+        onBack={goBack}
         onForward={handleForward}
         forwardLabel={forwardLabel}
       />
     </div>
   );
-}
-
-export default function MigrationWizard() {
-  return <MigrationWizardInner />;
 }
