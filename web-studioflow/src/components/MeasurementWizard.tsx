@@ -1033,6 +1033,40 @@ function SimpleSizingField({ label, value, onChange, options, icon: Icon, option
   );
 }
 
+/* ── Helper: ReviewRow ──────────────────────────────────────────── */
+
+interface ReviewRowProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value?: string | number;
+  unit?: string;
+}
+
+/** A labelled value row for the review step. Shows "Not provided" for empty values. */
+function ReviewRow({ icon: Icon, label, value, unit }: ReviewRowProps) {
+  const displayValue = value != null && value !== "" ? String(value) : "Not provided";
+  const isEmpty = value == null || value === "";
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <span
+        className={cn(
+          "text-sm font-semibold",
+          isEmpty && "text-muted-foreground italic",
+        )}
+      >
+        {displayValue}
+        {unit && !isEmpty && (
+          <span className="text-xs text-muted-foreground ml-1">{unit}</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 /* ── Measurement guide content ───────────────────────────────────── */
 
 const MEASUREMENT_GUIDES = [
