@@ -376,7 +376,7 @@ function StripeConnectSection() {
   const { data: state, isLoading, refetch } = useQuery({
     queryKey: ["stripe-connect", studio.id],
     queryFn: () => getStripeConnectState(studio.id),
-    refetchInterval: state?.status === "pending" ? 5000 : false,
+    refetchInterval: (query) => (query.state.data as Awaited<ReturnType<typeof getStripeConnectState>>)?.status === "pending" ? 5000 : false,
   });
 
   const handleConnect = async () => {
