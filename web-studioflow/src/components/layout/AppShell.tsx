@@ -431,7 +431,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground sm:flex">
                 <Search className="h-4 w-4" />
                 <input
-                  placeholder="Search students, classes…"
+                  placeholder={`Search ${term.participantPlural.toLowerCase()}, ${term.classPlural.toLowerCase()}…`}
                   className="w-44 bg-transparent outline-none placeholder:text-muted-foreground/70"
                 />
               </div>

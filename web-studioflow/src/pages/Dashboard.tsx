@@ -194,7 +194,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-display text-lg font-semibold">Today's {term.classPlural.toLowerCase()}</h3>
-            <p className="text-sm text-muted-foreground">{todayDay} · {todayClasses.length} classes scheduled</p>
+            <p className="text-sm text-muted-foreground">{todayDay} · {todayClasses.length} {term.classPlural.toLowerCase()} scheduled</p>
           </div>
           <Link to="/schedule" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose transition hover:opacity-80">
             Full schedule <ArrowUpRight className="h-3.5 w-3.5" />
@@ -292,7 +292,7 @@ export default function Dashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gold">{expiringWaivers} waivers pending</p>
-                  <p className="text-xs text-muted-foreground">Needs parent signature</p>
+                  <p className="text-xs text-muted-foreground">Needs caregiver signature</p>
                 </div>
                 <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-gold/50" />
               </Link>

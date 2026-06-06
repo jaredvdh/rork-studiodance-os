@@ -84,7 +84,7 @@ export default function Classes() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-display text-3xl font-semibold tracking-tight">{term.classPlural}</h2>
-          <p className="text-sm text-muted-foreground">{classes.length} active classes · {classes.reduce((a, c) => a + c.enrolled, 0)} enrollments</p>
+          <p className="text-sm text-muted-foreground">{classes.length} active {term.classPlural.toLowerCase()} · {classes.reduce((a, c) => a + c.enrolled, 0)} enrolled</p>
         </div>
         <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
           <Plus className="h-4 w-4" /> New class

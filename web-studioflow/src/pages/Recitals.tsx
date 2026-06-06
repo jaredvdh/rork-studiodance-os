@@ -477,9 +477,9 @@ export default function Recitals() {
               <div className="grid h-12 w-12 place-items-center rounded-full bg-secondary text-muted-foreground">
                 <Music className="h-6 w-6" />
               </div>
-              <p className="font-display text-lg font-semibold text-foreground/70">No classes in the recital yet</p>
+              <p className="font-display text-lg font-semibold text-foreground/70">No {term.classPlural.toLowerCase()} in the {term.event.toLowerCase()} yet</p>
               <p className="max-w-xs text-sm text-muted-foreground">
-                Add classes from the pool on the right to start building your recital plan.
+                Add {term.classPlural.toLowerCase()} from the pool on the right to start building your {term.event.toLowerCase()} plan.
               </p>
             </div>
           ) : (
@@ -551,7 +551,7 @@ export default function Recitals() {
                       <div className="border-t border-border/70 px-5 pb-4 pt-3 space-y-2">
                         {perfClasses.length === 0 ? (
                           <p className="py-3 text-center text-sm text-muted-foreground">
-                            No classes assigned yet. Drag classes here or use the dropdown on a recital class.
+                            No classes assigned yet. Drag classes here or use the dropdown on a {term.event.toLowerCase()} {term.class.toLowerCase()}.
                           </p>
                         ) : (
                           perfClasses.map((c) => (
@@ -699,7 +699,7 @@ export default function Recitals() {
                   <p className="text-sm text-muted-foreground">
                     {search || ageFilter !== "All"
                       ? "No classes match your filters"
-                      : "All classes are in the recital"}
+                      : `All ${term.classPlural.toLowerCase()} are in the ${term.event.toLowerCase()}` }
                   </p>
                 </div>
               ) : (
@@ -749,7 +749,7 @@ export default function Recitals() {
           setNewPerfStartTime("");
         }}
         title="Create a performance act"
-        description="Organize recital classes into acts for the running order."
+        description={`Organize ${term.event.toLowerCase()} ${term.classPlural.toLowerCase()} into acts for the running order.`}
         footer={
           <div className="flex justify-end gap-2">
             <button
@@ -805,7 +805,7 @@ export default function Recitals() {
       </div>
 
       <p className="no-print pb-2 text-center text-xs text-muted-foreground">
-        Recital data is demo content · Spring Showcase 2026
+        {term.event} data is demo content · Spring Showcase 2026
       </p>
     </div>
   );
@@ -868,7 +868,7 @@ function RecitalClassCard({
         <button
           onClick={onRemoveFromRecital}
           className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-          title="Remove from recital"
+          title={`Remove from ${term.event.toLowerCase()}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
