@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -23,6 +24,9 @@ import {
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
+import { useAuth } from "@/hooks/useAuth";
+import { deleteTestStudio } from "@/lib/testStudio";
+import { FlaskConical } from "lucide-react";
 import type { Vertical } from "@/data/types";
 import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology, MODULE_LABELS, type ModuleKey } from "@/data/terminology";
 import { cn } from "@/lib/utils";
@@ -504,6 +508,9 @@ export default function Settings() {
       {/* Stripe Connect (shown when Stripe is active payment method) */}
       {paymentMethod === "stripe" && <StripeConnectSection />}
 
+      {/* Test studio cleanup (sandbox studios only) */}
+      {studio.isTest && <DeleteTestStudioSection />}
+
       {/* Save */}
       <div className="flex items-center gap-3">
         <button
@@ -526,6 +533,71 @@ export default function Settings() {
 }
 
 /* ── Image upload section (logo + banner) ───────────────────────── */
+
+function DeleteTestStudioSection() {
+  const { studio } = useStudio();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+
+  const handleDelete = async () => {
+    if (confirmText.trim().toUpperCase() !== "DELETE") {
+      toast.error('Type "DELETE" to confirm');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { ok, removedUsers } = await deleteTestStudio(studio.id);
+      if (!ok) throw new Error("Delete failed");
+      toast.success(`Test studio deleted (${removedUsers} test account${removedUsers === 1 ? "" : "s"} removed)`);
+      await signOut();
+      localStorage.removeItem("studioflow_studio");
+      localStorage.removeItem("studioflow_onboarding_completed");
+      localStorage.removeItem("studioflow_setup_complete");
+      navigate("/sandbox", { replace: true });
+      window.location.href = "/sandbox";
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete test studio");
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 shadow-soft">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-destructive/10">
+          <FlaskConical className="h-4.5 w-4.5 text-destructive" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold">Delete test studio</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            This is a sandbox studio. Deleting it permanently removes this studio and all of its
+            data — participants, classes, caregivers, enrolments, invoices, waivers, attendance and
+            announcements — plus the test login accounts. Real studios are never affected.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="text"
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder='Type "DELETE" to confirm'
+          className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-destructive focus:ring-1 focus:ring-destructive"
+        />
+        <button
+          onClick={() => void handleDelete()}
+          disabled={deleting || confirmText.trim().toUpperCase() !== "DELETE"}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-destructive px-6 py-2.5 text-sm font-semibold text-destructive-foreground shadow-lift transition hover:opacity-90 disabled:opacity-40"
+        >
+          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          {deleting ? "Deleting…" : "Delete test studio"}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function ImageUploadSection({
   title,

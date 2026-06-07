@@ -172,6 +172,8 @@ export interface Studio {
   logoUrl?: string;
   bannerUrl?: string;
   vertical: Vertical;
+  /** True when this is a sandbox/test studio created via the Sandbox flow. */
+  isTest?: boolean;
   /** Structured studio address (replaces single city string for intl support). */
   address?: Address;
   settings?: {

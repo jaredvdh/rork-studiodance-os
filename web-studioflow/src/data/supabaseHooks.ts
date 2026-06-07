@@ -98,7 +98,7 @@ export function useSupabaseStudio(isDemo: boolean) {
         .eq("id", studioId)
         .single();
       if (error || !data) return { data: null, error };
-      return { data: [{ id: data.id, name: data.name, tagline: data.tagline ?? "", city: data.city ?? "", brandColor: data.brand_color ?? "", initials: data.initials ?? "", logoUrl: data.logo_url ?? undefined, vertical: (data.vertical as Studio["vertical"]) ?? "dance" }], error: null };
+      return { data: [{ id: data.id, name: data.name, tagline: data.tagline ?? "", city: data.city ?? "", brandColor: data.brand_color ?? "", initials: data.initials ?? "", logoUrl: data.logo_url ?? undefined, vertical: (data.vertical as Studio["vertical"]) ?? "dance", isTest: data.is_test === true }], error: null };
     },
     [demoStudio],
     isDemo,

@@ -19,6 +19,7 @@ import Landing from "./pages/Landing";
 import MigrationWizard from "./pages/MigrationWizard";
 import MigrationHistory from "./pages/MigrationHistory";
 import DemoLogin from "./pages/DemoLogin";
+import Sandbox from "./pages/Sandbox";
 import NotFound from "./pages/NotFound";
 import Payments from "./pages/Payments";
 import Recitals from "./pages/Recitals";
@@ -124,6 +125,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={withStudio(Landing)} />
           <Route path="/demo" element={<DemoLogin />} />
+          <Route path="/sandbox" element={withStudio(Sandbox)} />
           <Route path="/auth/callback" element={withStudio(AuthCallback)} />
           <Route path="/login" element={withStudio(AdminLogin)} />
 

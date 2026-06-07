@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { FlaskConical, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/store";
 import {
@@ -102,6 +102,15 @@ export default function AdminLogin() {
             Parent/Student Portal →
           </Link>
         </div>
+
+        {/* Sandbox / test studio entry */}
+        <Link
+          to="/sandbox"
+          className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-teal-300/60 bg-teal-50/70 px-4 py-2.5 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
+        >
+          <FlaskConical className="h-4 w-4" />
+          Create a test studio (sandbox)
+        </Link>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground transition">

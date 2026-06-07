@@ -21,7 +21,7 @@ import {
 
 import { useStudio } from "@/data/store";
 import { useAuth } from "@/hooks/useAuth";
-import { DemoBadge, isDemoSession } from "@/components/DemoBadge";
+import { DemoBadge, TestStudioBanner, isDemoSession } from "@/components/DemoBadge";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -307,6 +307,7 @@ export default function MemberShell({ children }: MemberShellProps) {
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {demo && <DemoBadge variant="banner" className="-mx-4 -mt-6 mb-4 sm:-mx-6 lg:-mx-8" />}
+        <TestStudioBanner className="-mx-4 -mt-6 mb-4 sm:-mx-6 lg:-mx-8" />
         {children}
       </main>
 

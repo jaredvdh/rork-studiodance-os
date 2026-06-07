@@ -1,5 +1,6 @@
-import { Beaker, RefreshCw } from "lucide-react";
+import { Beaker, FlaskConical, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStudio } from "@/data/studioStore";
 
 interface DemoBadgeProps {
   /** Visual variant */
@@ -82,6 +83,27 @@ export function ResetDemoButton({ className }: ResetDemoButtonProps) {
       <RefreshCw className="h-3 w-3" />
       Reset demo data
     </button>
+  );
+}
+
+/**
+ * Banner shown when the active studio is a sandbox/test studio (studios.is_test).
+ * Unlike demo mode, test studios use real Supabase data + RLS — so this is a
+ * distinct, clearly-labelled indicator. Renders nothing for real studios.
+ */
+export function TestStudioBanner({ className }: { className?: string }) {
+  const { studio } = useStudio();
+  if (!studio.isTest) return null;
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center gap-2 border-b border-teal-300/60 bg-teal-100/80 px-4 py-1.5 text-xs font-medium text-teal-800 backdrop-blur-sm",
+        className,
+      )}
+    >
+      <FlaskConical className="h-3.5 w-3.5" />
+      <span>Test studio (sandbox) — real data, safe to delete from Settings</span>
+    </div>
   );
 }
 

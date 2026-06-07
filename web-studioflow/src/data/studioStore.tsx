@@ -86,6 +86,7 @@ function mapSupabaseStudio(row: Record<string, unknown>): Studio {
     logoUrl: (row.logo_url as string) || undefined,
     bannerUrl: (row.banner_url as string) || undefined,
     vertical: (row.vertical as Studio["vertical"]) || defaultStudio.vertical,
+    isTest: row.is_test === true,
     settings: { regional: DEFAULT_REGIONAL_SETTINGS },
   };
 }
