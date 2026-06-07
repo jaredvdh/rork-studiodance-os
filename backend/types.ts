@@ -98,6 +98,7 @@ export type Database = {
           capacity: number | null
           created_at: string | null
           day: string | null
+          description: string | null
           duration_mins: number | null
           enrolled: number | null
           id: string
@@ -117,6 +118,7 @@ export type Database = {
           capacity?: number | null
           created_at?: string | null
           day?: string | null
+          description?: string | null
           duration_mins?: number | null
           enrolled?: number | null
           id?: string
@@ -136,6 +138,7 @@ export type Database = {
           capacity?: number | null
           created_at?: string | null
           day?: string | null
+          description?: string | null
           duration_mins?: number | null
           enrolled?: number | null
           id?: string
@@ -292,8 +295,12 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          paid_at: string | null
+          parent_email: string | null
           parent_name: string | null
           status: string | null
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
           student_name: string
           studio_id: string
           updated_at: string | null
@@ -304,8 +311,12 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          paid_at?: string | null
+          parent_email?: string | null
           parent_name?: string | null
           status?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
           student_name: string
           studio_id: string
           updated_at?: string | null
@@ -316,8 +327,12 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          paid_at?: string | null
+          parent_email?: string | null
           parent_name?: string | null
           status?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
           student_name?: string
           studio_id?: string
           updated_at?: string | null
@@ -467,6 +482,8 @@ export type Database = {
           email: string | null
           id: string
           name: string | null
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
           role: string | null
           studio_id: string | null
           updated_at: string | null
@@ -477,6 +494,8 @@ export type Database = {
           email?: string | null
           id: string
           name?: string | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           role?: string | null
           studio_id?: string | null
           updated_at?: string | null
@@ -487,6 +506,8 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           role?: string | null
           studio_id?: string | null
           updated_at?: string | null
@@ -640,6 +661,7 @@ export type Database = {
       }
       studios: {
         Row: {
+          banner_url: string | null
           brand_color: string | null
           city: string | null
           created_at: string | null
@@ -653,6 +675,7 @@ export type Database = {
           vertical: string | null
         }
         Insert: {
+          banner_url?: string | null
           brand_color?: string | null
           city?: string | null
           created_at?: string | null
@@ -666,6 +689,7 @@ export type Database = {
           vertical?: string | null
         }
         Update: {
+          banner_url?: string | null
           brand_color?: string | null
           city?: string | null
           created_at?: string | null
@@ -725,6 +749,182 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "teachers_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      }
+      attendance_sessions: {
+        Row: {
+          class_id: string
+          created_at: string
+          end_time: string | null
+          id: string
+          marked_by: string | null
+          notes: string | null
+          session_date: string
+          start_time: string | null
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_date: string
+          start_time?: string | null
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_date?: string
+          start_time?: string | null
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sessions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_records: {
+        Row: {
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string
+          id: string
+          marked_by: string | null
+          notes: string | null
+          session_id: string
+          status: string
+          student_id: string
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id: string
+          status?: string
+          student_id: string
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id?: string
+          status?: string
+          student_id?: string
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recital_performances: {
+        Row: {
+          class_ids: string[]
+          costume_note: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          "order": number
+          recital_event_id: string | null
+          start_time: string | null
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_ids?: string[]
+          costume_note?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          "order"?: number
+          recital_event_id?: string | null
+          start_time?: string | null
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_ids?: string[]
+          costume_note?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          "order"?: number
+          recital_event_id?: string | null
+          start_time?: string | null
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recital_performances_recital_event_id_fkey"
+            columns: ["recital_event_id"]
+            isOneToOne: false
+            referencedRelation: "recital_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recital_performances_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"

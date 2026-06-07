@@ -613,7 +613,7 @@ export function useStudioData() {
 }
 
 // Re-export StudioProvider, useStudio, useTerminology so existing imports from "@/data/store" keep working
-export { StudioProvider, useStudio, useTerminology } from "./studioStore";
+export { StudioProvider, useStudio, useTerminology, useOnboarding } from "./studioStore";
 
 export function teacherName(teachers: Teacher[], id: string): string {
   return teachers.find((t) => t.id === id)?.name ?? "Unassigned";

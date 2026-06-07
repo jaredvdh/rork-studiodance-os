@@ -28,6 +28,7 @@ import Costumes from "./pages/Costumes";
 import CostumeDetail from "./pages/CostumeDetail";
 import Waivers from "./pages/Waivers";
 import Students from "./pages/Students";
+import InstructorPay from "./pages/InstructorPay";
 
 import { StudioProvider, EnrolmentsProvider, TeachersProvider, ClassesProvider, StudentsProvider, AnnouncementsProvider, InvoicesProvider, CostumesProvider, WaiversProvider, DocumentsProvider } from "./data/store";
 import { MigrationProvider } from "./data/migrationStore";
@@ -45,6 +46,8 @@ import ParentSchedule from "./pages/parent/ParentSchedule";
 import ParentCostumes from "./pages/parent/ParentCostumes";
 import ParentWaivers from "./pages/parent/ParentWaivers";
 import ParentDocuments from "./pages/parent/ParentDocuments";
+import ParentChildren from "./pages/parent/ParentChildren";
+import ParentCaregivers from "./pages/parent/ParentCaregivers";
 
 const queryClient = new QueryClient();
 
@@ -135,7 +138,7 @@ const App = () => (
           <Route path="/costumes" element={<ProtectedRoute><ErrorBoundary>{withShell(Costumes)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/costumes/:id" element={<ProtectedRoute><ErrorBoundary>{withShell(CostumeDetail)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/instructors" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
-          <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(Instructors)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/instructor-pay" element={<ProtectedRoute><ErrorBoundary>{withShell(InstructorPay)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/waivers" element={<ProtectedRoute><ErrorBoundary>{withShell(Waivers)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><ErrorBoundary>{withShell(Settings)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/migration" element={<ProtectedRoute><ErrorBoundary>{withShell(MigrationWizard)}</ErrorBoundary></ProtectedRoute>} />
@@ -150,8 +153,8 @@ const App = () => (
           <Route path="/parent/family" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/classes" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentClasses)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/schedule" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentSchedule)}</ErrorBoundary></ProtectedRoute>} />
-          <Route path="/parent/children" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
-          <Route path="/parent/caregivers" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentFamily)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/children" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentChildren)}</ErrorBoundary></ProtectedRoute>} />
+          <Route path="/parent/caregivers" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentCaregivers)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/payments" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentPayments)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/announcements" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentAnnouncements)}</ErrorBoundary></ProtectedRoute>} />
           <Route path="/parent/costumes" element={<ProtectedRoute><ErrorBoundary>{withParentShell(ParentCostumes)}</ErrorBoundary></ProtectedRoute>} />

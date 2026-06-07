@@ -5,6 +5,33 @@ const supabaseAnonKey = (import.meta.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string
 
 const VALID_URL = supabaseUrl.startsWith("http");
 
+/**
+ * Custom fetch wrapper that injects the Rork Auth JWT into every Supabase
+ * REST request. This allows RLS policies to use auth.uid() when Supabase
+ * is configured to trust Rork's JWKS endpoint.
+ *
+ * For Supabase to validate Rork JWTs, configure the Supabase project:
+ *   Dashboard → Authentication → Settings → JWT Settings
+ *   → Add External JWT Secret / JWKS URL: https://api.rork.com/.well-known/jwks.json
+ *
+ * Until that is configured, RLS policies will see auth.uid() = null.
+ * Backend functions use the service_role key (createAdminClient) to
+ * bypass RLS, servicing all requests through the backend API layer.
+ */
+function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = getAccessToken();
+  if (!token) return fetch(input, init);
+
+  const headers = new Headers(init?.headers);
+  // Only inject the Rork JWT if there isn't already a Supabase session
+  // header set (e.g. from signInWithEmail). The Supabase client sets its
+  // own Authorization header when a session exists.
+  if (!headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return fetch(input, { ...init, headers });
+}
+
 let _client: SupabaseClient | null = null;
 
 function getClient(): SupabaseClient {
@@ -16,11 +43,15 @@ function getClient(): SupabaseClient {
       _client = createClient(
         "https://placeholder.supabase.co",
         "placeholder-key",
-        { auth: { autoRefreshToken: false, persistSession: false } },
+        {
+          auth: { autoRefreshToken: false, persistSession: false },
+          global: { fetch: authenticatedFetch },
+        },
       );
     } else {
       _client = createClient(supabaseUrl, supabaseAnonKey, {
         auth: { autoRefreshToken: false, persistSession: false },
+        global: { fetch: authenticatedFetch },
       });
     }
   }
@@ -34,6 +65,9 @@ function getClient(): SupabaseClient {
  * is routed through the lazily-initialised real client. This prevents a hard crash
  * at module-load time when EXPO_PUBLIC_SUPABASE_URL is missing (e.g. in a preview
  * deployment without Supabase env vars set).
+ *
+ * All outgoing requests include the Rork Auth JWT (if present) in the
+ * Authorization header, enabling RLS-driven multi-tenant queries.
  */
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
@@ -58,7 +92,7 @@ export function getAccessToken(): string | null {
   return localStorage.getItem("rork:access_token");
 }
 
-/** Create headers with the auth token for Supabase API calls. */
+/** Create headers with the auth token for manual fetch calls. */
 export function authHeaders(): Record<string, string> {
   const token = getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
