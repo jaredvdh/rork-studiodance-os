@@ -706,8 +706,210 @@ export function useUpdateInvoice() {
   });
 }
 
-/* ── Parents (Families) ───────────────────────────────────────── */
+/* ── Caregivers (Parent Portal) ────────────────────────────────── */
 
+/** Map a Supabase caregivers row to our Caregiver type. */
+function mapSupabaseCaregiver(row: Record<string, unknown>): Caregiver {
+  const firstName = (row.first_name as string) || (row.name as string)?.split(" ")?.[0] || "";
+  const lastName = (row.last_name as string) || (row.name as string)?.split(" ")?.slice(1)?.join(" ") || "";
+  return {
+    id: row.id as string,
+    first_name: firstName,
+    last_name: lastName,
+    relationship_to_student: (row.relationship_to_student as string) || "Parent",
+    email: row.email as string,
+    phone: (row.phone as string) ?? "",
+    address: (row.structured_address as Address) ?? (row.address as string) ?? undefined,
+    city: (row.city as string) ?? undefined,
+    state: (row.state as string) ?? undefined,
+    zip: (row.zip as string) ?? undefined,
+    household_label: (row.household_label as string) ?? undefined,
+    status: ((row.status as string) ?? "active") as Caregiver["status"],
+    role: ((row.role as string) ?? "primary_caregiver") as Caregiver["role"],
+    receives_announcements: (row.receives_announcements as boolean) ?? true,
+    receives_emergency_messages: (row.receives_emergency_messages as boolean) ?? true,
+    can_view_schedule: (row.can_view_schedule as boolean) ?? true,
+    can_view_billing: (row.can_view_billing as boolean) ?? false,
+    can_pay_invoices: (row.can_pay_invoices as boolean) ?? false,
+    can_manage_enrolments: (row.can_manage_enrolments as boolean) ?? false,
+    can_sign_waivers: (row.can_sign_waivers as boolean) ?? false,
+    can_view_medical_notes: (row.can_view_medical_notes as boolean) ?? false,
+    authorized_pickup: (row.authorized_pickup as boolean) ?? false,
+    invited_at: (row.invited_at as string) ?? undefined,
+    accepted_at: (row.accepted_at as string) ?? undefined,
+    custody_restriction: (row.custody_restriction as boolean) ?? undefined,
+    court_order_on_file: (row.court_order_on_file as boolean) ?? undefined,
+    communication_only: (row.communication_only as boolean) ?? undefined,
+  };
+}
+
+/** Fetch the caregiver record matching the authenticated user's email.
+ * Returns null if no caregiver exists for this user. */
+export function useSupabaseCaregiverByEmail(isDemo: boolean) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["caregiver_by_email", user?.email],
+    queryFn: async (): Promise<Caregiver | null> => {
+      if (!user || isDemo) return null;
+      try {
+        const { data, error } = await supabase
+          .from("caregivers")
+          .select("*")
+          .eq("email", user.email)
+          .eq("status", "active")
+          .maybeSingle();
+        if (error || !data) return null;
+        return mapSupabaseCaregiver(data as Record<string, unknown>);
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!user && !isDemo,
+    staleTime: 30_000,
+  });
+}
+
+/** Fetch all caregivers for the active studio. */
+export function useSupabaseCaregivers(isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<Caregiver>(
+    ["caregivers", studioId],
+    async () => {
+      const { data, error } = await supabase.from("caregivers").select("*").eq("studio_id", studioId);
+      if (error || !data) return { data: null, error };
+      return {
+        data: (data as unknown as Record<string, unknown>[]).map(mapSupabaseCaregiver),
+        error: null,
+      };
+    },
+    demoParents.map((p) => p.primaryCaregiver),
+    isDemo,
+  );
+}
+
+/** Fetch students linked to a specific caregiver. Scoped by RLS in real mode. */
+export function useSupabaseCaregiverStudents(caregiverId: string | undefined, isDemo: boolean) {
+  const studioId = useStudioId();
+  return useDualQuery<Student>(
+    ["caregiver_students", caregiverId ?? "none", studioId],
+    async () => {
+      if (!caregiverId) return { data: [], error: null };
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("studio_id", studioId)
+        .eq("caregiver_id", caregiverId);
+      if (error || !data) return { data: null, error };
+      return { data: (data as unknown as Record<string, unknown>[]).map((s) => ({
+        id: s.id as string, studioId: s.studio_id as string, name: s.name as string,
+        dob: (s.dob as string) ?? "",
+        caregiverId: (s.caregiver_id as string) ?? "",
+        caregiverName: (s.caregiver_name as string) ?? "",
+        caregiverEmail: (s.caregiver_email as string) ?? "",
+        classIds: (s.class_ids as string[]) ?? [],
+        attendanceRate: (s.attendance_rate as number) ?? 1,
+        waiver: ((s.waiver as string) ?? "missing") as Student["waiver"],
+        payment: ((s.payment as string) ?? "paid") as Student["payment"],
+        balanceCents: (s.balance_cents as number) ?? 0,
+        medicalNotes: (s.medical_notes as string) ?? undefined,
+        allergies: (s.allergies as string) ?? undefined,
+        legalFirstName: (s.legal_first_name as string) ?? undefined,
+        legalLastName: (s.legal_last_name as string) ?? undefined,
+        preferredName: (s.preferred_name as string) ?? undefined,
+        gender: (s.gender as string) ?? undefined,
+        pronouns: (s.pronouns as string) ?? undefined,
+        schoolGrade: (s.school_grade as string) ?? undefined,
+        emergencyContactName: (s.emergency_contact_name as string) ?? undefined,
+        emergencyContactRelationship: (s.emergency_contact_relationship as string) ?? undefined,
+        emergencyContactPhone: (s.emergency_contact_phone as string) ?? undefined,
+        emergencyContactSecondaryPhone: (s.emergency_contact_secondary_phone as string) ?? undefined,
+        emergencyContactCanPickup: (s.emergency_contact_can_pickup as boolean) ?? undefined,
+        authorizedPickupContacts: (s.authorized_pickup_contacts as Student["authorizedPickupContacts"]) ?? undefined,
+      })), error: null };
+    },
+    [],
+    isDemo,
+  );
+}
+
+export function useAddCaregiver() {
+  const queryClient = useQueryClient();
+  const studioId = useStudioId();
+  return useMutation({
+    mutationFn: async (cg: Omit<Caregiver, "id">) => {
+      const { data, error } = await supabase.from("caregivers").insert({
+        studio_id: studioId,
+        first_name: cg.first_name,
+        last_name: cg.last_name,
+        name: `${cg.first_name} ${cg.last_name}`,
+        email: cg.email,
+        phone: cg.phone,
+        relationship_to_student: cg.relationship_to_student,
+        role: cg.role,
+        status: cg.status,
+        receives_announcements: cg.receives_announcements,
+        receives_emergency_messages: cg.receives_emergency_messages,
+        can_view_schedule: cg.can_view_schedule,
+        can_view_billing: cg.can_view_billing,
+        can_pay_invoices: cg.can_pay_invoices,
+        can_manage_enrolments: cg.can_manage_enrolments,
+        can_sign_waivers: cg.can_sign_waivers,
+        can_view_medical_notes: cg.can_view_medical_notes,
+        authorized_pickup: cg.authorized_pickup,
+        structured_address: cg.address ?? null,
+        household_label: cg.household_label ?? null,
+      }).select().single();
+      if (error) throw error;
+      return { ...cg, id: data.id };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["caregivers"] }),
+  });
+}
+
+export function useUpdateCaregiver() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Caregiver> }) => {
+      const updates: Record<string, unknown> = {};
+      if (patch.first_name !== undefined) { updates.first_name = patch.first_name; updates.name = `${patch.first_name} ${patch.last_name ?? ""}`; }
+      if (patch.last_name !== undefined) { updates.last_name = patch.last_name; updates.name = `${patch.first_name ?? ""} ${patch.last_name}`; }
+      if (patch.email !== undefined) updates.email = patch.email;
+      if (patch.phone !== undefined) updates.phone = patch.phone;
+      if (patch.relationship_to_student !== undefined) updates.relationship_to_student = patch.relationship_to_student;
+      if (patch.role !== undefined) updates.role = patch.role;
+      if (patch.status !== undefined) updates.status = patch.status;
+      if (patch.receives_announcements !== undefined) updates.receives_announcements = patch.receives_announcements;
+      if (patch.receives_emergency_messages !== undefined) updates.receives_emergency_messages = patch.receives_emergency_messages;
+      if (patch.can_view_schedule !== undefined) updates.can_view_schedule = patch.can_view_schedule;
+      if (patch.can_view_billing !== undefined) updates.can_view_billing = patch.can_view_billing;
+      if (patch.can_pay_invoices !== undefined) updates.can_pay_invoices = patch.can_pay_invoices;
+      if (patch.can_manage_enrolments !== undefined) updates.can_manage_enrolments = patch.can_manage_enrolments;
+      if (patch.can_sign_waivers !== undefined) updates.can_sign_waivers = patch.can_sign_waivers;
+      if (patch.can_view_medical_notes !== undefined) updates.can_view_medical_notes = patch.can_view_medical_notes;
+      if (patch.authorized_pickup !== undefined) updates.authorized_pickup = patch.authorized_pickup;
+      if (patch.household_label !== undefined) updates.household_label = patch.household_label;
+      if (patch.address !== undefined) updates.structured_address = patch.address;
+      const { error } = await supabase.from("caregivers").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["caregivers"] }),
+  });
+}
+
+export function useRemoveCaregiver() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("caregivers").update({ status: "removed" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["caregivers"] }),
+  });
+}
+
+/* ── Parents (Families) — legacy, deprecated ───────────────────── */
+
+/** @deprecated Use useSupabaseCaregivers and build ParentAccount client-side. */
 export function useSupabaseParents(isDemo: boolean) {
   const studioId = useStudioId();
   return useDualQuery<ParentAccount>(

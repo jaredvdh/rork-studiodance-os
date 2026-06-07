@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { styleStyles, useStudio, useStudioData, useTerminology } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton, NoCaregiverFound, ParentLoadError } from "@/data/parentStore";
 import { ageFromDob, formatCurrency, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,23 @@ export default function ParentDashboard() {
   const { studio } = useStudio();
   const term = useTerminology();
   const { classes, announcements, invoices } = useStudioData();
-  const { parent, primaryContact, children: myStudents } = useParent();
+  const {
+    parent, primaryContact, children: myStudents,
+    isLoading, loadState, loadError,
+  } = useParent();
+
+  // Loading state
+  if (isLoading) return <ParentLoadingSkeleton lines={6} />;
+
+  // Error state
+  if (loadState === "error") {
+    return <ParentLoadError message={loadError ?? undefined} />;
+  }
+
+  // Empty state — no caregiver linked
+  if (loadState === "empty" || !parent || !primaryContact) {
+    return <NoCaregiverFound email={undefined} />;
+  }
 
   const myClassIds = useMemo(
     () => [...new Set(myStudents.flatMap((s) => s.classIds))],

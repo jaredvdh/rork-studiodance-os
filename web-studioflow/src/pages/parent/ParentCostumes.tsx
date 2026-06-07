@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { useStudents, useCostumes } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton } from "@/data/parentStore";
 import { COSTUME_FEE_TYPE_LABELS } from "@/data/types";
 import type { CostumeFee, SizeRecommendation } from "@/data/types";
 import { formatCurrency } from "@/lib/format";

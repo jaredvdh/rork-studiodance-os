@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton } from "@/data/parentStore";
 import { useWaivers } from "@/data/store";
 import { WAIVER_TYPE_LABELS } from "@/data/types";
 import type { WaiverTemplate, WaiverVersion } from "@/data/types";

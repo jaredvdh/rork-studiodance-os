@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { useStudioData } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton, NoCaregiverFound } from "@/data/parentStore";
 import {
   getPaymentMethods,
   removePaymentMethod,
@@ -168,10 +168,13 @@ function AddCardForm({ caregiverId, onClose }: { caregiverId: string; onClose: (
 
 export default function ParentPayments() {
   const { invoices: allInvoices } = useStudioData();
-  const { account: parent, children: myStudents, primaryCaregiver, additionalCaregivers } = useParent();
+  const { parent, children: myStudents, primaryCaregiver, additionalCaregivers, isLoading, loadState } = useParent();
   const [filter, setFilter] = useState<InvoiceFilter>("all");
   const [showAddCard, setShowAddCard] = useState(false);
   const qc = useQueryClient();
+
+  if (isLoading) return <ParentLoadingSkeleton lines={5} />;
+  if (loadState === "empty" || !parent || !primaryCaregiver) return <NoCaregiverFound />;
 
   // Check billing permission
   const caregiver = [primaryCaregiver, ...additionalCaregivers].find(

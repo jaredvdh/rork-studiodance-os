@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 
 import { styleStyles, teacherName, useStudioData, useTeachers, useTerminology } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton } from "@/data/parentStore";
 import {
   type AddressSource,
   type Caregiver,

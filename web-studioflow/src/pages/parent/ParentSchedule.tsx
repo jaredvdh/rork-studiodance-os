@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Clock, Heart, MapPin } from "lucide-react";
 
 import { styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton } from "@/data/parentStore";
 import type { WeekDay } from "@/data/types";
 import { cn } from "@/lib/utils";
 

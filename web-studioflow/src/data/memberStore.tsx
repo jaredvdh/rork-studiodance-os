@@ -1,6 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { parentAccounts, studio as defaultStudio } from "./demo";
+import { useAuth } from "@/hooks/useAuth";
+import { useSupabaseCaregiverByEmail, useSupabaseCaregiverStudents } from "./supabaseHooks";
+import {
+  parentAccounts,
+  students as demoStudentsArr,
+} from "./demo";
 import {
   type Student,
   type FamilyContact,
@@ -8,13 +13,14 @@ import {
   caregiverToContact,
 } from "./types";
 import { useStudents } from "./store";
-import { useInvoices } from "./store";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 /** The member store provides self-service access for a student/member
  *  who logs into their own portal (not a parent managing children). */
 interface MemberCtx {
+  /** Whether member data is still loading. */
+  isLoading: boolean;
   /** The student record for the currently logged-in member. */
   memberStudent: Student | null;
   /** All classes the member is enrolled in. */
@@ -39,15 +45,13 @@ interface MemberCtx {
 
 const MemberContext = createContext<MemberCtx | null>(null);
 
-/* ── Demo defaults ────────────────────────────────────────────────── */
+/* ── Demo helpers ─────────────────────────────────────────────────── */
 
 function findDemoCaregiverForStudent(studentId: string): Caregiver | null {
   for (const pa of parentAccounts) {
-    // Check primary caregiver
     if (pa.primaryCaregiver && pa.childIds.includes(studentId)) {
       return pa.primaryCaregiver;
     }
-    // Check additional caregivers
     for (const cg of pa.additionalCaregivers ?? []) {
       if (pa.childIds.includes(studentId)) {
         return cg;
@@ -60,25 +64,63 @@ function findDemoCaregiverForStudent(studentId: string): Caregiver | null {
 /* ── Provider ──────────────────────────────────────────────────────── */
 
 export function MemberProvider({ children }: { children: React.ReactNode }) {
-  const { students: sharedStudents, enrolStudentInClass, withdrawStudentFromClass } = useStudents();
-  const allStudents = useMemo(() => sharedStudents, [sharedStudents]);
+  const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
 
-  // Pick the first student with classes as the default member
-  const defaultStudent = useMemo(
-    () => allStudents.find((s) => s.classIds.length > 0) ?? allStudents[0] ?? null,
-    [allStudents],
+  const {
+    students: sharedStudents,
+    enrolStudentInClass,
+    withdrawStudentFromClass,
+    updateStudent,
+  } = useStudents();
+
+  /* ── Real mode: fetch caregiver by email to find linked students ─── */
+  const { data: supabaseCaregiver, isLoading: cgLoading } = useSupabaseCaregiverByEmail(isDemo);
+  const supabaseCgId = supabaseCaregiver?.id;
+
+  const { data: supabaseCgStudents = [] } = useSupabaseCaregiverStudents(
+    isDemo ? undefined : supabaseCgId,
+    isDemo,
   );
 
-  const [studentId, setStudentId] = useState<string>(defaultStudent?.id ?? "");
+  /* ── Real mode: find the student matching the user ────────────────── */
+  // In real mode, we look up the student that matches the authenticated user's name/email
+  // or is linked to the caregiver. The member portal is for a specific student.
+  const realMemberStudent = useMemo(() => {
+    if (isDemo || !user) return null;
+    // Try to find a student by matching caregiver-linked students first
+    if (supabaseCgStudents.length > 0) {
+      return supabaseCgStudents[0]; // Default to first linked student
+    }
+    // Fall back to searching shared students by email or name match
+    const match = sharedStudents.find(
+      (s) => s.caregiverEmail === user.email || s.name?.toLowerCase().includes(user.name?.toLowerCase() ?? ""),
+    );
+    return match ?? null;
+  }, [isDemo, user, supabaseCgStudents, sharedStudents]);
 
-  const memberStudent = useMemo(
-    () => allStudents.find((s) => s.id === studentId) ?? defaultStudent,
-    [allStudents, studentId, defaultStudent],
+  /* ── Demo mode: pick first student with classes ──────────────────── */
+  const demoDefaultStudent = useMemo(
+    () => sharedStudents.find((s) => s.classIds.length > 0) ?? sharedStudents[0] ?? null,
+    [sharedStudents],
   );
 
+  const [demoStudentId, setDemoStudentId] = useState<string>(demoDefaultStudent?.id ?? "");
+
+  const demoMemberStudent = useMemo(
+    () => sharedStudents.find((s) => s.id === demoStudentId) ?? demoDefaultStudent,
+    [sharedStudents, demoStudentId, demoDefaultStudent],
+  );
+
+  const memberStudent = isDemo ? demoMemberStudent : realMemberStudent;
+
+  /* ── Caregiver info ──────────────────────────────────────────────── */
   const caregiver = useMemo(
-    () => (memberStudent ? findDemoCaregiverForStudent(memberStudent.id) : null),
-    [memberStudent],
+    () => {
+      if (isDemo) return memberStudent ? findDemoCaregiverForStudent(memberStudent.id) : null;
+      return supabaseCaregiver ?? null;
+    },
+    [isDemo, memberStudent, supabaseCaregiver],
   );
 
   const primaryContact = useMemo(
@@ -87,25 +129,27 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
   );
 
   const additionalCaregivers = useMemo(() => {
-    if (!memberStudent) return [];
-    for (const pa of parentAccounts) {
-      if (pa.childIds.includes(memberStudent.id)) {
-        return pa.additionalCaregivers ?? [];
+    if (isDemo && memberStudent) {
+      for (const pa of parentAccounts) {
+        if (pa.childIds.includes(memberStudent.id)) {
+          return pa.additionalCaregivers ?? [];
+        }
       }
     }
     return [];
-  }, [memberStudent]);
+  }, [isDemo, memberStudent]);
 
-  const switchMember = useCallback((id: string) => setStudentId(id), []);
+  /* ── Actions ──────────────────────────────────────────────────────── */
+  const switchMember = useCallback((id: string) => {
+    if (isDemo) setDemoStudentId(id);
+  }, [isDemo]);
 
   const updateMemberProfile = useCallback(
     (patch: Partial<Student>) => {
       if (!memberStudent) return;
-      // Updates through shared context
-      const { updateStudent } = useStudents();
       updateStudent(memberStudent.id, patch);
     },
-    [memberStudent],
+    [memberStudent, updateStudent],
   );
 
   const enrolInClass = useCallback(
@@ -124,8 +168,11 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
     [memberStudent, withdrawStudentFromClass],
   );
 
+  const isLoading = !isDemo && cgLoading;
+
   const ctx = useMemo(
     (): MemberCtx => ({
+      isLoading,
       memberStudent,
       enrolledClassIds: memberStudent?.classIds ?? [],
       caregiver,
@@ -136,7 +183,7 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
       enrolInClass,
       dropClass,
     }),
-    [memberStudent, caregiver, primaryContact, additionalCaregivers, switchMember, enrolInClass, dropClass],
+    [isLoading, memberStudent, caregiver, primaryContact, additionalCaregivers, switchMember, updateMemberProfile, enrolInClass, dropClass],
   );
 
   return (

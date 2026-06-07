@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton, NoCaregiverFound } from "@/data/parentStore";
 import {
   type Caregiver,
   type CaregiverAuditEvent,
@@ -773,7 +773,12 @@ export default function ParentCaregivers() {
     enableCaregiver,
     removeCaregiver,
     auditLog,
+    isLoading,
+    loadState,
   } = useParent();
+
+  if (isLoading) return <ParentLoadingSkeleton lines={5} />;
+  if (loadState === "empty" || !primaryCaregiver) return <NoCaregiverFound />;
 
   const [showInvite, setShowInvite] = useState(false);
   const [showAudit, setShowAudit] = useState(false);

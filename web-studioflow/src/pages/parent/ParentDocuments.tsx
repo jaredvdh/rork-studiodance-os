@@ -12,7 +12,7 @@ import {
   UserCheck,
 } from "lucide-react";
 
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton } from "@/data/parentStore";
 import { useDocuments, useWaivers } from "@/data/store";
 import { DOCUMENT_TYPE_LABELS } from "@/data/types";
 import { formatDate } from "@/lib/format";

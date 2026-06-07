@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
-import { useParent } from "@/data/parentStore";
+import { useParent, ParentLoadingSkeleton, NoCaregiverFound } from "@/data/parentStore";
 import { contactFullName, type FamilyContact } from "@/data/types";
 import { ageFromDob, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,12 @@ export default function ParentChildren() {
     updatePrimaryContact,
     setSecondaryContact,
     removeSecondaryContact,
+    isLoading,
+    loadState,
   } = useParent();
+
+  if (isLoading) return <ParentLoadingSkeleton lines={5} />;
+  if (loadState === "empty" || !parent || !primaryContact) return <NoCaregiverFound />;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
