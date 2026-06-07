@@ -21,24 +21,21 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createAdminClient } from "../_shared/auth.ts";
+import { handlePreflight, jsonCorsHeaders } from "../_shared/cors.ts";
 
 const STRIPE_SECRET = Deno.env.get("SUPABASE_STRIPE_SECRET_KEY") ?? "";
 const WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, stripe-signature",
-      },
-    });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
+  const corsHeaders = (): Record<string, string> => jsonCorsHeaders(req);
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: corsHeaders(),
     });
   }
 
@@ -173,6 +170,8 @@ serve(async (req: Request) => {
   }
 });
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /**
  * Verify the Stripe webhook signature using HMAC-SHA256.
  * This avoids depending on the Stripe Node.js SDK in Deno.
@@ -228,13 +227,4 @@ async function verifyStripeSignature(
   }
 
   return JSON.parse(body);
-}
-
-function corsHeaders(): Record<string, string> {
-  return {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, stripe-signature",
-  };
 }

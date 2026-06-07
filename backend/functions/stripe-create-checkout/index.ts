@@ -11,19 +11,15 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { requireAuth, createAdminClient } from "../_shared/auth.ts";
+import { handlePreflight, jsonCorsHeaders } from "../_shared/cors.ts";
 
 const STRIPE_SECRET = Deno.env.get("SUPABASE_STRIPE_SECRET_KEY") ?? "";
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-      },
-    });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
+  const corsHeaders = (): Record<string, string> => jsonCorsHeaders(req);
 
   try {
     await requireAuth(req);
@@ -179,12 +175,3 @@ serve(async (req: Request) => {
     );
   }
 });
-
-function corsHeaders(): Record<string, string> {
-  return {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-  };
-}

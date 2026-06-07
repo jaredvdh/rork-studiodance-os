@@ -1,14 +1,5 @@
 import { requireAuth, createAdminClient, AuthError } from "../_shared/auth.ts";
-
-const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": CORS_ORIGIN,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
-  "Access-Control-Allow-Credentials": "true",
-  "Vary": "Origin",
-};
+import { handlePreflight, jsonCorsHeaders } from "../_shared/cors.ts";
 
 interface SendPayload {
   announcementId: string;
@@ -99,20 +90,13 @@ function buildEmailHtml(
 
 Deno.serve(async (req: Request): Promise<Response> => {
   // OPTIONS preflight — handle BEFORE any JSON parsing, auth, or credential checks
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: jsonCorsHeaders(req),
     });
   }
 
@@ -123,10 +107,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!announcementId) {
       return new Response(JSON.stringify({ error: "announcementId is required" }), {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
 
@@ -142,10 +123,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (annError || !announcement) {
       return new Response(JSON.stringify({ error: "Announcement not found" }), {
         status: 404,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
 
@@ -167,10 +145,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (caregiverError) {
       return new Response(JSON.stringify({ error: "Failed to fetch caregivers" }), {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
 
@@ -228,29 +203,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
         message: `Announcement delivered to ${delivered} of ${recipientList.length} recipients.`,
       }),
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       },
     );
   } catch (err) {
     if (err instanceof AuthError) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
     console.error("send-announcement error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: jsonCorsHeaders(req),
     });
   }
 });

@@ -1,14 +1,5 @@
 import { createAdminClient } from "../_shared/auth.ts";
-
-const CORS_ORIGIN = "https://p-h2o4xl61o2ik1fuisevjr.rork.live";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": CORS_ORIGIN,
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
-  "Access-Control-Allow-Credentials": "true",
-  "Vary": "Origin",
-};
+import { handlePreflight, jsonCorsHeaders } from "../_shared/cors.ts";
 
 /* ── Demo credentials ─────────────────────────────────────────────── */
 
@@ -86,20 +77,13 @@ interface LoginBody {
 
 Deno.serve(async (req: Request): Promise<Response> => {
   // OPTIONS preflight — handle BEFORE any JSON parsing, auth, or credential checks
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: jsonCorsHeaders(req),
     });
   }
 
@@ -109,10 +93,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!email || !password) {
       return new Response(JSON.stringify({ error: "Email and password are required" }), {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
 
@@ -123,10 +104,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!account || account.password !== password) {
       return new Response(JSON.stringify({ error: "Invalid demo credentials" }), {
         status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: jsonCorsHeaders(req),
       });
     }
 
@@ -201,19 +179,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
     }), {
       status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: jsonCorsHeaders(req),
     });
   } catch (err) {
     console.error("demo-login error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: jsonCorsHeaders(req),
     });
   }
 });

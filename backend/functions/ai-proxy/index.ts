@@ -16,17 +16,11 @@
  */
 
 import { requireAuth, AuthError } from "../_shared/auth.ts";
+import { handlePreflight, jsonCorsHeaders } from "../_shared/cors.ts";
 
 const TOOLKIT_URL = Deno.env.get("RORK_TOOLKIT_URL") ?? "";
 const TOOLKIT_KEY = Deno.env.get("RORK_TOOLKIT_SECRET_KEY") ?? "";
 const DEFAULT_MODEL = "anthropic/claude-sonnet-4.6";
-
-const corsHeaders: Record<string, string> = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
-};
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -40,9 +34,10 @@ interface ProxyBody {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
+  const corsHeaders = jsonCorsHeaders(req);
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
