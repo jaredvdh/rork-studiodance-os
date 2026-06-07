@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { isDemoMode } from "@/lib/demoMode";
 
 const supabaseUrl = (import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "";
 const supabaseAnonKey = (import.meta.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string) || "";
@@ -19,6 +20,11 @@ const VALID_URL = supabaseUrl.startsWith("http");
  * bypass RLS, servicing all requests through the backend API layer.
  */
 function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  // Demo sessions are entirely client-side and hold a synthetic, unsigned JWT.
+  // Never attach it to Supabase requests — it would be rejected and demo mode
+  // must not touch production data at all.
+  if (isDemoMode()) return fetch(input, init);
+
   const token = getAccessToken();
   if (!token) return fetch(input, init);
 

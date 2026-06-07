@@ -787,6 +787,22 @@ export function useSupabaseCaregivers(isDemo: boolean) {
   );
 }
 
+/**
+ * Demo students linked to the seeded demo parent/caregiver.
+ *
+ * In demo mode the parent portal user is the first seeded parent account
+ * (Diane Walsh). We resolve their linked students from the demo data so the
+ * parent demo experience shows real seeded children rather than an empty list.
+ */
+const demoCaregiverStudents: Student[] = (() => {
+  const demoParent = demoParents[0];
+  if (!demoParent) return [];
+  const childIdSet = new Set(demoParent.childIds);
+  return demoStudents.filter(
+    (s) => childIdSet.has(s.id) || s.caregiverId === demoParent.id,
+  );
+})();
+
 /** Fetch students linked to a specific caregiver. Scoped by RLS in real mode. */
 export function useSupabaseCaregiverStudents(caregiverId: string | undefined, isDemo: boolean) {
   const studioId = useStudioId();
@@ -827,7 +843,7 @@ export function useSupabaseCaregiverStudents(caregiverId: string | undefined, is
         authorizedPickupContacts: (s.authorized_pickup_contacts as Student["authorizedPickupContacts"]) ?? undefined,
       })), error: null };
     },
-    [],
+    demoCaregiverStudents,
     isDemo,
   );
 }
@@ -943,10 +959,12 @@ export function useSupabaseParents(isDemo: boolean) {
 
 export function useSyncProfile() {
   const { user } = useAuth();
+  const isDemo = user?.isDemo === true;
   return useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
-      if (!user) return null;
+      // Demo sessions must never write to the production profiles table.
+      if (!user || isDemo) return null;
       const { data, error } = await supabase
         .from("profiles")
         .upsert({ id: user.id, email: user.email, name: user.name, avatar_url: user.picture, updated_at: new Date().toISOString() }, { onConflict: "id" })
@@ -955,7 +973,7 @@ export function useSyncProfile() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !isDemo,
     staleTime: 5 * 60_000,
   });
 }
