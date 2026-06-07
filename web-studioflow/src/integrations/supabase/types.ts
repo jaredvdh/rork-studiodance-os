@@ -291,14 +291,18 @@ export type Database = {
       invoices: {
         Row: {
           amount_cents: number | null
+          caregiver_id: string | null
           created_at: string | null
+          currency: string | null
           description: string | null
           due_date: string | null
+          enrolment_id: string | null
           id: string
           paid_at: string | null
           parent_email: string | null
           parent_name: string | null
           status: string | null
+          stripe_customer_id: string | null
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
           student_name: string
@@ -307,14 +311,18 @@ export type Database = {
         }
         Insert: {
           amount_cents?: number | null
+          caregiver_id?: string | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           due_date?: string | null
+          enrolment_id?: string | null
           id?: string
           paid_at?: string | null
           parent_email?: string | null
           parent_name?: string | null
           status?: string | null
+          stripe_customer_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           student_name: string
@@ -323,14 +331,18 @@ export type Database = {
         }
         Update: {
           amount_cents?: number | null
+          caregiver_id?: string | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           due_date?: string | null
+          enrolment_id?: string | null
           id?: string
           paid_at?: string | null
           parent_email?: string | null
           parent_name?: string | null
           status?: string | null
+          stripe_customer_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           student_name?: string
@@ -382,6 +394,7 @@ export type Database = {
           role: string
           state: string | null
           status: string
+          stripe_customer_id: string | null
           structured_address: Json | null
           studio_id: string
           updated_at: string | null
@@ -421,6 +434,7 @@ export type Database = {
           role?: string
           state?: string | null
           status?: string
+          stripe_customer_id?: string | null
           structured_address?: Json | null
           studio_id: string
           updated_at?: string | null
@@ -460,6 +474,7 @@ export type Database = {
           role?: string
           state?: string | null
           status?: string
+          stripe_customer_id?: string | null
           structured_address?: Json | null
           studio_id?: string
           updated_at?: string | null

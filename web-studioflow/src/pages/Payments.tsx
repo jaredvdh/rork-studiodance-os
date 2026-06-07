@@ -9,13 +9,17 @@ import {
   CreditCard,
   DollarSign,
   Download,
+  ExternalLink,
   FileText,
   GraduationCap,
   Loader2,
   Mail,
   RefreshCcw,
   Send,
+  ShieldAlert,
+  TestTube,
   X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +31,7 @@ import {
   payInvoice,
   markOverdue,
   getStripeConnectState,
+  IS_STRIPE_SIMULATED,
   type InvoiceStatus,
 } from "@/lib/stripe";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -44,6 +49,7 @@ interface InvoiceRow {
   status: string | null;
   due_date: string | null;
   paid_at?: string | null;
+  stripe_payment_intent_id?: string | null;
 }
 
 const statusMeta: Record<string, { chip: string; label: string; icon: typeof CheckCircle2 }> = {
@@ -54,6 +60,7 @@ const statusMeta: Record<string, { chip: string; label: string; icon: typeof Che
   overdue: { chip: "bg-destructive/10 text-destructive", label: "Overdue", icon: AlertTriangle },
   failed: { chip: "bg-destructive/10 text-destructive", label: "Failed", icon: X },
   refunded: { chip: "bg-plum/10 text-plum", label: "Refunded", icon: RefreshCcw },
+  processing: { chip: "bg-amber-100 text-amber-700", label: "Processing", icon: Loader2 },
 };
 
 /* ── Create invoice modal — now enrolment-aware ────────────────────── */
@@ -75,23 +82,21 @@ function CreateInvoiceModal({
   const [description, setDescription] = useState("");
   const [amountCents, setAmountCents] = useState("9500");
   const [dueDays, setDueDays] = useState("14");
-  const [classId, setClassId] = useState(""); // optional: link to a class
+  const [classId, setClassId] = useState("");
 
-  // When student is selected, show their enrolled classes for quick-link
   const selectedStudent = students.find((s) => s.id === studentId);
   const enrolledClasses = useMemo(
     () => (selectedStudent ? classes.filter((c) => selectedStudent.classIds.includes(c.id)) : []),
     [selectedStudent, classes],
   );
 
-  // Auto-fill amount and description from selected class
   const handleClassSelect = useCallback((clsId: string, priceCents: number, className: string) => {
     setClassId(clsId);
     setAmountCents(String(priceCents));
     if (!description) {
       setDescription(`Tuition — ${className}`);
     }
-  }, []);
+  }, [description]);
 
   function handleCreateInvoice() {
     const student = students.find((s) => s.id === studentId);
@@ -101,8 +106,6 @@ function CreateInvoiceModal({
 
     const desc = description || (cls ? `Tuition — ${cls.name}` : "Tuition");
 
-    // addInvoice persists to Supabase via the shared context mutation.
-    // enrolmentId links the invoice to the specific enrolment for billing traceability.
     addInvoice({
       studentName: student?.name ?? "",
       caregiverName: student?.caregiverName ?? "",
@@ -146,7 +149,6 @@ function CreateInvoiceModal({
             </select>
           </label>
 
-          {/* Enrolment-based quick-fill */}
           {enrolledClasses.length > 0 && (
             <div>
               <span className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -242,7 +244,6 @@ export default function Payments() {
     },
   });
 
-  // Merge: DB invoices take precedence, fallback to shared state
   const allInvoices = dbInvoices && dbInvoices.length > 0
     ? dbInvoices.map((i) => ({
         id: i.id,
@@ -279,11 +280,18 @@ export default function Payments() {
 
   const sendMut = useMutation({
     mutationFn: (id: string) => sendInvoice(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["invoices", studio.id] });
-      toast.success("Invoice sent to parent");
+      if (result.checkoutUrl) {
+        toast.success("Checkout created — redirecting…");
+        window.open(result.checkoutUrl, "_blank");
+      } else {
+        toast.success("Invoice sent to caregiver");
+      }
     },
-    onError: () => toast.error("Failed to send invoice"),
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to send invoice");
+    },
   });
 
   const payMut = useMutation({
@@ -292,7 +300,9 @@ export default function Payments() {
       qc.invalidateQueries({ queryKey: ["invoices", studio.id] });
       toast.success("Payment recorded");
     },
-    onError: () => toast.error("Payment failed"),
+    onError: (err: Error) => {
+      toast.error(err.message || "Payment failed");
+    },
   });
 
   return (
@@ -303,7 +313,9 @@ export default function Payments() {
           <p className="text-sm text-muted-foreground">
             {connectState?.status === "connected"
               ? "Stripe Connect active — direct payouts to your bank"
-              : "Powered by Stripe — connect to accept payments"}
+              : IS_STRIPE_SIMULATED
+                ? "Demo mode — connect Stripe to accept real payments"
+                : "Powered by Stripe — connect to accept payments"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -324,8 +336,23 @@ export default function Payments() {
         </div>
       </div>
 
+      {/* Demo mode banner */}
+      {IS_STRIPE_SIMULATED && (
+        <div className="rounded-2xl border border-purple-200/70 bg-purple-50/60 p-4 flex flex-wrap items-center gap-4">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 text-purple-600">
+            <TestTube className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-purple-900">Simulated payment mode</p>
+            <p className="text-sm text-purple-700/80">
+              Payments are simulated. Set <code className="bg-purple-100 px-1 rounded text-xs">EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to enable live Stripe payments.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Connect banner */}
-      {connectState?.status !== "connected" && (
+      {!IS_STRIPE_SIMULATED && connectState?.status !== "connected" && (
         <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-5 flex flex-wrap items-center gap-4">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-600">
             <CreditCard className="h-5 w-5" />
@@ -340,6 +367,22 @@ export default function Payments() {
           >
             Set up Stripe
           </a>
+        </div>
+      )}
+
+      {/* Stripe not configured at all (live mode but no connect) */}
+      {!IS_STRIPE_SIMULATED && !connectState && (
+        <div className="rounded-2xl border border-rose/20 bg-rose/5 p-5 flex flex-wrap items-center gap-4">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose/10 text-rose">
+            <ShieldAlert className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-rose">Stripe setup incomplete</p>
+            <p className="text-sm text-muted-foreground">
+              The publishable key is set but the backend may not have <code className="bg-rose/5 px-1 rounded text-xs">SUPABASE_STRIPE_SECRET_KEY</code> configured.
+              Deploy the Stripe edge functions and set the secret in Supabase Dashboard → Edge Functions.
+            </p>
+          </div>
         </div>
       )}
 
@@ -382,10 +425,11 @@ export default function Payments() {
             {allInvoices.map((inv) => {
               const meta = statusMeta[inv.status] ?? statusMeta.draft;
               const Icon = meta.icon;
+              const isProcessing = inv.status === "processing";
               return (
                 <div key={inv.id} className="flex items-center gap-4 px-5 py-4 transition hover:bg-secondary/40">
-                  <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", meta.chip)}>
-                    <Icon className="h-4 w-4" />
+                  <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", meta.chip, isProcessing && "animate-pulse")}>
+                    <Icon className={cn("h-4 w-4", isProcessing && "animate-spin")} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{inv.studentName}</p>
@@ -405,7 +449,7 @@ export default function Payments() {
                         onClick={() => sendMut.mutate(inv.id)}
                         disabled={sendMut.isPending}
                         className="rounded-full bg-rose/10 p-1.5 text-rose transition hover:bg-rose/20"
-                        title="Send to parent"
+                        title={IS_STRIPE_SIMULATED ? "Send to caregiver (simulated)" : "Create checkout & send"}
                       >
                         {sendMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                       </button>
@@ -418,6 +462,16 @@ export default function Payments() {
                         title="Mark as paid"
                       >
                         {payMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
+                    {inv.status === "failed" && (
+                      <button
+                        onClick={() => sendMut.mutate(inv.id)}
+                        disabled={sendMut.isPending}
+                        className="rounded-full bg-amber-100 p-1.5 text-amber-600 transition hover:bg-amber-200"
+                        title="Retry payment"
+                      >
+                        <RefreshCcw className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>

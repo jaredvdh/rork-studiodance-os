@@ -6,13 +6,16 @@ import {
   Ban,
   CheckCircle2,
   CreditCard,
+  ExternalLink,
   Eye,
   EyeOff,
   Loader2,
   Lock,
   Plus,
+  RefreshCcw,
   Shield,
   ShieldAlert,
+  TestTube,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +31,7 @@ import {
   type PaymentMethod,
 } from "@/lib/stripe";
 import {
+  sendInvoice,
   payInvoice,
   type StudioFlowInvoice,
   type InvoiceStatus,
@@ -72,7 +76,6 @@ function AddCardForm({ caregiverId, onClose }: { caregiverId: string; onClose: (
     setSaving(true);
     try {
       if (IS_STRIPE_SIMULATED) {
-        // Simulate card save
         const card: PaymentMethod = {
           id: `pm_${Date.now()}`,
           brand: cardNumber.startsWith("4") ? "visa" : cardNumber.startsWith("5") ? "mastercard" : "visa",
@@ -82,16 +85,15 @@ function AddCardForm({ caregiverId, onClose }: { caregiverId: string; onClose: (
           isDefault: true,
         };
         await savePaymentMethod(caregiverId, `seti_sim_${Date.now()}`);
-        toast.success(`${card.brand === "visa" ? "Visa" : "Mastercard"} ending in ${card.last4} added`);
+        toast.success(`${card.brand === "visa" ? "Visa" : "Mastercard"} ending in ${card.last4} added (simulated)`);
       } else {
         const { clientSecret } = await createSetupIntent(caregiverId);
-        // In production, Stripe Elements would handle this
-        toast.info("Payment method flow requires Stripe Elements — simulated");
+        toast.info("Payment method flow requires Stripe Elements — redirecting to Stripe");
       }
       qc.invalidateQueries({ queryKey: ["payment-methods", caregiverId] });
       onClose();
-    } catch {
-      toast.error("Failed to add payment method");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add payment method");
     } finally {
       setSaving(false);
     }
@@ -100,6 +102,12 @@ function AddCardForm({ caregiverId, onClose }: { caregiverId: string; onClose: (
   return (
     <div className="rounded-2xl border-2 border-amber-300 bg-white p-6 shadow-lift">
       <h3 className="font-display text-lg font-semibold mb-4">Add payment method</h3>
+      {IS_STRIPE_SIMULATED && (
+        <div className="mb-4 rounded-lg bg-purple-50 p-3 flex items-center gap-2 text-xs text-purple-700">
+          <TestTube className="h-3.5 w-3.5 shrink-0" />
+          Demo mode — card details are not sent to Stripe.
+        </div>
+      )}
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Card number</span>
@@ -173,10 +181,24 @@ export default function ParentPayments() {
   const [showAddCard, setShowAddCard] = useState(false);
   const qc = useQueryClient();
 
+  // Check for success/cancelled URL params from Stripe checkout redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "success") {
+      toast.success("Payment completed! Your invoice has been marked as paid.");
+      // Clean the URL
+      window.history.replaceState({}, "", window.location.pathname);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    } else if (status === "cancelled") {
+      toast.info("Payment was cancelled. Your invoice is still due.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [qc]);
+
   if (isLoading) return <ParentLoadingSkeleton lines={5} />;
   if (loadState === "empty" || !parent || !primaryCaregiver) return <NoCaregiverFound />;
 
-  // Check billing permission
   const caregiver = [primaryCaregiver, ...additionalCaregivers].find(
     (c) => c.email === parent?.primaryContact?.email,
   );
@@ -185,7 +207,6 @@ export default function ParentPayments() {
 
   if (!canViewBilling) return <NoBillingAccess />;
 
-  // Payment methods
   const { data: paymentMethods, isLoading: pmLoading } = useQuery({
     queryKey: ["payment-methods", parent?.id],
     queryFn: () => getPaymentMethods(parent?.id ?? ""),
@@ -198,10 +219,9 @@ export default function ParentPayments() {
       qc.invalidateQueries({ queryKey: ["payment-methods", parent?.id] });
       toast.success("Payment method removed");
     },
-    onError: () => toast.error("Failed to remove payment method"),
+    onError: (err: Error) => toast.error(err.message || "Failed to remove payment method"),
   });
 
-  // Filter invoices for this family
   const myInvoices = allInvoices.filter((i) =>
     myStudents.some((s) => s.name === i.studentName) ||
     myStudents.some((s) => `${s.caregiverName}` === i.caregiverName),
@@ -210,8 +230,22 @@ export default function ParentPayments() {
   const filtered = filter === "all" ? myInvoices : myInvoices.filter((i) => i.status === filter);
 
   const totalOutstanding = myInvoices
-    .filter((i) => i.status !== "paid")
+    .filter((i) => i.status !== "paid" && i.status !== "refunded")
     .reduce((a, i) => a + i.amountCents, 0);
+
+  const sendMut = useMutation({
+    mutationFn: (invId: string) => sendInvoice(invId),
+    onSuccess: (result) => {
+      if (result.checkoutUrl) {
+        toast.success("Opening secure checkout…");
+        window.open(result.checkoutUrl, "_blank");
+      } else {
+        toast.success("Invoice sent");
+      }
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to send invoice for payment"),
+  });
 
   const payMut = useMutation({
     mutationFn: (invId: string) => payInvoice(invId),
@@ -219,7 +253,7 @@ export default function ParentPayments() {
       toast.success("Payment successful");
       qc.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: () => toast.error("Payment failed"),
+    onError: (err: Error) => toast.error(err.message || "Payment failed"),
   });
 
   const statusBadge: Record<string, { label: string; className: string }> = {
@@ -229,6 +263,7 @@ export default function ParentPayments() {
     due: { label: "Due", className: "bg-amber-100 text-amber-700" },
     overdue: { label: "Overdue", className: "bg-rose/10 text-rose" },
     failed: { label: "Failed", className: "bg-rose/10 text-rose" },
+    processing: { label: "Processing", className: "bg-amber-100 text-amber-700" },
   };
 
   return (
@@ -237,7 +272,11 @@ export default function ParentPayments() {
         <div className="animate-float-up">
           <p className="text-sm text-muted-foreground">Billing & payments</p>
           <h2 className="font-display text-3xl font-semibold tracking-tight">Payments</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Manage invoices and payment methods</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {IS_STRIPE_SIMULATED
+              ? "Demo mode — payments are simulated"
+              : "Manage invoices and payment methods"}
+          </p>
         </div>
         {canPayInvoices && (
           <button
@@ -249,6 +288,19 @@ export default function ParentPayments() {
           </button>
         )}
       </div>
+
+      {/* Demo mode banner */}
+      {IS_STRIPE_SIMULATED && (
+        <div className="rounded-2xl border border-purple-200/70 bg-purple-50/60 p-4 flex items-center gap-3 animate-float-up">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-purple-100 text-purple-600">
+            <TestTube className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-purple-900">Simulated payment mode</p>
+            <p className="text-xs text-purple-700/70">Invoice actions are simulated. Real payments will be available when your studio connects Stripe.</p>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -281,6 +333,7 @@ export default function ParentPayments() {
           { key: "paid" as const, label: "Paid" },
           { key: "sent" as const, label: "Due" },
           { key: "overdue" as const, label: "Overdue" },
+          { key: "processing" as const, label: "Processing" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -302,14 +355,19 @@ export default function ParentPayments() {
         <div className="space-y-3">
           {filtered.map((inv, i) => {
             const s = statusBadge[inv.status] ?? statusBadge.draft;
+            const isProcessing = inv.status === "processing";
             return (
               <div
                 key={inv.id}
                 className="flex flex-wrap items-center gap-4 rounded-xl border border-amber-200/70 bg-white p-4 animate-float-up"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-100 text-amber-700">
-                  <CreditCard className="h-5 w-5" />
+                <div className={cn("grid h-10 w-10 place-items-center rounded-lg bg-amber-100 text-amber-700", isProcessing && "animate-pulse")}>
+                  {isProcessing ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{inv.description}</p>
@@ -324,14 +382,45 @@ export default function ParentPayments() {
                   <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", s.className)}>
                     {s.label}
                   </span>
-                  {(inv.status === "sent" || inv.status === "due" || inv.status === "overdue") && canPayInvoices && (
+                  {/* Pay via Stripe checkout */}
+                  {(inv.status === "sent" || inv.status === "due" || inv.status === "draft") && canPayInvoices && !IS_STRIPE_SIMULATED && (
+                    <button
+                      onClick={() => sendMut.mutate(inv.id)}
+                      disabled={sendMut.isPending}
+                      className="rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:opacity-90 inline-flex items-center gap-1"
+                    >
+                      {sendMut.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-3 w-3" />
+                      )}
+                      Pay now
+                    </button>
+                  )}
+                  {/* Simulated pay button */}
+                  {(inv.status === "sent" || inv.status === "due" || inv.status === "overdue") && canPayInvoices && IS_STRIPE_SIMULATED && (
                     <button
                       onClick={() => payMut.mutate(inv.id)}
                       disabled={payMut.isPending}
-                      className="rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:opacity-90"
+                      className="rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:opacity-90 inline-flex items-center gap-1"
                     >
-                      {payMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Pay now"}
+                      {payMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Pay (demo)"}
                     </button>
+                  )}
+                  {/* Retry failed */}
+                  {inv.status === "failed" && canPayInvoices && (
+                    <button
+                      onClick={() => sendMut.mutate(inv.id)}
+                      disabled={sendMut.isPending}
+                      className="rounded-full bg-amber-100 px-3.5 py-1.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-200 inline-flex items-center gap-1"
+                    >
+                      <RefreshCcw className="h-3 w-3" />
+                      Retry
+                    </button>
+                  )}
+                  {/* Processing — no actions */}
+                  {inv.status === "processing" && (
+                    <span className="text-xs text-muted-foreground">Awaiting payment…</span>
                   )}
                 </div>
               </div>
