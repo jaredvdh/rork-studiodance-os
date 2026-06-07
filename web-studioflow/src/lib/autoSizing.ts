@@ -5,9 +5,7 @@
 
 import type { SizingChart, SizingChartRow, StudentMeasurement, UnitSystem } from "@/data/types";
 import { inToCm } from "@/lib/units";
-
-const TOOLKIT_URL = import.meta.env.EXPO_PUBLIC_TOOLKIT_URL as string;
-const TOOLKIT_KEY = import.meta.env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY as string;
+import { aiChatCompletion, isAIConfigured } from "@/lib/aiClient";
 
 export interface DimensionMatch {
   dimension: string;
@@ -327,7 +325,7 @@ export function normalizeChartRow(row: SizingChartRow, unit: UnitSystem): Sizing
 
 /** Use the Rork AI proxy to parse raw sizing-chart text into structured rows. */
 export async function parseChartWithAI(rawText: string): Promise<SizingChartRow[]> {
-  if (!TOOLKIT_URL || !TOOLKIT_KEY) {
+  if (!isAIConfigured()) {
     throw new Error("AI toolkit not configured");
   }
   const prompt = `You are a sizing chart parser for a dance studio costume system.
@@ -349,18 +347,7 @@ Return ONLY a JSON array. Example:
 Raw chart text:
 ${rawText.substring(0, 4000)}`;
 
-  const response = await fetch(`${TOOLKIT_URL}/v2/vercel/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOOLKIT_KEY}` },
-    body: JSON.stringify({
-      model: "anthropic/claude-sonnet-4.6",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
-    }),
-  });
-  if (!response.ok) throw new Error(`AI request failed: ${response.status}`);
-  const data = await response.json();
-  const text = data.choices?.[0]?.message?.content ?? "";
+  const text = await aiChatCompletion([{ role: "user", content: prompt }], 2000);
   const jsonMatch = text.match(/\[[\s\S]*?\]/);
   if (!jsonMatch) throw new Error("AI response did not contain valid JSON array");
   const parsed = JSON.parse(jsonMatch[0]) as Array<Record<string, unknown>>;

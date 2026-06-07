@@ -1,27 +1,8 @@
-const TOOLKIT_URL = import.meta.env.EXPO_PUBLIC_TOOLKIT_URL as string;
-const TOOLKIT_KEY = import.meta.env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY as string;
+import { aiChatCompletion } from "./aiClient";
 
-/** Call the Rork AI proxy for chat completions. Returns the assistant's text response. */
+/** Call the server-side AI proxy for chat completions. Returns the assistant's text response. */
 export async function aiChat(messages: Array<{ role: "system" | "user"; content: string }>): Promise<string> {
-  const response = await fetch(`${TOOLKIT_URL}/v2/vercel/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TOOLKIT_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "anthropic/claude-sonnet-4.6",
-      messages,
-      max_tokens: 1000,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`AI request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  return aiChatCompletion(messages, 1000);
 }
 
 /** Suggest field mappings for CSV columns. */
