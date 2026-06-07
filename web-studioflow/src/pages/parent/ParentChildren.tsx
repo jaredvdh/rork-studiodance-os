@@ -59,9 +59,6 @@ export default function ParentChildren() {
     loadState,
   } = useParent();
 
-  if (isLoading) return <ParentLoadingSkeleton lines={5} />;
-  if (loadState === "empty" || !parent || !primaryContact) return <NoCaregiverFound />;
-
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -70,10 +67,17 @@ export default function ParentChildren() {
   const [editingSecondary, setEditingSecondary] = useState(false);
   const [addingSecondary, setAddingSecondary] = useState(false);
 
-  const [primaryDraft, setPrimaryDraft] = useState<FamilyContact>(primaryContact);
+  const [primaryDraft, setPrimaryDraft] = useState<FamilyContact>(
+    primaryContact ?? emptyContact(),
+  );
   const [secondaryDraft, setSecondaryDraft] = useState<FamilyContact>(
     secondaryContact ?? emptyContact(),
   );
+
+  // Conditional rendering happens after all hooks are declared to satisfy
+  // the rules of hooks (no early returns before hook calls).
+  if (isLoading) return <ParentLoadingSkeleton lines={5} />;
+  if (loadState === "empty" || !parent || !primaryContact) return <NoCaregiverFound />;
 
   // Sync drafts when contacts change
   const startEditPrimary = () => {
