@@ -4,7 +4,9 @@ import SwiftUI
 /// Holds the studio, classes, students, instructors and supports edits.
 @Observable
 final class AppStore {
-    var studio: Studio
+    var studio: Studio {
+        didSet { _cachedTerm = Terminologies.of(studio.vertical) }
+    }
     var classes: [StudioClass]
     var teachers: [Teacher]
     var students: [Student]
@@ -12,8 +14,14 @@ final class AppStore {
     var invoices: [Invoice]
     var recitalEvents: [RecitalEvent]
 
+    /// Cached terminology so TabView labels and other frequently-read
+    /// computed properties don't re-create the struct on every access.
+    private var _cachedTerm: Terminology
+
     init() {
-        studio = DemoData.studio
+        let s = DemoData.studio
+        studio = s
+        _cachedTerm = Terminologies.of(s.vertical)
         classes = DemoData.classes
         teachers = DemoData.teachers
         students = DemoData.students
@@ -22,9 +30,9 @@ final class AppStore {
         recitalEvents = DemoData.recitalEvents
     }
 
-    // MARK: - Derived
+    // MARK: - Derived (stable)
 
-    var term: Terminology { Terminologies.of(studio.vertical) }
+    var term: Terminology { _cachedTerm }
     var accentColor: Color { Color(hslString: studio.brandColor) }
 
     func teacherName(_ id: String) -> String {
