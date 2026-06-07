@@ -31,6 +31,34 @@ function cacheStudio(s: Studio) {
   localStorage.setItem(STUDIO_KEY, JSON.stringify(s));
 }
 
+/**
+ * Ensure a profiles row exists for the authenticated (Rork or native) user.
+ *
+ * Studio creation relies on studios.owner_id → profiles.id, so the profile
+ * must exist first. Rork third-party users have no auth.users row and no
+ * GoTrue signup trigger fires for them, so we create the profile here on the
+ * first authenticated request. RLS (profiles_self_policy: id = user_id())
+ * permits this only for the user's own id.
+ */
+async function ensureProfile(user: { id: string; email: string; name?: string; picture?: string }): Promise<void> {
+  try {
+    await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.picture,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
+      );
+  } catch {
+    // Non-fatal: a transient failure here will be retried on the next load.
+  }
+}
+
 /** Fetch the studio for the given owner from Supabase. Returns null if none exists. */
 async function fetchStudioFromSupabase(ownerId: string): Promise<Studio | null> {
   try {
@@ -143,6 +171,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
+      // Create/refresh the profile row first so studio FKs resolve.
+      await ensureProfile({ id: userId, email: user.email, name: user.name, picture: user.picture });
       const remote = await fetchStudioFromSupabase(userId);
       if (cancelled) return;
       if (remote) {
