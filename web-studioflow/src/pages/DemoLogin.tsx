@@ -5,15 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-/** Build the Supabase Functions URL only when the env var looks like a real URL. */
-function getSupabaseFunctionsUrl(): string | null {
-  const raw = import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string;
-  if (!raw || (!raw.startsWith("http://") && !raw.startsWith("https://"))) {
-    return null;
-  }
-  return `${raw}/functions/v1`;
-}
+import { getFunctionUrl } from "@/lib/supabaseFunctions";
 
 interface DemoAccount {
   email: string;
@@ -98,10 +90,10 @@ export default function DemoLogin() {
 
     // 1. Try the Supabase edge function (fails gracefully if not deployed)
     let token: string | null = null;
-    const functionsUrl = getSupabaseFunctionsUrl();
-    if (functionsUrl) {
+    const demoLoginUrl = getFunctionUrl("demo-login");
+    if (demoLoginUrl) {
       try {
-        const res = await fetch(`${functionsUrl}/demo-login`, {
+        const res = await fetch(demoLoginUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email.trim(), password }),

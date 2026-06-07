@@ -21,11 +21,11 @@
  */
 
 import { supabase, getAccessToken } from "./supabase";
+import { getFunctionUrl } from "./supabaseFunctions";
 
-const SUPABASE_URL = (import.meta as Record<string, Record<string, string>>).env
-  .EXPO_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-
-const EDGE_FUNCTION = `${SUPABASE_URL}/functions/v1`;
+/** Base Edge Functions URL, normalised against misconfigured env values. */
+const EDGE_FUNCTION =
+  (getFunctionUrl("")?.replace(/\/$/, "")) ?? "https://placeholder.supabase.co/functions/v1";
 
 /** Publishable key — safe for client. If unset or placeholder, simulated mode is active. */
 function getStripePk(): string {

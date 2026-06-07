@@ -8,13 +8,10 @@
  */
 
 import { getAccessToken } from "./supabase";
-
-const SUPABASE_URL =
-  (import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "";
+import { getFunctionUrl } from "./supabaseFunctions";
 
 function aiProxyUrl(): string | null {
-  if (!SUPABASE_URL.startsWith("http")) return null;
-  return `${SUPABASE_URL}/functions/v1/ai-proxy`;
+  return getFunctionUrl("ai-proxy");
 }
 
 /** Whether the AI proxy is reachable in this environment. */

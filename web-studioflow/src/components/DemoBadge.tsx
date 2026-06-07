@@ -47,9 +47,10 @@ export function ResetDemoButton({ className }: ResetDemoButtonProps) {
     if (!confirm("Reset all demo data to factory defaults? This cannot be undone.")) return;
 
     try {
-      const functionsUrl = `${(import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) || "https://placeholder.supabase.co"}/functions/v1`;
+      const seedUrl = getFunctionUrl("seed-demo-data")
+        ?? "https://placeholder.supabase.co/functions/v1/seed-demo-data";
       const token = localStorage.getItem("rork:access_token");
-      const res = await fetch(`${functionsUrl}/seed-demo-data`, {
+      const res = await fetch(seedUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

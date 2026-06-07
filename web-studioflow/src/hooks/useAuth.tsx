@@ -8,20 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase";
+import { getFunctionUrl } from "@/lib/supabaseFunctions";
 import type { AuthError } from "@supabase/supabase-js";
 
 const AUTH_URL = import.meta.env.EXPO_PUBLIC_RORK_AUTH_URL as string;
 const APP_KEY = import.meta.env.EXPO_PUBLIC_RORK_APP_KEY as string;
 const FUNCTIONS_URL = import.meta.env.EXPO_PUBLIC_RORK_FUNCTIONS_URL as string;
-
-/** Build the Supabase Functions URL only when the env var looks like a real URL. */
-function getSupabaseFunctionsUrl(): string | null {
-  const raw = import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string;
-  if (!raw || (!raw.startsWith("http://") && !raw.startsWith("https://"))) {
-    return null;
-  }
-  return `${raw}/functions/v1`;
-}
 
 const ACCESS_TOKEN_KEY = "rork:access_token";
 const REFRESH_TOKEN_KEY = "rork:refresh_token";
@@ -335,10 +327,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       // Only call the edge function when we have a valid Supabase Functions URL.
-      const functionsUrl = getSupabaseFunctionsUrl();
-      if (functionsUrl) {
+      const demoLoginUrl = getFunctionUrl("demo-login");
+      if (demoLoginUrl) {
         try {
-          const res = await fetch(`${functionsUrl}/demo-login`, {
+          const res = await fetch(demoLoginUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: email.trim(), password }),
