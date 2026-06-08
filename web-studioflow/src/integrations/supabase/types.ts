@@ -946,6 +946,876 @@ export type Database = {
           },
         ]
       }
+      waiver_templates: {
+        Row: {
+          applies_to: Json | null
+          created_at: string
+          current_version_id: string | null
+          description: string | null
+          id: string
+          renewal_period: string
+          required: boolean
+          status: string
+          studio_id: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to?: Json | null
+          created_at?: string
+          current_version_id?: string | null
+          description?: string | null
+          id?: string
+          renewal_period?: string
+          required?: boolean
+          status?: string
+          studio_id: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: Json | null
+          created_at?: string
+          current_version_id?: string | null
+          description?: string | null
+          id?: string
+          renewal_period?: string
+          required?: boolean
+          status?: string
+          studio_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      waiver_versions: {
+        Row: {
+          archived_at: string | null
+          body_html: string | null
+          body_markdown: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          published_at: string | null
+          studio_id: string
+          version_number: number
+          waiver_template_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          body_html?: string | null
+          body_markdown?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          studio_id: string
+          version_number?: number
+          waiver_template_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          body_html?: string | null
+          body_markdown?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          studio_id?: string
+          version_number?: number
+          waiver_template_id?: string
+        }
+        Relationships: []
+      }
+      waiver_signatures: {
+        Row: {
+          caregiver_id: string | null
+          created_at: string
+          e_sign_consent: boolean
+          guardian_authority_confirmed: boolean
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          pdf_url: string | null
+          signature_data: string | null
+          signature_type: string
+          signed_at: string
+          signer_name: string
+          signer_relationship: string | null
+          status: string
+          student_id: string | null
+          studio_id: string
+          user_agent: string | null
+          waiver_template_id: string
+          waiver_version_id: string
+        }
+        Insert: {
+          caregiver_id?: string | null
+          created_at?: string
+          e_sign_consent?: boolean
+          guardian_authority_confirmed?: boolean
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          pdf_url?: string | null
+          signature_data?: string | null
+          signature_type?: string
+          signed_at?: string
+          signer_name: string
+          signer_relationship?: string | null
+          status?: string
+          student_id?: string | null
+          studio_id: string
+          user_agent?: string | null
+          waiver_template_id: string
+          waiver_version_id: string
+        }
+        Update: {
+          caregiver_id?: string | null
+          created_at?: string
+          e_sign_consent?: boolean
+          guardian_authority_confirmed?: boolean
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          pdf_url?: string | null
+          signature_data?: string | null
+          signature_type?: string
+          signed_at?: string
+          signer_name?: string
+          signer_relationship?: string | null
+          status?: string
+          student_id?: string | null
+          studio_id?: string
+          user_agent?: string | null
+          waiver_template_id?: string
+          waiver_version_id?: string
+        }
+        Relationships: []
+      }
+      uploaded_documents: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          document_type: string
+          event_id: string | null
+          expiry_date: string | null
+          family_id: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_url: string | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          student_id: string | null
+          studio_id: string
+          title: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+          visibility: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          document_type: string
+          event_id?: string | null
+          expiry_date?: string | null
+          family_id?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          student_id?: string | null
+          studio_id: string
+          title: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          visibility?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          document_type?: string
+          event_id?: string | null
+          expiry_date?: string | null
+          family_id?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          student_id?: string | null
+          studio_id?: string
+          title?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          visibility?: string
+        }
+        Relationships: []
+      }
+      costumes: {
+        Row: {
+          care_instructions: string | null
+          category: string
+          colour: string | null
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          markup_pct: number
+          name: string
+          retail_cost_cents: number | null
+          season: string | null
+          shipping_allocation_cents: number
+          sizing_chart_pdf_url: string | null
+          sku: string | null
+          studio_id: string
+          updated_at: string
+          vendor: string | null
+          vendor_pdf_url: string | null
+          wholesale_cost_cents: number
+        }
+        Insert: {
+          care_instructions?: string | null
+          category?: string
+          colour?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          markup_pct?: number
+          name: string
+          retail_cost_cents?: number | null
+          season?: string | null
+          shipping_allocation_cents?: number
+          sizing_chart_pdf_url?: string | null
+          sku?: string | null
+          studio_id: string
+          updated_at?: string
+          vendor?: string | null
+          vendor_pdf_url?: string | null
+          wholesale_cost_cents?: number
+        }
+        Update: {
+          care_instructions?: string | null
+          category?: string
+          colour?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          markup_pct?: number
+          name?: string
+          retail_cost_cents?: number | null
+          season?: string | null
+          shipping_allocation_cents?: number
+          sizing_chart_pdf_url?: string | null
+          sku?: string | null
+          studio_id?: string
+          updated_at?: string
+          vendor?: string | null
+          vendor_pdf_url?: string | null
+          wholesale_cost_cents?: number
+        }
+        Relationships: []
+      }
+      costume_assignments: {
+        Row: {
+          assigned_count: number
+          class_id: string | null
+          costume_id: string
+          created_at: string
+          id: string
+          recital_performance_id: string | null
+          routine_name: string | null
+          student_id: string | null
+          studio_id: string
+        }
+        Insert: {
+          assigned_count?: number
+          class_id?: string | null
+          costume_id: string
+          created_at?: string
+          id?: string
+          recital_performance_id?: string | null
+          routine_name?: string | null
+          student_id?: string | null
+          studio_id: string
+        }
+        Update: {
+          assigned_count?: number
+          class_id?: string | null
+          costume_id?: string
+          created_at?: string
+          id?: string
+          recital_performance_id?: string | null
+          routine_name?: string | null
+          student_id?: string | null
+          studio_id?: string
+        }
+        Relationships: []
+      }
+      student_measurements: {
+        Row: {
+          chest_cm: number | null
+          created_at: string
+          girth_cm: number | null
+          height_cm: number | null
+          hips_cm: number | null
+          id: string
+          inseam_cm: number | null
+          measured_at: string | null
+          measured_by: string | null
+          notes: string | null
+          shoe_size: string | null
+          status: string
+          student_id: string
+          studio_id: string
+          submitted_by: string | null
+          waist_cm: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          chest_cm?: number | null
+          created_at?: string
+          girth_cm?: number | null
+          height_cm?: number | null
+          hips_cm?: number | null
+          id?: string
+          inseam_cm?: number | null
+          measured_at?: string | null
+          measured_by?: string | null
+          notes?: string | null
+          shoe_size?: string | null
+          status?: string
+          student_id: string
+          studio_id: string
+          submitted_by?: string | null
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          chest_cm?: number | null
+          created_at?: string
+          girth_cm?: number | null
+          height_cm?: number | null
+          hips_cm?: number | null
+          id?: string
+          inseam_cm?: number | null
+          measured_at?: string | null
+          measured_by?: string | null
+          notes?: string | null
+          shoe_size?: string | null
+          status?: string
+          student_id?: string
+          studio_id?: string
+          submitted_by?: string | null
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
+      sizing_charts: {
+        Row: {
+          chart_data: Json
+          chart_name: string
+          costume_id: string | null
+          created_at: string
+          file_type: string | null
+          file_url: string | null
+          id: string
+          studio_id: string
+          vendor: string
+        }
+        Insert: {
+          chart_data?: Json
+          chart_name: string
+          costume_id?: string | null
+          created_at?: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          studio_id: string
+          vendor: string
+        }
+        Update: {
+          chart_data?: Json
+          chart_name?: string
+          costume_id?: string | null
+          created_at?: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          studio_id?: string
+          vendor?: string
+        }
+        Relationships: []
+      }
+      size_recommendations: {
+        Row: {
+          alternative_size: string | null
+          approved_at: string | null
+          approved_by: string | null
+          confidence_pct: number | null
+          costume_id: string
+          created_at: string
+          flags: string[] | null
+          id: string
+          parent_approved: boolean
+          parent_notes: string | null
+          reason: string | null
+          recommended_size: string | null
+          sizing_chart_id: string | null
+          student_id: string
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          alternative_size?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence_pct?: number | null
+          costume_id: string
+          created_at?: string
+          flags?: string[] | null
+          id?: string
+          parent_approved?: boolean
+          parent_notes?: string | null
+          reason?: string | null
+          recommended_size?: string | null
+          sizing_chart_id?: string | null
+          student_id: string
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          alternative_size?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence_pct?: number | null
+          costume_id?: string
+          created_at?: string
+          flags?: string[] | null
+          id?: string
+          parent_approved?: boolean
+          parent_notes?: string | null
+          reason?: string | null
+          recommended_size?: string | null
+          sizing_chart_id?: string | null
+          student_id?: string
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      costume_fees: {
+        Row: {
+          costume_id: string
+          created_at: string
+          due_date: string | null
+          fee_type: string
+          id: string
+          invoice_id: string | null
+          paid_cents: number
+          status: string
+          student_id: string
+          studio_id: string
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          costume_id: string
+          created_at?: string
+          due_date?: string | null
+          fee_type?: string
+          id?: string
+          invoice_id?: string | null
+          paid_cents?: number
+          status?: string
+          student_id: string
+          studio_id: string
+          total_cents: number
+          updated_at?: string
+        }
+        Update: {
+          costume_id?: string
+          created_at?: string
+          due_date?: string | null
+          fee_type?: string
+          id?: string
+          invoice_id?: string | null
+          paid_cents?: number
+          status?: string
+          student_id?: string
+          studio_id?: string
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vendor_orders: {
+        Row: {
+          actual_delivery: string | null
+          created_at: string
+          expected_delivery: string | null
+          id: string
+          order_date: string | null
+          po_number: string | null
+          shipping_cost_cents: number
+          status: string
+          studio_id: string
+          updated_at: string
+          vendor: string
+          vendor_notes: string | null
+        }
+        Insert: {
+          actual_delivery?: string | null
+          created_at?: string
+          expected_delivery?: string | null
+          id?: string
+          order_date?: string | null
+          po_number?: string | null
+          shipping_cost_cents?: number
+          status?: string
+          studio_id: string
+          updated_at?: string
+          vendor: string
+          vendor_notes?: string | null
+        }
+        Update: {
+          actual_delivery?: string | null
+          created_at?: string
+          expected_delivery?: string | null
+          id?: string
+          order_date?: string | null
+          po_number?: string | null
+          shipping_cost_cents?: number
+          status?: string
+          studio_id?: string
+          updated_at?: string
+          vendor?: string
+          vendor_notes?: string | null
+        }
+        Relationships: []
+      }
+      vendor_order_items: {
+        Row: {
+          costume_id: string
+          created_at: string
+          id: string
+          quantity: number
+          size: string
+          unit_cost_cents: number
+          vendor_order_id: string
+        }
+        Insert: {
+          costume_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          size: string
+          unit_cost_cents: number
+          vendor_order_id: string
+        }
+        Update: {
+          costume_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          size?: string
+          unit_cost_cents?: number
+          vendor_order_id?: string
+        }
+        Relationships: []
+      }
+      alterations: {
+        Row: {
+          alteration_type: string
+          assigned_to: string | null
+          costume_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          photos: string[] | null
+          status: string
+          student_id: string
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          alteration_type: string
+          assigned_to?: string | null
+          costume_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          photos?: string[] | null
+          status?: string
+          student_id: string
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          alteration_type?: string
+          assigned_to?: string | null
+          costume_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          photos?: string[] | null
+          status?: string
+          student_id?: string
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      costume_distributions: {
+        Row: {
+          costume_id: string
+          created_at: string
+          distributed_by: string | null
+          id: string
+          items_checklist: Json
+          missing_items: string[] | null
+          notes: string | null
+          receipt_pdf_url: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_by: string | null
+          student_id: string
+          studio_id: string
+        }
+        Insert: {
+          costume_id: string
+          created_at?: string
+          distributed_by?: string | null
+          id?: string
+          items_checklist?: Json
+          missing_items?: string[] | null
+          notes?: string | null
+          receipt_pdf_url?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          student_id: string
+          studio_id: string
+        }
+        Update: {
+          costume_id?: string
+          created_at?: string
+          distributed_by?: string | null
+          id?: string
+          items_checklist?: Json
+          missing_items?: string[] | null
+          notes?: string | null
+          receipt_pdf_url?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          student_id?: string
+          studio_id?: string
+        }
+        Relationships: []
+      }
+      reusable_costumes: {
+        Row: {
+          condition: string
+          costume_id: string
+          created_at: string
+          id: string
+          last_used: string | null
+          notes: string | null
+          purchase_date: string | null
+          rack_number: string | null
+          size: string
+          status: string
+          storage_bin: string | null
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          costume_id: string
+          created_at?: string
+          id?: string
+          last_used?: string | null
+          notes?: string | null
+          purchase_date?: string | null
+          rack_number?: string | null
+          size: string
+          status?: string
+          storage_bin?: string | null
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          costume_id?: string
+          created_at?: string
+          id?: string
+          last_used?: string | null
+          notes?: string | null
+          purchase_date?: string | null
+          rack_number?: string | null
+          size?: string
+          status?: string
+          storage_bin?: string | null
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      costume_rentals: {
+        Row: {
+          costume_id: string
+          created_at: string
+          damage_fee_cents: number | null
+          deposit_cents: number
+          id: string
+          inventory_id: string | null
+          notes: string | null
+          rental_fee_cents: number
+          return_date: string | null
+          returned_at: string | null
+          status: string
+          student_id: string
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          costume_id: string
+          created_at?: string
+          damage_fee_cents?: number | null
+          deposit_cents?: number
+          id?: string
+          inventory_id?: string | null
+          notes?: string | null
+          rental_fee_cents?: number
+          return_date?: string | null
+          returned_at?: string | null
+          status?: string
+          student_id: string
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          costume_id?: string
+          created_at?: string
+          damage_fee_cents?: number | null
+          deposit_cents?: number
+          id?: string
+          inventory_id?: string | null
+          notes?: string | null
+          rental_fee_cents?: number
+          return_date?: string | null
+          returned_at?: string | null
+          status?: string
+          student_id?: string
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quick_change_analyses: {
+        Row: {
+          conflict_detected: boolean
+          created_at: string
+          estimated_change_minutes: number | null
+          id: string
+          recital_event_id: string | null
+          recommendation: string | null
+          resolved: boolean
+          routine_a: string | null
+          routine_a_end_time: string | null
+          routine_b: string | null
+          routine_b_start_time: string | null
+          student_id: string
+          studio_id: string
+        }
+        Insert: {
+          conflict_detected?: boolean
+          created_at?: string
+          estimated_change_minutes?: number | null
+          id?: string
+          recital_event_id?: string | null
+          recommendation?: string | null
+          resolved?: boolean
+          routine_a?: string | null
+          routine_a_end_time?: string | null
+          routine_b?: string | null
+          routine_b_start_time?: string | null
+          student_id: string
+          studio_id: string
+        }
+        Update: {
+          conflict_detected?: boolean
+          created_at?: string
+          estimated_change_minutes?: number | null
+          id?: string
+          recital_event_id?: string | null
+          recommendation?: string | null
+          resolved?: boolean
+          routine_a?: string | null
+          routine_a_end_time?: string | null
+          routine_b?: string | null
+          routine_b_start_time?: string | null
+          student_id?: string
+          studio_id?: string
+        }
+        Relationships: []
+      }
+      caregiver_audit_log: {
+        Row: {
+          caregiver_id: string
+          created_at: string
+          details: string | null
+          event: string
+          id: string
+          performed_by: string | null
+          studio_id: string
+        }
+        Insert: {
+          caregiver_id: string
+          created_at?: string
+          details?: string | null
+          event: string
+          id?: string
+          performed_by?: string | null
+          studio_id: string
+        }
+        Update: {
+          caregiver_id?: string
+          created_at?: string
+          details?: string | null
+          event?: string
+          id?: string
+          performed_by?: string | null
+          studio_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
