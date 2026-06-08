@@ -11,11 +11,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useStudio } from "@/data/store";
+import { useStudio, useOnboarding } from "@/data/store";
 import type { Vertical } from "@/data/types";
 import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 
 const STEPS = [
   { key: "welcome", label: "Welcome", icon: Zap },
@@ -34,31 +33,25 @@ interface SetupWizardProps {
 
 export function SetupWizard({ onComplete }: SetupWizardProps) {
   const { studio, updateStudio } = useStudio();
+  const { completeOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const [step, setStep] = useState<StepKey>("welcome");
-  const [studioName, setStudioName] = useState(studio.name);
+  const [studioName, setStudioName] = useState("");
   const [studioCity, setStudioCity] = useState(studio.city);
   const [studioVertical, setStudioVertical] = useState<Vertical>(studio.vertical);
 
   const currentIndex = STEPS.findIndex((s) => s.key === step);
 
   const handleComplete = async () => {
+    // updateStudio persists to Supabase under the authenticated owner (RLS-safe).
     updateStudio({
-      name: studioName || "My Studio",
+      name: studioName.trim() || "My Studio",
       city: studioCity,
       vertical: studioVertical,
     });
 
-    // Persist to Supabase if authenticated
-    try {
-      await supabase.from("studios").upsert({
-        id: studio.id,
-        name: studioName || "My Studio",
-        city: studioCity,
-        vertical: studioVertical,
-        owner_id: "", // Will be set by the authenticated user via RLS
-      });
-    } catch { /* ignore */ }
+    // Record onboarding completion on the profile (and locally).
+    await completeOnboarding();
 
     toast.success("Studio setup complete! Welcome to StudioFlow.");
     onComplete();

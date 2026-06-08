@@ -1,7 +1,6 @@
-import { Link, useNavigate } from "react-router-dom";
-import { FlaskConical, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useStudio } from "@/data/store";
 import {
   AuthCard,
   AuthCardIcon,
@@ -12,8 +11,6 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 import { EmailLoginForm } from "@/components/auth/EmailLoginForm";
 
 export default function AdminLogin() {
-  const navigate = useNavigate();
-  const { studio } = useStudio();
   const {
     isSigningIn,
     error,
@@ -42,10 +39,10 @@ export default function AdminLogin() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md animate-float-up">
-        {/* Brand */}
+        {/* Generic StudioFlow brand — not tied to a studio */}
         <Link to="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary font-display text-lg font-semibold text-primary-foreground">
-            {studio.initials}
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#1a1423] font-display text-lg font-semibold text-white">
+            SF
           </div>
           <span className="font-display text-xl font-semibold tracking-tight">
             StudioFlow
@@ -57,8 +54,8 @@ export default function AdminLogin() {
             <Sparkles className="h-7 w-7" />
           </AuthCardIcon>
           <AuthCardHeader
-            title="Studio Dashboard"
-            subtitle={`Sign in to manage ${studio.name}`}
+            title="Welcome back"
+            subtitle="Sign in to your studio dashboard"
           />
 
           {/* OAuth buttons — primary emphasis for admin */}
@@ -94,7 +91,14 @@ export default function AdminLogin() {
           </p>
         </AuthCard>
 
-        <div className="mt-6 text-center">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          New to StudioFlow?{" "}
+          <Link to="/signup" className="font-semibold text-primary hover:text-primary/80 transition">
+            Start your free trial
+          </Link>
+        </p>
+
+        <div className="mt-5 text-center">
           <Link
             to="/parent/login"
             className="text-sm font-medium text-primary hover:text-primary/80 transition"
@@ -103,18 +107,9 @@ export default function AdminLogin() {
           </Link>
         </div>
 
-        {/* Sandbox / test studio entry */}
-        <Link
-          to="/sandbox"
-          className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-teal-300/60 bg-teal-50/70 px-4 py-2.5 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
-        >
-          <FlaskConical className="h-4 w-4" />
-          Create a test studio (sandbox)
-        </Link>
-
         <p className="mt-4 text-center text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground transition">
-            ← Back to {studio.name}
+            ← Back to home
           </Link>
         </p>
       </div>

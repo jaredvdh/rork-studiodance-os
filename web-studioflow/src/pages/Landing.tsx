@@ -291,11 +291,11 @@ export default function Landing() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <Link to="/dashboard" className="hidden text-[14px] font-medium text-foreground/55 transition-colors hover:text-foreground sm:inline-block">
+            <Link to="/login" className="hidden text-[14px] font-medium text-foreground/55 transition-colors hover:text-foreground sm:inline-block">
               Log in
             </Link>
             <Link
-              to="/dashboard"
+              to="/signup"
               className="hidden rounded-full bg-[#1a1423] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1a1423]/85 active:scale-[0.97] sm:inline-flex items-center gap-2"
             >
               Start free trial
@@ -315,9 +315,9 @@ export default function Landing() {
             <nav className="flex flex-col gap-4 text-[15px] font-medium text-foreground/60">
               {navLinks}
               <Link to="/parent" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Portal login</Link>
-              <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Log in</Link>
+              <Link to="/login" onClick={() => setMobileNavOpen(false)} className="transition-colors hover:text-foreground">Log in</Link>
               <Link
-                to="/dashboard"
+                to="/signup"
                 onClick={() => setMobileNavOpen(false)}
                 className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-[#1a1423] px-5 py-2.5 text-sm font-semibold text-white shadow-sm"
               >
@@ -349,14 +349,14 @@ export default function Landing() {
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link
-              to="/dashboard"
+              to="/signup"
               className="group inline-flex items-center gap-2 rounded-full bg-rose px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-rose/25 transition-all hover:bg-rose/90 active:scale-[0.97]"
             >
               Start free trial
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              to="/dashboard"
+              to="/demo"
               className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-7 py-3.5 text-[15px] font-semibold text-foreground shadow-sm transition-all hover:bg-neutral-50 active:scale-[0.97]"
             >
               View live demo
@@ -631,7 +631,7 @@ export default function Landing() {
                   {plan.students}
                 </p>
                 <Link
-                  to="/dashboard"
+                  to="/signup"
                   className={cn(
                     "mt-8 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold transition-all active:scale-[0.97]",
                     plan.featured
@@ -671,14 +671,14 @@ export default function Landing() {
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link
-                to="/dashboard"
+                to="/signup"
                 className="group inline-flex items-center gap-2 rounded-full bg-rose px-8 py-4 text-[15px] font-semibold text-white shadow-lg shadow-rose/30 transition-all hover:bg-rose/90 active:scale-[0.97]"
               >
                 Start free trial
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                to="/dashboard"
+                to="/demo"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-8 py-4 text-[15px] font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-[0.97]"
               >
                 Book a demo
@@ -725,7 +725,7 @@ export default function Landing() {
             <a href="#portal" className="transition-colors hover:text-foreground/70">Portal</a>
             <a href="#pricing" className="transition-colors hover:text-foreground/70">Pricing</a>
             <Link to="/parent" className="transition-colors hover:text-foreground/70">Portal login</Link>
-            <Link to="/dashboard" className="transition-colors hover:text-foreground/70">Log in</Link>
+            <Link to="/login" className="transition-colors hover:text-foreground/70">Log in</Link>
           </div>
         </div>
       </footer>

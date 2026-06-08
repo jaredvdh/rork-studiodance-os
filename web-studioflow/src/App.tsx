@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute, GuestRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AdminLogin from "@/pages/AdminLogin";
+import Signup from "@/pages/Signup";
 import AuthCallback from "@/pages/AuthCallback";
 import AppShell from "./components/layout/AppShell";
 import Announcements from "./pages/Announcements";
@@ -128,6 +129,7 @@ const App = () => (
           <Route path="/sandbox" element={withStudio(Sandbox)} />
           <Route path="/auth/callback" element={withStudio(AuthCallback)} />
           <Route path="/login" element={withStudio(AdminLogin)} />
+          <Route path="/signup" element={<GuestRoute>{withStudio(Signup)}</GuestRoute>} />
 
           {/* Protected admin routes — wrapped in ErrorBoundary for crash resilience */}
           <Route path="/dashboard" element={<ProtectedRoute><ErrorBoundary>{withShell(Dashboard)}</ErrorBoundary></ProtectedRoute>} />

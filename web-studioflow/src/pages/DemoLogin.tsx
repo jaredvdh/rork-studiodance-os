@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, Beaker, Eye, EyeOff, FlaskConical, Loader2, LogIn } from "lucide-react";
+import { ArrowRight, Beaker, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,23 +162,6 @@ export default function DemoLogin() {
             Explore StudioFlow with pre-seeded demo data. No sign-up required.
           </p>
         </div>
-
-        {/* Sandbox — real Supabase-backed test studios */}
-        <Link
-          to="/sandbox"
-          className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-teal-300/60 bg-teal-50/70 p-3.5 transition hover:bg-teal-50"
-        >
-          <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-teal-100">
-              <FlaskConical className="h-4.5 w-4.5 text-teal-700" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-teal-900">Create a test studio</p>
-              <p className="text-[11px] text-teal-700">Real Supabase data you can explore & delete — recommended</p>
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-teal-700" />
-        </Link>
 
         {/* Quick-select demo accounts */}
         <div className="mb-6 space-y-2">
