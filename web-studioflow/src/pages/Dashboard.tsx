@@ -83,9 +83,9 @@ export default function Dashboard() {
   const missingOrStaleCount = missingMeasIds.length + staleMeasIds.length;
   const totalCapacity = classes.reduce((a, c) => a + c.capacity, 0);
   const totalEnrolled = classes.reduce((a, c) => a + c.enrolled, 0);
-  const capacityPct = Math.round((totalEnrolled / totalCapacity) * 100);
-  const avgAttendance = Math.round((students.reduce((a, s) => a + s.attendanceRate, 0) / students.length) * 100);
-  const waiverDone = Math.round((students.filter((s) => s.waiver === "signed").length / students.length) * 100);
+  const capacityPct = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
+  const avgAttendance = students.length > 0 ? Math.round((students.reduce((a, s) => a + s.attendanceRate, 0) / students.length) * 100) : 0;
+  const waiverDone = students.length > 0 ? Math.round((students.filter((s) => s.waiver === "signed").length / students.length) * 100) : 0;
 
   // Waiver compliance from the waiver system (source of truth)
   const publishedRequired = waiverTemplates.filter((t) => t.status === "published" && t.required);

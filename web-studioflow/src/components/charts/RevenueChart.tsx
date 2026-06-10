@@ -8,17 +8,25 @@ export default function RevenueChart({ data }: { data: RevenuePoint[] }) {
   const { path, area, points, max } = useMemo(() => {
     const w = 100;
     const h = 100;
-    const values = data.map((d) => d.revenueCents);
+    const values = data.map((d) => d.revenueCents).filter((v) => !Number.isNaN(v));
+
+    // No valid data — render a flat line at the bottom
+    if (values.length < 2) {
+      const flatPath = `M0,${h} L${w},${h}`;
+      return { path: flatPath, area: `${flatPath} L${w},${h} L0,${h} Z`, points: [{ x: 0, y: h, d: data[0] }, { x: w, y: h, d: data[data.length - 1] }], max: 0 };
+    }
+
     const maxV = Math.max(...values) * 1.12;
     const minV = Math.min(...values) * 0.88;
     const range = maxV - minV || 1;
-    const step = w / (data.length - 1);
+    const step = w / (Math.max(data.length, 2) - 1);
     const pts = data.map((d, i) => {
       const x = i * step;
-      const y = h - ((d.revenueCents - minV) / range) * h;
+      const raw = Number.isNaN(d.revenueCents) ? 0 : d.revenueCents;
+      const y = h - ((raw - minV) / range) * h;
       return { x, y, d };
     });
-    const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+    const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
     const areaPath = `${line} L${w},${h} L0,${h} Z`;
     return { path: line, area: areaPath, points: pts, max: maxV };
   }, [data]);
