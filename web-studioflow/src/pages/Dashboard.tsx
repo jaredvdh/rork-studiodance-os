@@ -60,21 +60,27 @@ export default function Dashboard() {
     }
   }, []);
 
+  // ── Computed metrics (hooks must run before any early return) ────
+  const allStudentIds = useMemo(() => students.map((s) => s.id), [students]);
+  const missingMeasIds = useMemo(() => studentsMissingMeasurements(allStudentIds), [studentsMissingMeasurements, allStudentIds]);
+  const staleMeasIds = useMemo(() => studentsWithStaleMeasurements(allStudentIds), [studentsWithStaleMeasurements, allStudentIds]);
+  const staleStudentNames = useMemo(() =>
+    staleMeasIds.map((id) => students.find((s) => s.id === id)?.name).filter(Boolean) as string[],
+  [staleMeasIds, students]);
+  const today = new Date();
+  const todayDay = TODAY_DAY[today.getDay()];
+  const todayClasses = useMemo(
+    () => classes.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [classes, todayDay],
+  );
+
   if (showSetup) {
     return <SetupWizard onComplete={() => { markSetupComplete(); setShowSetup(false); }} />;
   }
 
-  // ── Computed metrics ──────────────────────────────────────────────
+  // ── Derived values (no hooks below — safe after early return) ────
   const activeStudents = students.length;
-
-  // Measurement staleness computed metrics
-  const allStudentIds = useMemo(() => students.map((s) => s.id), [students]);
-  const missingMeasIds = useMemo(() => studentsMissingMeasurements(allStudentIds), [studentsMissingMeasurements, allStudentIds]);
-  const staleMeasIds = useMemo(() => studentsWithStaleMeasurements(allStudentIds), [studentsWithStaleMeasurements, allStudentIds]);
   const missingOrStaleCount = missingMeasIds.length + staleMeasIds.length;
-  const staleStudentNames = useMemo(() =>
-    staleMeasIds.map((id) => students.find((s) => s.id === id)?.name).filter(Boolean) as string[],
-  [staleMeasIds, students]);
   const totalCapacity = classes.reduce((a, c) => a + c.capacity, 0);
   const totalEnrolled = classes.reduce((a, c) => a + c.enrolled, 0);
   const capacityPct = Math.round((totalEnrolled / totalCapacity) * 100);
@@ -96,13 +102,6 @@ export default function Dashboard() {
   const unpaidInvoices = invoices.filter((i) => i.status !== "paid" && i.status !== "refunded");
   const overdueInvoices = invoices.filter((i) => i.status === "overdue");
   const outstanding = unpaidInvoices.reduce((a, i) => a + i.amountCents, 0);
-
-  const today = new Date();
-  const todayDay = TODAY_DAY[today.getDay()];
-  const todayClasses = useMemo(
-    () => classes.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime)),
-    [classes, todayDay],
-  );
 
   const expiringWaivers = students.filter((s) => s.waiver === "pending").length;
   const recitalClasses = classes.filter((c) => c.inRecital);

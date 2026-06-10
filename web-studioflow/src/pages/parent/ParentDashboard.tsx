@@ -28,21 +28,9 @@ export default function ParentDashboard() {
     isLoading, loadState, loadError,
   } = useParent();
 
-  // Loading state
-  if (isLoading) return <ParentLoadingSkeleton lines={6} />;
-
-  // Error state
-  if (loadState === "error") {
-    return <ParentLoadError message={loadError ?? undefined} />;
-  }
-
-  // Empty state — no caregiver linked
-  if (loadState === "empty" || !parent || !primaryContact) {
-    return <NoCaregiverFound email={undefined} />;
-  }
-
+  // ── Memoised data (hooks must run before any early return) ──────
   const myClassIds = useMemo(
-    () => [...new Set(myStudents.flatMap((s) => s.classIds))],
+    () => [...new Set((myStudents ?? []).flatMap((s) => s.classIds))],
     [myStudents],
   );
 
@@ -50,12 +38,6 @@ export default function ParentDashboard() {
     () => classes.filter((c) => myClassIds.includes(c.id)),
     [classes, myClassIds],
   );
-
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
 
   const upcomingClasses = useMemo(
     () =>
@@ -78,16 +60,35 @@ export default function ParentDashboard() {
     () =>
       invoices.filter(
         (i) =>
-          myStudents.some((s) => s.name === i.studentName) &&
+          (myStudents ?? []).some((s) => s.name === i.studentName) &&
           i.status !== "paid",
       ),
     [invoices, myStudents],
   );
 
   const unsignedWaivers = useMemo(
-    () => myStudents.filter((s) => s.waiver !== "signed"),
+    () => (myStudents ?? []).filter((s) => s.waiver !== "signed"),
     [myStudents],
   );
+
+  // Loading state
+  if (isLoading) return <ParentLoadingSkeleton lines={6} />;
+
+  // Error state
+  if (loadState === "error") {
+    return <ParentLoadError message={loadError ?? undefined} />;
+  }
+
+  // Empty state — no caregiver linked
+  if (loadState === "empty" || !parent || !primaryContact) {
+    return <NoCaregiverFound email={undefined} />;
+  }
+
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 
   const needsAttention = [
     ...(unsignedWaivers.length > 0
