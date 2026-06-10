@@ -115,18 +115,11 @@ export type Vertical =
   | "martial_arts"
   | "music_school";
 
-/** Class style — formerly DanceStyle. The available values depend on the studio vertical. */
-export type ClassStyle =
-  // Dance
-  | "Ballet" | "Jazz" | "Hip Hop" | "Contemporary" | "Tap" | "Lyrical" | "Acro"
-  // Yoga
-  | "Vinyasa" | "Hatha" | "Yin" | "Restorative" | "Power Yoga"
-  // CrossFit / Gym
-  | "Strength" | "Conditioning" | "Olympic Lifting" | "Gymnastics" | "Mobility"
-  // Martial Arts
-  | "Beginner" | "Intermediate" | "Advanced" | "Sparring" | "Grading Prep"
-  // Music
-  | "Piano" | "Guitar" | "Voice" | "Violin" | "Drums";
+/** Class / program type — fully user-driven. The studio vertical provides
+ * suggested defaults via terminology.styleSuggestions, but owners can create
+ * any value they need. This lets a CrossFit box define "CrossFit", "Open Gym",
+ * or "Hero WOD" while a dance studio keeps "Ballet", "Jazz", etc. */
+export type ClassStyle = string;
 
 /** @deprecated Use ClassStyle instead. Kept for backward compatibility. */
 export type DanceStyle = ClassStyle;

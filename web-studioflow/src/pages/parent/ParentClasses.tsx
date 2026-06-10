@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 import { Clock, MapPin, Search, Sparkles, Users } from "lucide-react";
 
 import { classById, styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
-import type { AgeGroup, ClassStyle, WeekDay } from "@/data/types";
+import type { AgeGroup, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const days: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const styles: ClassStyle[] = [
+const styles: string[] = [
   "Ballet",
   "Jazz",
   "Hip Hop",
@@ -16,6 +16,11 @@ const styles: ClassStyle[] = [
   "Tap",
   "Lyrical",
   "Acro",
+  "Vinyasa",
+  "Hatha",
+  "CrossFit",
+  "Strength",
+  "Conditioning",
 ];
 const ageGroups: AgeGroup[] = [
   "Tiny Tots",
@@ -29,7 +34,7 @@ export default function ParentClasses() {
   const { classes } = useStudioData();
   const { teachers } = useTeachers();
   const [search, setSearch] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState<ClassStyle | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedAge, setSelectedAge] = useState<AgeGroup | null>(null);
   const [selectedDay, setSelectedDay] = useState<WeekDay | null>(null);
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(

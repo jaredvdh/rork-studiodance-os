@@ -13,19 +13,10 @@ import { toast } from "sonner";
 
 import { useStudio, useOnboarding } from "@/data/store";
 import type { Vertical } from "@/data/types";
-import { ALL_VERTICALS, VERTICAL_LABELS } from "@/data/terminology";
+import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 
-const STEPS = [
-  { key: "welcome", label: "Welcome", icon: Zap },
-  { key: "profile", label: "Studio profile", icon: Building2 },
-  { key: "staff", label: "Add instructors", icon: GraduationCap },
-  { key: "classes", label: "Add classes", icon: Users },
-  { key: "invite", label: "Invite families", icon: Megaphone },
-  { key: "done", label: "Ready", icon: Check },
-] as const;
-
-type StepKey = (typeof STEPS)[number]["key"];
+type StepKey = "welcome" | "profile" | "staff" | "classes" | "invite" | "done";
 
 interface SetupWizardProps {
   onComplete: () => void;
@@ -39,18 +30,26 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   const [studioName, setStudioName] = useState("");
   const [studioCity, setStudioCity] = useState(studio.city);
   const [studioVertical, setStudioVertical] = useState<Vertical>(studio.vertical);
+  const term = getTerminology(studioVertical);
 
-  const currentIndex = STEPS.findIndex((s) => s.key === step);
+  const steps = [
+    { key: "welcome", label: "Welcome", icon: Zap },
+    { key: "profile", label: "Studio profile", icon: Building2 },
+    { key: "staff", label: `Add ${term.instructorPlural.toLowerCase()}`, icon: GraduationCap },
+    { key: "classes", label: `Add ${term.classPlural.toLowerCase()}`, icon: Users },
+    { key: "invite", label: `Invite ${term.guardianPlural.toLowerCase()}`, icon: Megaphone },
+    { key: "done", label: "Ready", icon: Check },
+  ] as const;
+
+  const currentIndex = steps.findIndex((s) => s.key === step);
 
   const handleComplete = async () => {
-    // updateStudio persists to Supabase under the authenticated owner (RLS-safe).
     updateStudio({
       name: studioName.trim() || "My Studio",
       city: studioCity,
       vertical: studioVertical,
     });
 
-    // Record onboarding completion on the profile (and locally).
     await completeOnboarding();
 
     toast.success("Studio setup complete! Welcome to StudioFlow.");
@@ -64,16 +63,16 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-muted-foreground">
-              Step {currentIndex + 1} of {STEPS.length}
+              Step {currentIndex + 1} of {steps.length}
             </p>
             <p className="text-sm font-medium text-rose">
-              {STEPS[currentIndex].label}
+              {steps[currentIndex].label}
             </p>
           </div>
           <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
             <div
               className="h-full rounded-full bg-rose transition-all duration-500"
-              style={{ width: `${((currentIndex + 1) / STEPS.length) * 100}%` }}
+              style={{ width: `${((currentIndex + 1) / steps.length) * 100}%` }}
             />
           </div>
         </div>
@@ -89,12 +88,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                 Welcome to StudioFlow
               </h1>
               <p className="mx-auto max-w-md text-base text-muted-foreground leading-relaxed">
-                Let's set up your studio in a few minutes. Classes, students, payments, waivers — all in one beautiful place.
+                Let's set up your studio in a few minutes. {term.classPlural}, {term.participantPlural.toLowerCase()}, payments, waivers — all in one beautiful place.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 {[
-                  { icon: Users, label: "Class management" },
-                  { icon: Megaphone, label: "Family coordination" },
+                  { icon: Users, label: `${term.class} management` },
+                  { icon: Megaphone, label: `${term.guardian} coordination` },
                   { icon: Building2, label: "Multi-vertical support" },
                 ].map((f) => (
                   <span key={f.label} className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm">
@@ -140,7 +139,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    This adjusts labels throughout the app — Student/Athlete, Instructor/Coach, etc.
+                    Adjusts labels throughout the app — {studioVertical === "dance" ? "Student/Instructor/Parent" : studioVertical === "crossfit" ? "Member/Coach/Guardian" : studioVertical === "martial_arts" ? "Student/Instructor/Guardian" : "Member/Instructor/Guardian"}, etc.
                   </p>
                 </label>
               </div>
@@ -152,15 +151,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-plum/10 text-plum">
                 <GraduationCap className="h-8 w-8" />
               </div>
-              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Add your instructors</h2>
+              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Add your {term.instructorPlural.toLowerCase()}</h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                You can add instructors now or anytime from the dashboard. Each instructor can have their own pay rate, styles, and schedule.
+                You can add {term.instructorPlural.toLowerCase()} now or anytime from the dashboard. Each {term.instructor.toLowerCase()} can have their own pay rate, programs, and schedule.
               </p>
               <button
                 onClick={() => navigate("/instructors")}
                 className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-secondary"
               >
-                Go to instructors
+                {term.instructorPlural}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -171,16 +170,16 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-teal/10 text-teal">
                 <Users className="h-8 w-8" />
               </div>
-              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Build your class schedule</h2>
+              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Build your {term.class.toLowerCase()} schedule</h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Create classes, set capacities, assign instructors, and open registration. You can also import from a spreadsheet.
+                Create {term.classPlural.toLowerCase()}, set capacities, assign {term.instructorPlural.toLowerCase()}, and open registration. You can also import from a spreadsheet.
               </p>
               <div className="mt-6 flex justify-center gap-3 flex-wrap">
                 <button
                   onClick={() => navigate("/classes")}
                   className="inline-flex items-center gap-2 rounded-full bg-rose px-5 py-2.5 text-sm font-semibold text-rose-foreground"
                 >
-                  Add classes
+                  Add {term.classPlural.toLowerCase()}
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <button
@@ -198,9 +197,9 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-gold/15 text-gold">
                 <Megaphone className="h-8 w-8" />
               </div>
-              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Invite families</h2>
+              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Invite {term.guardianPlural.toLowerCase()}</h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Share your registration link with families. They can create accounts, enroll in classes, sign waivers, and manage payments — all from the parent portal.
+                Share your registration link with {term.guardianPlural.toLowerCase()}. They can create accounts, enroll in {term.classPlural.toLowerCase()}, sign waivers, and manage payments — all from the {term.guardian.toLowerCase()} portal.
               </p>
               <button
                 onClick={() => toast.success("Registration link: /parent/register")}
@@ -218,7 +217,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               </div>
               <h2 className="font-display text-3xl font-semibold tracking-tight mb-3">You're all set!</h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Your studio is ready. You can always add more instructors, classes, or import data later.
+                Your studio is ready. You can always add more {term.instructorPlural.toLowerCase()}, {term.classPlural.toLowerCase()}, or import data later.
               </p>
               <button
                 onClick={handleComplete}
@@ -236,7 +235,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           <div className="mt-10 flex items-center justify-between">
             <button
               onClick={() => {
-                const prev = STEPS[currentIndex - 1];
+                const prev = steps[currentIndex - 1];
                 if (prev) setStep(prev.key);
               }}
               disabled={currentIndex === 0}
@@ -246,12 +245,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
             </button>
             <button
               onClick={() => {
-                const next = STEPS[currentIndex + 1];
+                const next = steps[currentIndex + 1];
                 if (next) setStep(next.key);
               }}
               className="inline-flex items-center gap-2 rounded-full bg-rose px-5 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft hover:opacity-90"
             >
-              {currentIndex === STEPS.length - 2 ? "Finish" : "Continue"}
+              {currentIndex === steps.length - 2 ? "Finish" : "Continue"}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

@@ -4,7 +4,7 @@ import { Clock, Copy, Edit3, MapPin, Plus, Trash2, Trophy, Users } from "lucide-
 import Modal from "@/components/Modal";
 import { styleStyles, teacherName, useStudio, useEnrichedClasses, useClasses, useTeachers, useTerminology } from "@/data/store";
 import type { ModuleKey } from "@/data/terminology";
-import type { AgeGroup, Class, ClassStyle, WeekDay } from "@/data/types";
+import type { AgeGroup, Class, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ export default function Classes() {
   const { addClass, removeClass, updateClass } = useClasses();
   const { teachers } = useTeachers();
 
-  const [styleFilter, setStyleFilter] = useState<ClassStyle | "All">("All");
+  const [styleFilter, setStyleFilter] = useState<string | "All">("All");
   const [modalMode, setModalMode] = useState<ModalMode>("create");
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean>(false);
@@ -44,15 +44,15 @@ export default function Classes() {
 
   // Reset style filter when vertical changes
   useEffect(() => {
-    if (styleFilter !== "All" && !(term.styleCategories as readonly string[]).includes(styleFilter)) {
+    if (styleFilter !== "All" && !(term.styleSuggestions as readonly string[]).includes(styleFilter)) {
       setStyleFilter("All");
     }
-  }, [studio.vertical, term.styleCategories]);
+  }, [studio.vertical, term.styleSuggestions]);
 
   const defaultForm = useMemo(
     () => ({
       name: "",
-      style: term.styleCategories[0] as ClassStyle,
+      style: term.styleSuggestions[0] ?? "",
       ageGroup: "Junior" as AgeGroup,
       day: "Mon" as WeekDay,
       startTime: "16:00",
@@ -64,19 +64,19 @@ export default function Classes() {
       price: 95,
       description: "",
     }),
-    [term.styleCategories, teachers],
+    [term.styleSuggestions, teachers],
   );
 
   const [form, setForm] = useState(defaultForm);
 
   // Reset form when vertical / teachers change
   useEffect(() => {
-    const validStyles = term.styleCategories as readonly string[];
+    const validStyles = term.styleSuggestions as readonly string[];
     const styleOk = validStyles.includes(form.style);
     const teacherOk = teachers.length > 0 && teachers.some((t) => t.id === form.teacherId);
     setForm((f) => ({
       ...f,
-      style: styleOk ? f.style : (validStyles[0] as ClassStyle),
+      style: styleOk ? f.style : (validStyles[0] ?? f.style),
       teacherId: teacherOk ? f.teacherId : (teachers[0]?.id ?? ""),
     }));
   }, [studio.vertical, teachers]);
@@ -224,7 +224,7 @@ export default function Classes() {
 
       {/* ── Style filters ── */}
       <div className="flex flex-wrap gap-2">
-        {(["All", ...term.styleCategories] as (ClassStyle | "All")[]).map((s) => (
+        {(["All", ...term.styleSuggestions] as string[]).map((s) => (
           <button
             key={s}
             onClick={() => setStyleFilter(s)}
@@ -282,7 +282,7 @@ export default function Classes() {
                   <span
                     className={cn(
                       "rounded-full px-2.5 py-1 text-xs font-semibold",
-                      (styleStyles[c.style] ?? styleStyles.Ballet).chip,
+                      (styleStyles[c.style] ?? styleStyles["Strength"]).chip,
                     )}
                   >
                     {c.style}
@@ -340,7 +340,7 @@ export default function Classes() {
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
-                      (styleStyles[c.style] ?? styleStyles.Ballet).dot,
+                      (styleStyles[c.style] ?? styleStyles["Strength"]).dot,
                     )}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
@@ -476,8 +476,8 @@ export default function Classes() {
             <Field label={term.classStyle}>
               <Select
                 value={form.style}
-                onChange={(v) => setForm({ ...form, style: v as ClassStyle })}
-                options={term.styleCategories as string[]}
+                onChange={(v) => setForm({ ...form, style: v })}
+                options={term.styleSuggestions as string[]}
               />
             </Field>
             <Field label="Age group">

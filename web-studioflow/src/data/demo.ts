@@ -76,7 +76,7 @@ export function getDemoStudio(vertical: Vertical): Studio {
   };
 }
 
-const VERTICAL_TEACHER_POOLS: Record<Vertical, Array<{ name: string; styles: ClassStyle[]; skills: Array<{ name: string; category: string }>; email: string; hourlyRateCents: number; payType: "employee" | "1099" }>> = {
+const VERTICAL_TEACHER_POOLS: Record<Vertical, Array<{ name: string; styles: string[]; skills: Array<{ name: string; category: string }>; email: string; hourlyRateCents: number; payType: "employee" | "1099" }>> = {
   dance: [
     { name: "Mara Delgado", styles: ["Ballet", "Lyrical"], skills: [{ name: "Ballet", category: "Dance" }, { name: "Lyrical", category: "Dance" }, { name: "Pointe", category: "Dance" }], email: "mara@aurora.dance", hourlyRateCents: 4500, payType: "employee" },
     { name: "Theo Nakamura", styles: ["Hip Hop", "Jazz"], skills: [{ name: "Hip Hop", category: "Dance" }, { name: "Jazz", category: "Dance" }, { name: "Breaking", category: "Dance" }], email: "theo@aurora.dance", hourlyRateCents: 5000, payType: "1099" },
@@ -113,7 +113,7 @@ const VERTICAL_TEACHER_POOLS: Record<Vertical, Array<{ name: string; styles: Cla
   ],
 };
 
-const VERTICAL_CLASS_TEMPLATES: Record<Vertical, Array<{ name: string; style: ClassStyle; ageGroup: AgeGroup; day: WeekDay; startTime: string; durationMins: number; room: string; capacity: number; priceCents: number; inRecital: boolean }>> = {
+const VERTICAL_CLASS_TEMPLATES: Record<Vertical, Array<{ name: string; style: string; ageGroup: AgeGroup; day: WeekDay; startTime: string; durationMins: number; room: string; capacity: number; priceCents: number; inRecital: boolean }>> = {
   dance: [
     { name: "Tiny Tots Ballet", style: "Ballet", ageGroup: "Tiny Tots", day: "Mon", startTime: "16:00", durationMins: 45, room: "Studio A", capacity: 12, priceCents: 8500, inRecital: true },
     { name: "Junior Hip Hop", style: "Hip Hop", ageGroup: "Junior", day: "Mon", startTime: "17:00", durationMins: 60, room: "Studio B", capacity: 18, priceCents: 9500, inRecital: true },

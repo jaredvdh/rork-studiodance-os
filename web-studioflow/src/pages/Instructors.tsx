@@ -206,8 +206,10 @@ function InstructorModal({
   onSave: (form: InstructorFormData) => void;
 }) {
   const { teachers } = useTeachers();
+  const { classes } = useClasses();
   const term = useTerminology();
   const [form, setForm] = useState<InstructorFormData>(emptyForm());
+  const [customStyle, setCustomStyle] = useState("");
 
   useState(() => {
     if (editingId) {
@@ -228,13 +230,33 @@ function InstructorModal({
     } else {
       setForm(emptyForm());
     }
+    setCustomStyle("");
   }
 
-  function toggleStyle(s: ClassStyle) {
+  // Unique class/program types that already exist in this studio
+  const existingPrograms = useMemo(() => {
+    return [...new Set(classes.map((c) => c.style).filter(Boolean))];
+  }, [classes]);
+
+  // Suggestions from terminology, minus already-created programs the user might select
+  const suggestions = useMemo(() => {
+    return term.styleSuggestions.filter((s) => !existingPrograms.includes(s));
+  }, [term.styleSuggestions, existingPrograms]);
+
+  function toggleStyle(s: string) {
     setForm((f) => ({
       ...f,
       styles: f.styles.includes(s) ? f.styles.filter((x) => x !== s) : [...f.styles, s],
     }));
+  }
+
+  function addCustomStyle() {
+    const trimmed = customStyle.trim();
+    if (!trimmed) return;
+    if (!form.styles.includes(trimmed)) {
+      setForm((f) => ({ ...f, styles: [...f.styles, trimmed] }));
+    }
+    setCustomStyle("");
   }
 
   return (
@@ -242,7 +264,7 @@ function InstructorModal({
       open={open}
       onClose={onClose}
       title={editingId ? `Edit ${term.instructor.toLowerCase()}` : `Add ${term.instructor.toLowerCase()}`}
-      description={editingId ? "Update profile, teaching styles, and pay rate." : "Add a new instructor to your studio."}
+      description={editingId ? "Update profile, programs, and pay rate." : `Add a new ${term.instructor.toLowerCase()} to your studio.`}
       footer={
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm font-semibold transition hover:bg-secondary">
@@ -250,7 +272,7 @@ function InstructorModal({
           </button>
           <button
             onClick={() => onSave(form)}
-            disabled={!form.name.trim() || !form.email.trim() || form.styles.length === 0}
+            disabled={!form.name.trim() || !form.email.trim()}
             className="rounded-full bg-rose px-5 py-2 text-sm font-semibold text-rose-foreground transition hover:opacity-90 disabled:opacity-50"
           >
             {editingId ? "Save changes" : `Add ${term.instructor.toLowerCase()}`}
@@ -340,28 +362,106 @@ function InstructorModal({
           </Field>
         </div>
 
-        {/* Teaching styles */}
-        <Field label={`${term.classStyle}s *`}>
-          <div className="flex flex-wrap gap-2">
-            {term.styleCategories.map((s) => {
-              const active = form.styles.includes(s);
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleStyle(s)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
-                    active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground/70 hover:bg-secondary",
-                  )}
-                >
-                  {active && <Sparkles className="mr-1 inline h-3 w-3" />}
-                  {s}
-                </button>
-              );
-            })}
+        {/* Programs — user-driven with suggestions + existing studio classes */}
+        <SectionHeading icon={GraduationCap} title={`${term.classStyle}s (optional)`} />
+
+        {existingPrograms.length === 0 && form.styles.length === 0 ? (
+          <div className="rounded-2xl border border-border/70 bg-secondary/30 p-5 text-center">
+            <p className="text-sm font-medium text-foreground">
+              No {term.class.toLowerCase()}s created yet.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              You can add {term.class.toLowerCase()} types now or assign this {term.instructor.toLowerCase()} later.
+            </p>
           </div>
-        </Field>
+        ) : (
+          <>
+            {/* Existing studio programs — always shown first */}
+            {existingPrograms.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Your {term.class.toLowerCase()}s
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {existingPrograms.map((s) => {
+                    const active = form.styles.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleStyle(s)}
+                        className={cn(
+                          "rounded-full border px-3.5 py-1.5 text-sm font-medium transition active:scale-95",
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-teal/30 bg-teal/5 text-teal hover:bg-teal/10",
+                        )}
+                      >
+                        {active && <Sparkles className="mr-1 inline h-3 w-3" />}
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Suggestions (from terminology) */}
+        {suggestions.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Suggested {term.classStyle.toLowerCase()}s
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => {
+                const active = form.styles.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleStyle(s)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-1.5 text-sm font-medium transition active:scale-95",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground/70 hover:bg-secondary",
+                    )}
+                  >
+                    {active && <Sparkles className="mr-1 inline h-3 w-3" />}
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Custom style input */}
+        <div className="flex gap-2">
+          <input
+            value={customStyle}
+            onChange={(e) => setCustomStyle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomStyle(); } }}
+            placeholder={`Type a custom ${term.classStyle.toLowerCase()}…`}
+            className="flex-1 rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-rose focus:ring-2 focus:ring-rose/20"
+          />
+          <button
+            type="button"
+            onClick={addCustomStyle}
+            disabled={!customStyle.trim()}
+            className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+
+        {form.styles.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No {term.classStyle.toLowerCase()}s assigned. You can assign them now or later — this {term.instructor.toLowerCase()} can still be saved.
+          </p>
+        )}
 
         {/* Pay */}
         <SectionHeading icon={DollarSign} title="Pay Rate" />

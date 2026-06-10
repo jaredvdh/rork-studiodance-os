@@ -626,8 +626,10 @@ export function classById(id: string, contextClasses?: Class[]): Class | undefin
   return all.find((c) => c.id === id);
 }
 
-/** Tailwind-ready accent tokens per class style for chips and visuals. */
-export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
+/** Tailwind-ready accent tokens per class style for chips and visuals.
+ * Supports any string key — built-in styles get curated colours, unknown styles
+ * get a deterministic fallback derived from the string itself. */
+const STYLE_PALETTE: Record<string, { dot: string; chip: string }> = {
   // Dance
   Ballet: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Jazz: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
@@ -642,17 +644,23 @@ export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
   Yin: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
   Restorative: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
   "Power Yoga": { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  "Hot Yoga": { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   // CrossFit / Gym
   Strength: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Conditioning: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  CrossFit: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  "Functional Fitness": { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
   "Olympic Lifting": { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
   Gymnastics: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
   Mobility: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+  "Open Gym": { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
   // Martial Arts
+  Fundamentals: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
   Beginner: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
   Intermediate: { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
   Advanced: { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
   Sparring: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  "Kids Program": { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
   "Grading Prep": { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
   // Music
   Piano: { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
@@ -661,6 +669,31 @@ export const styleStyles: Record<ClassStyle, { dot: string; chip: string }> = {
   Violin: { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
   Drums: { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
 };
+
+const FALLBACK_PALETTE: { dot: string; chip: string }[] = [
+  { dot: "bg-rose", chip: "bg-rose/10 text-rose" },
+  { dot: "bg-teal", chip: "bg-teal/10 text-teal" },
+  { dot: "bg-gold", chip: "bg-gold/15 text-gold" },
+  { dot: "bg-plum", chip: "bg-plum/10 text-plum" },
+  { dot: "bg-foreground", chip: "bg-foreground/10 text-foreground" },
+];
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function styleFor(style: string): { dot: string; chip: string } {
+  if (STYLE_PALETTE[style]) return STYLE_PALETTE[style];
+  return FALLBACK_PALETTE[hashString(style) % FALLBACK_PALETTE.length];
+}
+
+export const styleStyles = new Proxy({} as Record<string, { dot: string; chip: string }>, {
+  get(_target, prop: string) {
+    return styleFor(prop);
+  },
+});
 
 /* ── Shared waivers state (templates + signatures) ───────────────────── */
 

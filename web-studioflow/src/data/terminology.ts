@@ -31,15 +31,19 @@ export interface VerticalTerminology {
   participant: string;
   /** Plural participant label */
   participantPlural: string;
+  /** Guardian / parent label (e.g. "Parent", "Guardian") */
+  guardian: string;
+  /** Plural guardian */
+  guardianPlural: string;
   /** Instructor/coach/teacher label */
   instructor: string;
   /** Plural instructor */
   instructorPlural: string;
-  /** Singular class label (e.g. "Class", "Session", "WOD") */
+  /** Singular class label (e.g. "Class", "Session", "Program") */
   class: string;
   /** Plural class label */
   classPlural: string;
-  /** Class style label (e.g. "Dance Style", "Workout Type") */
+  /** Class style label (e.g. "Dance Style", "Workout Type", "Program Type") */
   classStyle: string;
   /** Singular event label (e.g. "Recital", "Competition", "Workshop") */
   event: string;
@@ -49,14 +53,19 @@ export interface VerticalTerminology {
   verticalAdjective: string;
   /** Modules that are enabled for this vertical type. Used for nav visibility and dashboard cards. */
   enabledModules: ModuleKey[];
-  /** Available class/style categories for this vertical (used in filter dropdowns). */
-  styleCategories: ClassStyle[];
+  /** Suggested class/program types for this vertical. These are optional suggestions only —
+   * studio owners can create custom types freely. */
+  styleSuggestions: string[];
+  /** @deprecated Use styleSuggestions instead. Kept for backward compatibility. */
+  styleCategories: string[];
 }
 
 const terminology: Record<Vertical, VerticalTerminology> = {
   dance: {
     participant: "Student",
     participantPlural: "Students",
+    guardian: "Parent",
+    guardianPlural: "Parents",
     instructor: "Instructor",
     instructorPlural: "Instructors",
     class: "Class",
@@ -66,13 +75,16 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     eventPlural: "Recitals",
     verticalAdjective: "dance",
     enabledModules: ["family", "classes", "schedule", "costumes", "recitals", "payments", "waivers", "instructors", "announcements"],
-    styleCategories: ["Ballet", "Jazz", "Hip Hop", "Contemporary", "Tap", "Lyrical", "Acro"],
+    styleSuggestions: ["Ballet", "Jazz", "Tap", "Contemporary", "Acro", "Hip Hop", "Lyrical"],
+    styleCategories: ["Ballet", "Jazz", "Tap", "Contemporary", "Acro", "Hip Hop", "Lyrical"],
   },
   yoga: {
     participant: "Member",
     participantPlural: "Members",
-    instructor: "Teacher",
-    instructorPlural: "Teachers",
+    guardian: "Guardian",
+    guardianPlural: "Guardians",
+    instructor: "Instructor",
+    instructorPlural: "Instructors",
     class: "Class",
     classPlural: "Classes",
     classStyle: "Practice Style",
@@ -80,25 +92,31 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     eventPlural: "Workshops",
     verticalAdjective: "yoga",
     enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
-    styleCategories: ["Vinyasa", "Hatha", "Yin", "Restorative", "Power Yoga"],
+    styleSuggestions: ["Vinyasa", "Hatha", "Yin", "Hot Yoga", "Restorative", "Power Yoga"],
+    styleCategories: ["Vinyasa", "Hatha", "Yin", "Hot Yoga", "Restorative", "Power Yoga"],
   },
   crossfit: {
-    participant: "Athlete",
-    participantPlural: "Athletes",
+    participant: "Member",
+    participantPlural: "Members",
+    guardian: "Guardian",
+    guardianPlural: "Guardians",
     instructor: "Coach",
     instructorPlural: "Coaches",
-    class: "WOD",
-    classPlural: "WODs",
-    classStyle: "Workout Type",
+    class: "Session",
+    classPlural: "Sessions",
+    classStyle: "Program Type",
     event: "Competition",
     eventPlural: "Competitions",
     verticalAdjective: "CrossFit",
     enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
-    styleCategories: ["Strength", "Conditioning", "Olympic Lifting", "Gymnastics", "Mobility"],
+    styleSuggestions: ["CrossFit", "Functional Fitness", "Strength", "Conditioning", "Olympic Lifting", "Mobility", "Open Gym"],
+    styleCategories: ["CrossFit", "Functional Fitness", "Strength", "Conditioning", "Olympic Lifting", "Mobility", "Open Gym"],
   },
   gym: {
     participant: "Member",
     participantPlural: "Members",
+    guardian: "Guardian",
+    guardianPlural: "Guardians",
     instructor: "Trainer",
     instructorPlural: "Trainers",
     class: "Class",
@@ -108,25 +126,31 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     eventPlural: "Events",
     verticalAdjective: "gym",
     enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
+    styleSuggestions: ["Strength", "Conditioning", "Olympic Lifting", "Gymnastics", "Mobility"],
     styleCategories: ["Strength", "Conditioning", "Olympic Lifting", "Gymnastics", "Mobility"],
   },
   martial_arts: {
     participant: "Student",
     participantPlural: "Students",
-    instructor: "Sensei",
-    instructorPlural: "Senseis",
+    guardian: "Guardian",
+    guardianPlural: "Guardians",
+    instructor: "Instructor",
+    instructorPlural: "Instructors",
     class: "Class",
     classPlural: "Classes",
-    classStyle: "Discipline",
+    classStyle: "Program",
     event: "Tournament",
     eventPlural: "Tournaments",
     verticalAdjective: "martial arts",
     enabledModules: ["family", "classes", "schedule", "payments", "waivers", "instructors", "announcements"],
-    styleCategories: ["Beginner", "Intermediate", "Advanced", "Sparring", "Grading Prep"],
+    styleSuggestions: ["Fundamentals", "Sparring", "Kids Program", "Grading Prep", "Advanced"],
+    styleCategories: ["Fundamentals", "Sparring", "Kids Program", "Grading Prep", "Advanced"],
   },
   music_school: {
     participant: "Student",
     participantPlural: "Students",
+    guardian: "Parent",
+    guardianPlural: "Parents",
     instructor: "Teacher",
     instructorPlural: "Teachers",
     class: "Class",
@@ -136,6 +160,7 @@ const terminology: Record<Vertical, VerticalTerminology> = {
     eventPlural: "Recitals",
     verticalAdjective: "music",
     enabledModules: ["family", "classes", "schedule", "recitals", "payments", "waivers", "instructors", "announcements"],
+    styleSuggestions: ["Piano", "Guitar", "Voice", "Violin", "Drums"],
     styleCategories: ["Piano", "Guitar", "Voice", "Violin", "Drums"],
   },
 };

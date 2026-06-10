@@ -24,7 +24,7 @@ import {
 import Modal from "@/components/Modal";
 import { recitalEvents } from "@/data/demo";
 import { classById, styleStyles, teacherName, useStudio, useStudioData, useTeachers, useCostumes, useTerminology } from "@/data/store";
-import type { AgeGroup, Class, ClassStyle, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
+import type { AgeGroup, Class, Costume, CostumeAssignment, RecitalEvent, RecitalPerformance, Studio, Teacher } from "@/data/types";
 import type { VerticalTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
 import { resolveRegionalSettings, formatTimeRegional, formatDateRegional } from "@/lib/format";
@@ -179,7 +179,7 @@ function exportProgrammeToWord(
   URL.revokeObjectURL(url);
 }
 
-function styleColor(style: ClassStyle): string {
+function styleColor(style: string): string {
   const map: Record<string, string> = {
     // Dance
     Ballet: "#d94a6e",
