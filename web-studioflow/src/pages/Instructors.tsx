@@ -29,6 +29,7 @@ import {
 import Modal from "@/components/Modal";
 import { styleStyles, useClasses, useTeachers, useTerminology } from "@/data/store";
 import type { ClassStyle, Teacher, InstructorStatus, Certification, InstructorDocument } from "@/data/types";
+import { formatAddressShort } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: InstructorStatus; label: string; color: string }[] = [
@@ -181,7 +182,7 @@ function teacherToForm(t: Teacher): InstructorFormData {
     preferredName: t.preferredName ?? "",
     email: t.email,
     phone: t.phone ?? "",
-    address: t.address ?? "",
+    address: formatAddressShort(t.address),
     styles: [...t.styles],
     status: t.status,
     hireDate: t.hireDate ?? "",
@@ -545,7 +546,7 @@ function ProfileTab({ teacher }: { teacher: Teacher }) {
             )}
             {teacher.address && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" /> {teacher.address}
+                <MapPin className="h-3.5 w-3.5" /> {formatAddressShort(teacher.address)}
               </span>
             )}
           </div>
@@ -562,7 +563,7 @@ function ProfileTab({ teacher }: { teacher: Teacher }) {
             <InfoRow label="Preferred name" value={teacher.preferredName} />
             <InfoRow label="Email" value={teacher.email} />
             <InfoRow label="Phone" value={teacher.phone} />
-            <InfoRow label="Address" value={teacher.address} />
+            <InfoRow label="Address" value={formatAddressShort(teacher.address)} />
           </div>
         </div>
 

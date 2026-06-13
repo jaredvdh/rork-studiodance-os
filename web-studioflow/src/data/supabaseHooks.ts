@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/studioStore";
-import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument, Costume, CostumeAssignment, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, VendorOrderItem, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict } from "@/data/types";
+import type { Studio, Teacher, Student, Class, Announcement, Invoice, ParentAccount, Enrolment, EnrolmentStatus, WaiverTemplate, WaiverVersion, WaiverSignature, UploadedDocument, Costume, CostumeAssignment, CostumeStatus, StudentMeasurement, SizingChart, SizeRecommendation, CostumeFee, VendorOrder, VendorOrderItem, Alteration, CostumeDistribution, ReusableCostume, CostumeRental, QuickChangeConflict, Caregiver, Address, Certification } from "@/data/types";
 import {
   getDemoAnnouncements,
   getDemoClasses,
@@ -116,7 +116,7 @@ export function useSupabaseTeachers(isDemo: boolean) {
     async () => {
       const { data, error } = await supabase.from("teachers").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
-      return { data: data.map((t) => ({ id: t.id, studioId: t.studio_id, name: t.name, styles: t.styles as Teacher["styles"], email: t.email, hourlyRateCents: t.hourly_rate_cents ?? undefined, payType: (t.pay_type as Teacher["payType"]) ?? undefined })), error: null };
+      return { data: data.map((t) => ({ id: t.id, studioId: t.studio_id, name: t.name, styles: t.styles as Teacher["styles"], email: t.email, status: ((t as Record<string, unknown>).status as Teacher["status"]) ?? "active", certifications: (((t as Record<string, unknown>).certifications as Certification[]) ?? []), hourlyRateCents: t.hourly_rate_cents ?? undefined, payType: (t.pay_type as Teacher["payType"]) ?? undefined })), error: null };
     },
     vTeachers,
     isDemo,
@@ -997,12 +997,12 @@ export function useSupabaseWaiverTemplates(isDemo: boolean) {
         data: (data as unknown as Record<string, unknown>[]).map((t) => ({
           id: t.id as string, studioId: t.studio_id as string, title: t.title as string,
           description: (t.description as string) ?? undefined,
-          type: (t.type as string) ?? "custom",
-          status: (t.status as string) ?? "draft",
+          type: ((t.type as string) ?? "custom") as WaiverTemplate["type"],
+          status: ((t.status as string) ?? "draft") as WaiverTemplate["status"],
           currentVersionId: (t.current_version_id as string) ?? undefined,
           required: (t.required as boolean) ?? false,
-          appliesTo: (t.applies_to as { scope: string; targetIds?: string[] }) ?? { scope: "all" },
-          renewalPeriod: (t.renewal_period as string) ?? "once",
+          appliesTo: (t.applies_to as WaiverTemplate["appliesTo"]) ?? { scope: "all" },
+          renewalPeriod: ((t.renewal_period as string) ?? "once") as WaiverTemplate["renewalPeriod"],
           createdAt: (t.created_at as string) ?? "",
           updatedAt: (t.updated_at as string) ?? "",
         })),
@@ -1297,7 +1297,7 @@ export function useSupabaseCostumes(isDemo: boolean) {
         vendorWebsiteUrl: (c.vendor_website_url as string) ?? undefined,
         productPageUrl: (c.product_page_url as string) ?? undefined,
         style: (c.style as string) ?? undefined,
-        season: (c.season as string) ?? undefined, category: (c.category as string) ?? "other",
+        season: (c.season as string) ?? undefined, category: ((c.category as string) ?? "other") as Costume["category"],
         colour: (c.colour as string) ?? undefined, description: (c.description as string) ?? undefined,
         images: (c.images as string[]) ?? [], vendorPdfUrl: (c.vendor_pdf_url as string) ?? undefined,
         sizingChartPdfUrl: (c.sizing_chart_pdf_url as string) ?? undefined,
@@ -1452,7 +1452,8 @@ export function useSupabaseStudentMeasurements(isDemo: boolean) {
         inseamCm: (m.inseam_cm as number) ?? undefined, shoeSize: (m.shoe_size as string) ?? undefined,
         measuredBy: (m.measured_by as string) ?? undefined, measuredAt: (m.measured_at as string) ?? undefined,
         submittedBy: (m.submitted_by as string) ?? undefined,
-        status: ((m.status as string) ?? "pending") as StudentMeasurement["status"],
+        source: ((m.source as string) ?? "studio") as StudentMeasurement["source"],
+        status: ((m.status as string) ?? "pending_review") as StudentMeasurement["status"],
         notes: (m.notes as string) ?? undefined,
         createdAt: (m.created_at as string) ?? "",
       })), error: null };

@@ -30,7 +30,7 @@ const EDGE_FUNCTION =
 /** Publishable key — safe for client. If unset or placeholder, simulated mode is active. */
 function getStripePk(): string {
   try {
-    const env = (import.meta as Record<string, Record<string, string>>).env;
+    const env = (import.meta as unknown as { env: Record<string, string> }).env;
     return env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
   } catch {
     return "";

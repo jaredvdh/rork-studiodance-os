@@ -1,6 +1,7 @@
 import { Beaker, FlaskConical, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStudio } from "@/data/studioStore";
+import { getFunctionUrl } from "@/lib/supabaseFunctions";
 
 interface DemoBadgeProps {
   /** Visual variant */

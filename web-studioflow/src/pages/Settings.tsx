@@ -498,7 +498,7 @@ export default function Settings() {
         manualPaymentLink={manualPaymentLink}
         onPaymentMethodChange={(method) =>
           updateStudio({
-            settings: { ...studio.settings, paymentMethod: method },
+            settings: { ...studio.settings, paymentMethod: method as "stripe" | "manual" },
           })
         }
         onManualNotesChange={setManualPaymentNotes}

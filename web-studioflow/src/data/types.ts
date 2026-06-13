@@ -181,6 +181,12 @@ export interface Studio {
     measurementCollectionMode?: MeasurementCollectionMode;
     /** Feature toggles for admin-controlled module visibility. */
     featureToggles?: Record<string, boolean>;
+    /** Payment processing method for the studio. */
+    paymentMethod?: "stripe" | "manual";
+    /** Free-text instructions shown to families when paying manually. */
+    manualPaymentNotes?: string;
+    /** External payment link for manual payment flows. */
+    manualPaymentLink?: string;
   };
 }
 
@@ -278,6 +284,18 @@ export interface Teacher {
 export type WaiverStatus = "signed" | "pending" | "missing";
 export type PaymentStatus = "paid" | "due" | "overdue";
 
+/** Invoice lifecycle status — broader than PaymentStatus to cover the
+ * full billing flow (draft → sent → processing/paid/failed/refunded). */
+export type InvoiceStatus =
+  | "draft"
+  | "sent"
+  | "due"
+  | "overdue"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "refunded";
+
 export interface Student {
   id: string;
   studioId: string;
@@ -345,7 +363,7 @@ export interface Invoice {
   caregiverName: string;
   description: string;
   amountCents: number;
-  status: PaymentStatus;
+  status: InvoiceStatus;
   dueDate: string; // ISO
   /** Optional link to the enrolment this invoice was generated from. */
   enrolmentId?: string;

@@ -25,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useEnrichedClasses, useStudents, useStudioData, useTerminology } from "@/data/store";
+import { useEnrichedClasses, useStudents, useStudioData, useTerminology, CostumesContext } from "@/data/store";
 import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, StudentMeasurement, WaiverStatus } from "@/data/types";
 import { caregiverFullName } from "@/data/types";
 import { parentAccounts } from "@/data/demo";
@@ -300,6 +300,7 @@ function EnrolModal({
   onWithdraw: (studentId: string, classId: string) => void;
   onClose: () => void;
 }) {
+  const term = useTerminology();
   const student = students.find((s) => s.id === studentId);
   if (!student) return null;
 
@@ -415,7 +416,7 @@ const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground border-border",
 };
 
-function MeasurementsTabPanel({ studentId, onBack, onClose }: { studentId: string; onBack: () => void; onClose: () => void }) {
+function MeasurementsTabPanel({ studentId, onBack }: { studentId: string; onBack?: () => void; onClose?: () => void }) {
   const costumesCtx = useContext(CostumesContext);
   const measurementRecord = costumesCtx?.measurementForStudent(studentId) ?? null;
   const historyList = costumesCtx?.measurementHistory(studentId) ?? [];

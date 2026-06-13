@@ -44,6 +44,7 @@ export interface MigrationState {
 export interface ImportPreview {
   studentCount: number;
   parentCount: number;
+  caregiverCount?: number;
   classCount: number;
   instructorCount: number;
   enrolmentCount: number;
@@ -523,6 +524,8 @@ export function MigrationProvider({ children }: { children: React.ReactNode }) {
           name,
           email,
           styles: (row.mapped.styles?.split(",").map((s) => s.trim()).filter(Boolean) || ["Ballet"]) as Teacher["styles"],
+          status: "active",
+          certifications: [],
           hourlyRateCents: Math.round((Number(row.mapped.hourlyRateCents) || 40) * 100),
           payType: (row.mapped.payType?.trim().toLowerCase() === "1099" ? "1099" : "employee") as Teacher["payType"],
         };

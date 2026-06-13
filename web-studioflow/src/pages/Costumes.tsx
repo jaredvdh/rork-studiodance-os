@@ -67,6 +67,7 @@ import type {
   Costume,
   CostumeAssignment,
   CostumeCategory,
+  CostumeStatus,
   CostumeFee,
   CostumeRental,
   QuickChangeConflict,
@@ -91,6 +92,21 @@ const TABS: { key: Tab; label: string; icon: typeof Shirt }[] = [
   { key: "inventory", label: "Inventory", icon: Warehouse },
   { key: "quickchange", label: "Quick Change", icon: Clock },
 ];
+
+interface CostumeSummary {
+  totalCostumes: number;
+  totalAssignments: number;
+  missingMeasurements: number;
+  totalMeasurements: number;
+  outstandingFees: number;
+  overdueAlterations: number;
+  conflicts: number;
+  inTransit: number;
+  readyDist: number;
+  totalFees: number;
+  totalPaid: number;
+  feeCollectionPct: number;
+}
 
 export default function Costumes() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -124,7 +140,7 @@ export default function Costumes() {
   }, [ctx.costumes, search]);
 
   // Computed summary metrics
-  const summary = useMemo(() => {
+  const summary: CostumeSummary = useMemo(() => {
     const missingMeasurements = ctx.studentsMissingMeasurements(students.map((s) => s.id));
     const outstandingFees = ctx.outstandingFeeTotal();
     const overdueAlterations = ctx.alterations.filter(
@@ -308,7 +324,7 @@ export default function Costumes() {
 /* ── Dashboard Sub-Component ──────────────────────────────────────────── */
 
 function CostumeDashboard({ summary, ctx, students, term }: {
-  summary: ReturnType<typeof useMemo>;
+  summary: CostumeSummary;
   ctx: ReturnType<typeof useCostumes>;
   students: ReturnType<typeof useStudents>["students"];
   term: ReturnType<typeof useTerminology>;
@@ -734,7 +750,7 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
       {/* Summary bar */}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatPill label="Approved" value={measurements.filter((m) => m.status === "approved").length} tone="bg-teal" />
-        <StatPill label="Pending" value={measurements.filter((m) => m.status === "pending").length} tone="bg-gold" />
+        <StatPill label="Pending" value={measurements.filter((m) => m.status === "pending_review").length} tone="bg-gold" />
         <StatPill label="Draft" value={measurements.filter((m) => m.status === "draft").length} tone="bg-secondary" />
       </div>
 
@@ -788,7 +804,7 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
                 <span className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-semibold",
                   latest.status === "approved" ? "bg-teal/10 text-teal" :
-                  latest.status === "pending" ? "bg-gold/10 text-gold" :
+                  latest.status === "pending_review" ? "bg-gold/10 text-gold" :
                   latest.status === "rejected" ? "bg-rose/10 text-rose" :
                   "bg-secondary text-muted-foreground",
                 )}>
@@ -817,7 +833,7 @@ function MeasurementsTab({ measurements, students, sizingCharts, recommendations
                               <span className={cn(
                                 "rounded-full px-1.5 py-0.5 text-[9px] font-semibold",
                                 prev.status === "approved" ? "bg-teal/10 text-teal" :
-                                prev.status === "pending" ? "bg-gold/10 text-gold" :
+                                prev.status === "pending_review" ? "bg-gold/10 text-gold" :
                                 prev.status === "rejected" ? "bg-rose/10 text-rose" :
                                 "bg-secondary text-muted-foreground",
                               )}>
@@ -1009,7 +1025,7 @@ function OrdersTab({ orders, costumes }: { orders: VendorOrder[]; costumes: Cost
               {/* Timeline */}
               <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-2">
                 {(["draft", "ordered", "shipped", "delivered", "quality_checked", "ready", "distributed"] as const).map((s, i, arr) => {
-                  const done = arr.indexOf(order.status) >= i && order.status !== "cancelled";
+                  const done = arr.indexOf(order.status as typeof arr[number]) >= i && order.status !== "cancelled";
                   return (
                     <div key={s} className="flex items-center gap-1 shrink-0">
                       <div className={cn(

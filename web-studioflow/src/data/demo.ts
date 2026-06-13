@@ -1,7 +1,10 @@
 import type {
+  AgeGroup,
   Alteration,
   Announcement,
+  AnnouncementScope,
   Caregiver,
+  CaregiverRole,
   CaregiverAuditEvent,
   Class,
   Costume,
@@ -30,6 +33,7 @@ import type {
   WaiverTemplate,
   WaiverVersion,
   Vertical,
+  WeekDay,
 } from "./types";
 import { SAFE_SECONDARY_DEFAULTS, type Address, type AddressSource } from "./types";
 
@@ -387,7 +391,7 @@ function makeCaregiver(
   phone: string,
   address: string,
   relationship: string,
-  role: "primary_caregiver" | "secondary_caregiver",
+  role: CaregiverRole,
   overrides?: Partial<Caregiver>,
 ): Caregiver {
   return {

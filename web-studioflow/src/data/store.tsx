@@ -230,7 +230,7 @@ export function useTeachers() {
 
 interface ClassesCtx {
   classes: Class[];
-  addClass: (c: Omit<Class, "id" | "studioId">) => void;
+  addClass: (c: Omit<Class, "id" | "studioId" | "enrolled" | "waitlist"> & { enrolled?: number; waitlist?: number }) => void;
   removeClass: (id: string) => void;
   updateClass: (id: string, patch: Partial<Omit<Class, "id" | "studioId">>) => void;
 }
@@ -258,12 +258,13 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
   const updateClassMut = useUpdateClass();
   const removeClassMut = useRemoveClass();
 
-  const addClass = useCallback((c: Omit<Class, "id" | "studioId">) => {
+  const addClass = useCallback((c: Omit<Class, "id" | "studioId" | "enrolled" | "waitlist"> & { enrolled?: number; waitlist?: number }) => {
     const tempId = `c${Date.now()}`;
-    const optimistic: Class = { ...c, id: tempId, studioId: "" };
+    const full: Omit<Class, "id" | "studioId"> = { enrolled: 0, waitlist: 0, ...c };
+    const optimistic: Class = { ...full, id: tempId, studioId: "" };
     setClasses((prev) => [optimistic, ...prev]);
     if (isDemo) return;
-    addClassMut.mutate(c, {
+    addClassMut.mutate(full, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
       onError: () => {
         setClasses((prev) => prev.filter((x) => x.id !== tempId));
@@ -965,12 +966,12 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
   const [costumes, setCostumes] = useState<Costume[]>([]);
   const [assignments, setAssignments] = useState<CostumeAssignment[]>([]);
   const [measurements, setMeasurements] = useState<StudentMeasurement[]>([]);
-  const [sizingCharts] = useState<SizingChart[]>(supabaseSizingCharts);
-  const [sizeRecommendations] = useState<SizeRecommendation[]>(supabaseSizeRecs);
+  const [sizingCharts, setSizingCharts] = useState<SizingChart[]>(supabaseSizingCharts);
+  const [sizeRecommendations, setSizeRecs] = useState<SizeRecommendation[]>(supabaseSizeRecs);
   const [costumeFees] = useState<CostumeFee[]>(supabaseFees);
-  const [vendorOrders] = useState<VendorOrder[]>(supabaseOrders);
+  const [vendorOrders, setVendorOrders] = useState<VendorOrder[]>(supabaseOrders);
   const [alterations] = useState<Alteration[]>(supabaseAlterations);
-  const [distributions] = useState<CostumeDistribution[]>(supabaseDistributions);
+  const [distributions, setDistributions] = useState<CostumeDistribution[]>(supabaseDistributions);
   const [reusableInventory] = useState<ReusableCostume[]>(supabaseReusable);
   const [rentals] = useState<CostumeRental[]>(supabaseRentals);
   const [quickChangeConflicts] = useState<QuickChangeConflict[]>(supabaseQuickChange);
@@ -1035,7 +1036,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const now = new Date().toISOString();
       const newChart: SizingChart = { ...c, id, studioId: "demo", createdAt: now };
-      (setSizingCharts as (val: React.SetStateAction<SizingChart[]>) => void)((prev: SizingChart[]) => [newChart, ...prev]);
+      setSizingCharts((prev: SizingChart[]) => [newChart, ...prev]);
       return;
     }
     await addSizingChartMutation.mutateAsync(c);
@@ -1043,7 +1044,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
 
   const deleteSizingChart = useCallback((id: string) => {
     if (isDemo) {
-      (setSizingCharts as (val: React.SetStateAction<SizingChart[]>) => void)((prev: SizingChart[]) => prev.filter((x: SizingChart) => x.id !== id));
+      setSizingCharts((prev: SizingChart[]) => prev.filter((x: SizingChart) => x.id !== id));
       return;
     }
     deleteSizingChartMutation.mutate(id);
@@ -1054,7 +1055,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       const id = `sr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const now = new Date().toISOString();
       const newRec: SizeRecommendation = { ...r, id, studioId: "demo", createdAt: now, updatedAt: now };
-      (setSizeRecs as (val: React.SetStateAction<SizeRecommendation[]>) => void)((prev: SizeRecommendation[]) => [newRec, ...prev]);
+      setSizeRecs((prev: SizeRecommendation[]) => [newRec, ...prev]);
       return;
     }
     await addSizeRecMutation.mutateAsync(r);
@@ -1065,7 +1066,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       const id = `vo_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const now = new Date().toISOString();
       const newOrder: VendorOrder = { ...o, id, studioId: "demo", createdAt: now, updatedAt: now };
-      (setVendorOrders as (val: React.SetStateAction<VendorOrder[]>) => void)((prev: VendorOrder[]) => [newOrder, ...prev]);
+      setVendorOrders((prev: VendorOrder[]) => [newOrder, ...prev]);
       return;
     }
     await addVendorOrderMutation.mutateAsync(o);
@@ -1076,7 +1077,7 @@ export function CostumesProvider({ children }: { children: React.ReactNode }) {
       const id = `cd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const now = new Date().toISOString();
       const newDist: CostumeDistribution = { ...d, id, studioId: "demo", createdAt: now };
-      (setDistributions as (val: React.SetStateAction<CostumeDistribution[]>) => void)((prev: CostumeDistribution[]) => [newDist, ...prev]);
+      setDistributions((prev: CostumeDistribution[]) => [newDist, ...prev]);
       return;
     }
     await addDistributionMutation.mutateAsync(d);

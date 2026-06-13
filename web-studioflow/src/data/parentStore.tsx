@@ -81,8 +81,8 @@ interface ParentCtx {
     child: Omit<
       Student,
       | "id" | "studioId" | "caregiverId" | "caregiverName" | "caregiverEmail"
-      | "classIds" | "attendanceRate" | "payment" | "balanceCents"
-    >,
+      | "classIds" | "attendanceRate" | "payment" | "balanceCents" | "waiver"
+    > & { waiver?: Student["waiver"] },
   ) => void;
   /** Remove a child */
   removeChild: (id: string) => void;
@@ -122,6 +122,7 @@ const ParentContext = createContext<ParentCtx | null>(null);
 
 const NULL_CONTACT: FamilyContact = {
   firstName: "", lastName: "", relationshipToStudent: "", email: "", phone: "",
+  receivesEmails: false, receivesSMS: false, receivesBilling: false, emergencyContact: false,
 };
 const NULL_CAREGIVER: Caregiver = {
   id: "", first_name: "", last_name: "", relationship_to_student: "", email: "",
@@ -277,8 +278,8 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
       child: Omit<
         Student,
         | "id" | "studioId" | "caregiverId" | "caregiverName" | "caregiverEmail"
-        | "classIds" | "attendanceRate" | "payment" | "balanceCents"
-      >,
+        | "classIds" | "attendanceRate" | "payment" | "balanceCents" | "waiver"
+      > & { waiver?: Student["waiver"] },
     ) => {
       const pc = isDemo ? demoParent.primaryContact : primaryContact;
       const cgId = isDemo ? demoParent.id : (realCaregiver?.id ?? "");
@@ -435,7 +436,7 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
           secondaryCaregiver: first,
           secondaryContact: first ? caregiverToContact(first) : undefined,
           caregiverAuditLog: pushAudit(
-            demoParent.caregiverAuditLog, cg.id, demoParent.id,
+            demoParent.caregiverAuditLog, cg.id,
             "caregiver_nominated",
             `${cg.first_name} ${cg.last_name} nominated as additional caregiver`,
           ),

@@ -145,7 +145,7 @@ export default function MeasurementWizard({
     
     // Full mode: validate all body measurements
     if (!isSimple) {
-      const range = isMetric
+      const range: { height: [number, number]; weight: [number, number]; body: [number, number] } = isMetric
         ? { height: [40, 250], weight: [2, 250], body: [10, 200] }
         : { height: [16, 98], weight: [4, 550], body: [4, 80] };
       

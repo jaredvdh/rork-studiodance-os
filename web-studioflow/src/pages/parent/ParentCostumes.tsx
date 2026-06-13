@@ -51,12 +51,13 @@ export default function ParentCostumes() {
 
   const handleSubmitMeasurement = useCallback(async (data: MeasurementSubmission) => {
     const draft = ctx.measurements.find(
-      (m) => m.studentId === data.studentId && (m.status === "draft" || m.status === "pending"),
+      (m) => m.studentId === data.studentId && (m.status === "draft" || m.status === "pending_review"),
     );
     await ctx.submitMeasurement({
       ...data,
       id: draft?.id,
-      status: "pending",
+      status: "pending_review",
+      source: "parent",
       submittedBy: "parent",
       measuredAt: new Date().toISOString(),
     });
@@ -70,6 +71,7 @@ export default function ParentCostumes() {
       ...data,
       id: draft?.id,
       status: "draft",
+      source: "parent",
       submittedBy: "parent",
     });
   }, [ctx]);
@@ -243,7 +245,7 @@ export default function ParentCostumes() {
                 (m) => m.studentId === student.id && m.status === "draft",
               );
               const pending = ctx.measurements.find(
-                (m) => m.studentId === student.id && m.status === "pending",
+                (m) => m.studentId === student.id && m.status === "pending_review",
               );
               const recs = ctx.sizeRecommendations.filter((r) => r.studentId === student.id);
               const freshness = measurement ? getMeasurementFreshness(measurement.measuredAt) : null;
@@ -346,7 +348,7 @@ export default function ParentCostumes() {
                                 <span className={cn(
                                   "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
                                   prev.status === "approved" ? "bg-teal/10 text-teal" :
-                                  prev.status === "pending" ? "bg-gold/10 text-gold" :
+                                  prev.status === "pending_review" ? "bg-gold/10 text-gold" :
                                   prev.status === "rejected" ? "bg-rose/10 text-rose" :
                                   "bg-secondary text-muted-foreground",
                                 )}>

@@ -20,7 +20,7 @@ import {
 
 import { styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
 import { useParent, ParentLoadingSkeleton, NoCaregiverFound } from "@/data/parentStore";
-import { contactFullName, type FamilyContact } from "@/data/types";
+import { contactFullName, formatAddressShort, type FamilyContact } from "@/data/types";
 import { ageFromDob, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import ChildRegistrationWizard from "@/components/ChildRegistrationWizard";
@@ -682,7 +682,7 @@ function EditingForm({
         </label>
         <input
           type="text"
-          value={draft.address ?? ""}
+          value={formatAddressShort(draft.address)}
           onChange={(e) =>
             update({ address: e.target.value || undefined })
           }

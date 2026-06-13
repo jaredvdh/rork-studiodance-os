@@ -210,7 +210,7 @@ export default function SizingChartUpload({
             onClick={() => { setMode("manual"); setRows([emptyRow()]); }}
             className={cn(
               "rounded-xl px-4 py-2 text-sm font-medium transition",
-              mode === "manual" && mode !== "upload" ? "bg-rose text-white shadow" : "text-muted-foreground hover:bg-secondary",
+              mode === "manual" ? "bg-rose text-white shadow" : "text-muted-foreground hover:bg-secondary",
             )}
           >
             <Pencil className="inline-block mr-1 h-3.5 w-3.5" />
