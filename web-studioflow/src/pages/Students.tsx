@@ -30,6 +30,7 @@ import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student,
 import { caregiverFullName } from "@/data/types";
 import { parentAccounts } from "@/data/demo";
 import { ageFromDob, formatCurrency, formatDate, initials } from "@/lib/format";
+import { classPriceInline } from "@/lib/classPricing";
 import { formatCm, formatWeight } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -294,7 +295,7 @@ function EnrolModal({
 }: {
   studentId: string;
   students: Student[];
-  classes: { id: string; name: string; style: string; teacherId: string; enrolled: number; capacity: number; day: string; startTime: string; priceCents: number }[];
+  classes: { id: string; name: string; style: string; teacherId: string; enrolled: number; capacity: number; day: string; startTime: string; priceCents: number; pricingMode?: "price" | "included" | "none"; billingFrequency?: string; includedLabel?: string }[];
   onEnrol: (studentId: string, classId: string, forceWaitlist?: boolean) => void;
   onWithdraw: (studentId: string, classId: string) => void;
   onClose: () => void;
@@ -328,7 +329,7 @@ function EnrolModal({
                 <div key={c.id} className="flex items-center justify-between rounded-lg bg-success/5 border border-success/10 px-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.day} {c.startTime} · {formatCurrency(c.priceCents)}/mo</p>
+                    <p className="text-xs text-muted-foreground">{c.day} {c.startTime}{classPriceInline(c, formatCurrency) ? ` · ${classPriceInline(c, formatCurrency)}` : ""}</p>
                   </div>
                   <button
                     onClick={() => onWithdraw(studentId, c.id)}
@@ -356,7 +357,7 @@ function EnrolModal({
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{c.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {c.day} {c.startTime} · {c.enrolled}/{c.capacity} · {formatCurrency(c.priceCents)}/mo
+                        {c.day} {c.startTime} · {c.enrolled}/{c.capacity}{classPriceInline(c, formatCurrency) ? ` · ${classPriceInline(c, formatCurrency)}` : ""}
                       </p>
                     </div>
                     <button

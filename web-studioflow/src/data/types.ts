@@ -124,6 +124,10 @@ export type ClassStyle = string;
 /** @deprecated Use ClassStyle instead. Kept for backward compatibility. */
 export type DanceStyle = ClassStyle;
 
+/** How a class is billed. Studios may set an explicit price, fold it into
+ * tuition/membership, or hide pricing entirely (trials, rehearsals, etc.). */
+export type ClassPricingMode = "price" | "included" | "none";
+
 export type AgeGroup = "Tiny Tots" | "Junior" | "Intermediate" | "Senior" | "Adult" | "All Levels";
 
 export type WeekDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
@@ -196,6 +200,12 @@ export interface Class {
   waitlist: number;
   inRecital: boolean;
   priceCents: number;
+  /** Billing mode. Defaults to "price" for legacy records. */
+  pricingMode?: ClassPricingMode;
+  /** Billing frequency/label for "price" mode — e.g. "month", "term", "drop-in", or custom. */
+  billingFrequency?: string;
+  /** Display label for "included" mode — e.g. "Included in tuition". */
+  includedLabel?: string;
   description?: string;
 }
 

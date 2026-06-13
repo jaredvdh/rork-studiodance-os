@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Copy, Edit3, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
+import { BadgeCheck, Ban, Clock, Copy, DollarSign, Edit3, MapPin, Plus, Trash2, Trophy, Users } from "lucide-react";
 
 import Modal from "@/components/Modal";
 import { styleStyles, teacherName, useStudio, useEnrichedClasses, useClasses, useTeachers, useTerminology } from "@/data/store";
 import type { ModuleKey } from "@/data/terminology";
-import type { AgeGroup, Class, WeekDay } from "@/data/types";
+import type { AgeGroup, Class, ClassPricingMode, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
+import { BILLING_FREQUENCIES, INCLUDED_LABELS, classPriceDisplay } from "@/lib/classPricing";
 import { cn } from "@/lib/utils";
+
+const PRICING_OPTIONS: { mode: ClassPricingMode; title: string; desc: string; icon: typeof DollarSign }[] = [
+  { mode: "price", title: "Set a price", desc: "Charge a specific amount", icon: DollarSign },
+  { mode: "included", title: "Included", desc: "Part of tuition / membership", icon: BadgeCheck },
+  { mode: "none", title: "No pricing", desc: "Hide — trials, rehearsals, manual", icon: Ban },
+];
+
+const FREQUENCY_VALUES: string[] = BILLING_FREQUENCIES.map((f) => f.value);
+const FREQUENCY_LABELS = Object.fromEntries(BILLING_FREQUENCIES.map((f) => [f.value, f.label]));
 
 const AGES: AgeGroup[] = ["Tiny Tots", "Junior", "Intermediate", "Senior", "Adult"];
 const DAYS: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -62,6 +72,9 @@ export default function Classes() {
       capacity: 16,
       inRecital: true,
       price: 95,
+      pricingMode: "price" as ClassPricingMode,
+      billingFrequency: "month",
+      includedLabel: INCLUDED_LABELS[0] as string,
       description: "",
     }),
     [term.styleSuggestions, teachers],
@@ -110,14 +123,21 @@ export default function Classes() {
       capacity: cls.capacity,
       inRecital: cls.inRecital,
       price: Math.round(cls.priceCents / 100),
+      pricingMode: cls.pricingMode ?? "price",
+      billingFrequency: cls.billingFrequency ?? "month",
+      includedLabel: cls.includedLabel ?? (INCLUDED_LABELS[0] as string),
       description: cls.description ?? "",
     });
     setOpen(true);
   }
 
   // ── Submit (create or edit) ──
+  // Price is only required when the owner chose "Set a price".
+  const priceMissing = form.pricingMode === "price" && (!form.price || form.price <= 0);
+  const canSave = form.name.trim().length > 0 && !priceMissing;
+
   async function handleSubmit() {
-    if (!form.name.trim()) return;
+    if (!canSave) return;
     setSaving(true);
 
     const payload = {
@@ -131,7 +151,10 @@ export default function Classes() {
       teacherId: form.teacherId,
       capacity: form.capacity,
       inRecital: form.inRecital,
-      priceCents: form.price * 100,
+      priceCents: form.pricingMode === "price" ? form.price * 100 : 0,
+      pricingMode: form.pricingMode,
+      billingFrequency: form.pricingMode === "price" ? form.billingFrequency : undefined,
+      includedLabel: form.pricingMode === "included" ? form.includedLabel : undefined,
       description: form.description.trim() || undefined,
     };
 
@@ -162,6 +185,9 @@ export default function Classes() {
       capacity: cls.capacity,
       inRecital: cls.inRecital,
       priceCents: cls.priceCents,
+      pricingMode: cls.pricingMode,
+      billingFrequency: cls.billingFrequency,
+      includedLabel: cls.includedLabel,
       description: cls.description,
     });
   }
@@ -349,10 +375,7 @@ export default function Classes() {
 
               {/* Footer: price + mobile actions */}
               <div className="mt-4 flex items-center justify-between border-t border-border/70 pt-3">
-                <span className="font-display text-base font-semibold">
-                  {formatCurrency(c.priceCents)}
-                  <span className="text-xs font-normal text-muted-foreground">/mo</span>
-                </span>
+                <ClassPrice cls={c} />
                 <div className="flex items-center gap-1 sm:hidden">
                   {cardActions(c)}
                 </div>
@@ -410,10 +433,10 @@ export default function Classes() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!form.name.trim() || saving}
+              disabled={!canSave || saving}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition",
-                saving || !form.name.trim()
+                saving || !canSave
                   ? "cursor-not-allowed bg-rose/40 text-rose-foreground/60"
                   : "bg-rose text-rose-foreground hover:opacity-90 active:scale-95",
               )}
@@ -552,15 +575,80 @@ export default function Classes() {
                 className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
               />
             </Field>
-            <Field label="Monthly price ($)">
-              <input
-                type="number"
-                min={0}
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
-              />
-            </Field>
+          </div>
+
+          {/* ── Pricing & billing ── */}
+          <div className="space-y-3 rounded-2xl border border-border/70 bg-secondary/30 p-4">
+            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Pricing &amp; billing
+            </span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {PRICING_OPTIONS.map((opt) => {
+                const active = form.pricingMode === opt.mode;
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.mode}
+                    type="button"
+                    onClick={() => setForm({ ...form, pricingMode: opt.mode })}
+                    className={cn(
+                      "flex flex-col gap-1 rounded-xl border p-3 text-left transition active:scale-[0.98]",
+                      active
+                        ? "border-rose bg-rose/5 ring-2 ring-rose/20"
+                        : "border-border bg-card hover:bg-secondary",
+                    )}
+                  >
+                    <span className="flex items-center gap-1.5 text-sm font-semibold">
+                      <Icon className={cn("h-4 w-4", active ? "text-rose" : "text-muted-foreground")} />
+                      {opt.title}
+                    </span>
+                    <span className="text-xs leading-snug text-muted-foreground">{opt.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.pricingMode === "price" && (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Price ($)" required>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                    className={cn(
+                      "w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none transition focus:ring-2",
+                      priceMissing
+                        ? "border-rose focus:border-rose focus:ring-rose/20"
+                        : "border-input focus:border-rose focus:ring-rose/20",
+                    )}
+                  />
+                </Field>
+                <Field label="Billing">
+                  <BillingFrequencySelect
+                    value={form.billingFrequency}
+                    onChange={(v) => setForm({ ...form, billingFrequency: v })}
+                  />
+                </Field>
+              </div>
+            )}
+
+            {form.pricingMode === "included" && (
+              <Field label="Display label">
+                <Select
+                  value={form.includedLabel}
+                  onChange={(v) => setForm({ ...form, includedLabel: v })}
+                  options={INCLUDED_LABELS as unknown as string[]}
+                />
+              </Field>
+            )}
+
+            {form.pricingMode === "none" && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                No price will be shown for this {term.class.toLowerCase()}. Useful for trial
+                {" "}{term.classPlural.toLowerCase()}, rehearsals, competition groups, or anything billed manually.
+              </p>
+            )}
           </div>
 
           <Field label="Description" optional>
@@ -589,6 +677,85 @@ export default function Classes() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/* ── Class price display (card footer) ── */
+
+function ClassPrice({ cls }: { cls: Class }) {
+  const d = classPriceDisplay(cls, (cents) => formatCurrency(cents));
+  if (!d.show) return <span className="text-sm text-muted-foreground">No set price</span>;
+  if (d.text) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-semibold text-teal">
+        <BadgeCheck className="h-3.5 w-3.5" /> {d.text}
+      </span>
+    );
+  }
+  return (
+    <span className="font-display text-base font-semibold">
+      {d.amount}
+      {d.suffix && <span className="text-xs font-normal text-muted-foreground">{d.suffix}</span>}
+    </span>
+  );
+}
+
+/* ── Billing frequency select (with custom label) ── */
+
+function BillingFrequencySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isPreset = FREQUENCY_VALUES.includes(value);
+  const [showCustom, setShowCustom] = useState<boolean>(!isPreset && value !== "");
+
+  if (showCustom) {
+    return (
+      <div className="flex gap-1">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="e.g. season, package"
+          className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none transition focus:border-rose focus:ring-2 focus:ring-rose/20"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setShowCustom(false);
+            onChange("month");
+          }}
+          className="rounded-xl border border-input px-3 py-2 text-xs text-muted-foreground transition hover:bg-secondary"
+        >
+          Back
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={isPreset ? value : "__custom__"}
+      onChange={(e) => {
+        if (e.target.value === "__custom__") {
+          setShowCustom(true);
+          onChange("");
+        } else {
+          onChange(e.target.value);
+        }
+      }}
+      className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none transition focus:border-rose focus:ring-2 focus:ring-rose/20"
+    >
+      {FREQUENCY_VALUES.map((v) => (
+        <option key={v} value={v}>
+          {FREQUENCY_LABELS[v]}
+        </option>
+      ))}
+      <option value="__custom__">Custom…</option>
+    </select>
   );
 }
 

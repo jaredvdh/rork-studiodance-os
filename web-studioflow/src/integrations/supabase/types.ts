@@ -103,8 +103,11 @@ export type Database = {
           enrolled: number | null
           id: string
           in_recital: boolean | null
+          billing_frequency: string | null
+          included_label: string | null
           name: string
           price_cents: number | null
+          pricing_mode: string | null
           room: string | null
           start_time: string | null
           studio_id: string
@@ -123,8 +126,11 @@ export type Database = {
           enrolled?: number | null
           id?: string
           in_recital?: boolean | null
+          billing_frequency?: string | null
+          included_label?: string | null
           name: string
           price_cents?: number | null
+          pricing_mode?: string | null
           room?: string | null
           start_time?: string | null
           studio_id: string
@@ -143,8 +149,11 @@ export type Database = {
           enrolled?: number | null
           id?: string
           in_recital?: boolean | null
+          billing_frequency?: string | null
+          included_label?: string | null
           name?: string
           price_cents?: number | null
+          pricing_mode?: string | null
           room?: string | null
           start_time?: string | null
           studio_id?: string

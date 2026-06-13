@@ -20,6 +20,7 @@ import { SetupWizard } from "@/components/SetupWizard";
 import { styleStyles, teacherName, useCostumes, useEnrichedClasses, useStudio, useStudents, useTeachers, useTerminology, useInvoices, useWaivers } from "@/data/store";
 import type { WeekDay } from "@/data/types";
 import { formatCurrency, initials, relativeTime } from "@/lib/format";
+import { classRevenueCents } from "@/lib/classPricing";
 import { cn } from "@/lib/utils";
 
 /** Check if a module key is enabled for the current vertical. */
@@ -96,8 +97,8 @@ export default function Dashboard() {
   ).length;
   const wCompliancePct = students.length > 0 ? Math.round(((students.length - studentsWithMissingWaivers) / students.length) * 100) : 100;
 
-  // Revenue — estimate from enrolment × price
-  const monthRevenue = classes.reduce((a, c) => a + c.enrolled * c.priceCents, 0);
+  // Revenue — estimate from enrolment × price (only priced classes contribute)
+  const monthRevenue = classes.reduce((a, c) => a + c.enrolled * classRevenueCents(c), 0);
 
   const unpaidInvoices = invoices.filter((i) => i.status !== "paid" && i.status !== "refunded");
   const overdueInvoices = invoices.filter((i) => i.status === "overdue");

@@ -5,6 +5,7 @@ import { Clock, MapPin, Search, Sparkles, Users } from "lucide-react";
 import { classById, styleStyles, teacherName, useStudioData, useTeachers } from "@/data/store";
 import type { AgeGroup, WeekDay } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
+import { classPriceDisplay } from "@/lib/classPricing";
 import { cn } from "@/lib/utils";
 
 const days: WeekDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -220,9 +221,17 @@ export default function ParentClasses() {
               </div>
 
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-display text-xl font-semibold">
-                  {formatCurrency(c.priceCents)}
-                </span>
+                {(() => {
+                  const d = classPriceDisplay(c, formatCurrency);
+                  if (!d.show) return <span className="text-sm text-muted-foreground">No set price</span>;
+                  if (d.text) return <span className="text-sm font-semibold text-teal">{d.text}</span>;
+                  return (
+                    <span className="font-display text-xl font-semibold">
+                      {d.amount}
+                      {d.suffix && <span className="text-xs font-normal text-muted-foreground">{d.suffix}</span>}
+                    </span>
+                  );
+                })()}
                 <button
                   onClick={() => toggleEnroll(c.id)}
                   disabled={isFull && !isEnrolled}

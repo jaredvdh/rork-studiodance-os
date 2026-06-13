@@ -182,7 +182,7 @@ export function useSupabaseClasses(isDemo: boolean) {
     async () => {
       const { data, error } = await supabase.from("classes").select("*").eq("studio_id", studioId);
       if (error || !data) return { data: null, error };
-      return { data: data.map((c) => ({ id: c.id, studioId: c.studio_id, name: c.name, style: c.style as Class["style"], ageGroup: (c.age_group as Class["ageGroup"]) ?? "Junior", day: (c.day as Class["day"]) ?? "Mon", startTime: c.start_time ?? "17:00", durationMins: c.duration_mins ?? 60, room: c.room ?? "Studio A", teacherId: c.teacher_id ?? "", capacity: c.capacity ?? 15, enrolled: c.enrolled ?? 0, waitlist: c.waitlist ?? 0, inRecital: c.in_recital ?? false, priceCents: c.price_cents ?? 9500 })), error: null };
+      return { data: data.map((c) => ({ id: c.id, studioId: c.studio_id, name: c.name, style: c.style as Class["style"], ageGroup: (c.age_group as Class["ageGroup"]) ?? "Junior", day: (c.day as Class["day"]) ?? "Mon", startTime: c.start_time ?? "17:00", durationMins: c.duration_mins ?? 60, room: c.room ?? "Studio A", teacherId: c.teacher_id ?? "", capacity: c.capacity ?? 15, enrolled: c.enrolled ?? 0, waitlist: c.waitlist ?? 0, inRecital: c.in_recital ?? false, priceCents: c.price_cents ?? 9500, pricingMode: (c.pricing_mode as Class["pricingMode"]) ?? "price", billingFrequency: c.billing_frequency ?? undefined, includedLabel: c.included_label ?? undefined })), error: null };
     },
     vClasses,
     isDemo,
@@ -209,6 +209,9 @@ export function useAddClass() {
         waitlist: c.waitlist,
         in_recital: c.inRecital,
         price_cents: c.priceCents,
+        pricing_mode: c.pricingMode ?? "price",
+        billing_frequency: c.billingFrequency ?? null,
+        included_label: c.includedLabel ?? null,
       }).select().single();
       if (error) throw error;
       return { ...c, id: data.id, studioId };
@@ -235,6 +238,9 @@ export function useUpdateClass() {
       if (patch.waitlist !== undefined) updates.waitlist = patch.waitlist;
       if (patch.inRecital !== undefined) updates.in_recital = patch.inRecital;
       if (patch.priceCents !== undefined) updates.price_cents = patch.priceCents;
+      if (patch.pricingMode !== undefined) updates.pricing_mode = patch.pricingMode;
+      if (patch.billingFrequency !== undefined) updates.billing_frequency = patch.billingFrequency ?? null;
+      if (patch.includedLabel !== undefined) updates.included_label = patch.includedLabel ?? null;
       const { error } = await supabase.from("classes").update(updates).eq("id", id);
       if (error) throw error;
     },

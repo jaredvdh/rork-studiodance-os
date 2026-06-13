@@ -35,6 +35,7 @@ import {
   type InvoiceStatus,
 } from "@/lib/stripe";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { classPriceInline } from "@/lib/classPricing";
 import { cn } from "@/lib/utils";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -168,7 +169,7 @@ function CreateInvoiceModal({
                   >
                     <span className="font-medium">{c.name}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {c.day} {c.startTime} · {formatCurrency(c.priceCents)}/mo
+                      {c.day} {c.startTime}{classPriceInline(c, formatCurrency) ? ` · ${classPriceInline(c, formatCurrency)}` : ""}
                     </span>
                   </button>
                 ))}
