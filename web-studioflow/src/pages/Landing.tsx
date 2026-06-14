@@ -9,6 +9,10 @@ import {
   Heart,
   Swords,
   GraduationCap,
+  Waves,
+  Zap,
+  Star,
+  Award,
   Menu,
   X,
   MinusCircle,
@@ -21,7 +25,9 @@ import { useStudio } from "@/data/store";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
-type BusinessType = "dance" | "fitness" | "yoga" | "music" | "martial_arts";
+type BusinessType =
+  | "dance" | "crossfit" | "yoga" | "music" | "martial_arts"
+  | "swimming" | "pilates" | "gymnastics" | "cheer";
 
 interface BusinessProfile {
   id: BusinessType;
@@ -56,13 +62,13 @@ const businessProfiles: BusinessProfile[] = [
     chromeLabel: "Dance studio — Dashboard",
   },
   {
-    id: "fitness",
-    label: "Fitness",
-    short: "Fitness",
+    id: "crossfit",
+    label: "CrossFit",
+    short: "CrossFit",
     icon: Dumbbell,
     blurb: "Memberships, class packs, attendance and coach scheduling from one calm dashboard.",
     screenshot: SCREENSHOTS.schedule,
-    chromeLabel: "Fitness studio — Schedule",
+    chromeLabel: "CrossFit box — Schedule",
   },
   {
     id: "yoga",
@@ -90,6 +96,42 @@ const businessProfiles: BusinessProfile[] = [
     blurb: "Belt and rank tracking, grading events, attendance and membership billing — seamlessly.",
     screenshot: SCREENSHOTS.dashboard,
     chromeLabel: "Martial arts — Dashboard",
+  },
+  {
+    id: "swimming",
+    label: "Swimming",
+    short: "Swim",
+    icon: Waves,
+    blurb: "Lane scheduling, swimmer progression levels, parent communication and term billing in one place.",
+    screenshot: SCREENSHOTS.schedule,
+    chromeLabel: "Swimming school — Schedule",
+  },
+  {
+    id: "pilates",
+    label: "Pilates",
+    short: "Pilates",
+    icon: Star,
+    blurb: "Reformer and mat class bookings, membership management and client progress tracking made simple.",
+    screenshot: SCREENSHOTS.classes,
+    chromeLabel: "Pilates studio — Classes",
+  },
+  {
+    id: "gymnastics",
+    label: "Gymnastics",
+    short: "Gym",
+    icon: Zap,
+    blurb: "Squad scheduling, skill level tracking, competition prep and parent updates — all in one platform.",
+    screenshot: SCREENSHOTS.dashboard,
+    chromeLabel: "Gymnastics club — Dashboard",
+  },
+  {
+    id: "cheer",
+    label: "Cheer",
+    short: "Cheer",
+    icon: Award,
+    blurb: "Team rosters, competition calendars, uniform tracking and family communication without the chaos.",
+    screenshot: SCREENSHOTS.schedule,
+    chromeLabel: "Cheer academy — Schedule",
   },
 ];
 

@@ -144,7 +144,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Adjusts labels throughout the app — {studioVertical === "dance" ? "Student/Instructor/Parent" : studioVertical === "crossfit" ? "Member/Coach/Guardian" : studioVertical === "martial_arts" ? "Student/Instructor/Guardian" : "Member/Instructor/Guardian"}, etc.
+                    Adjusts labels throughout the app — {term.participant}/{term.instructor}/{term.guardian}, etc.
                   </p>
                 </label>
               </div>
