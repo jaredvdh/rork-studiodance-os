@@ -95,6 +95,7 @@ export type Database = {
       classes: {
         Row: {
           age_group: string | null
+          billing_frequency: string | null
           capacity: number | null
           created_at: string | null
           day: string | null
@@ -102,8 +103,10 @@ export type Database = {
           enrolled: number | null
           id: string
           in_recital: boolean | null
+          included_label: string | null
           name: string
           price_cents: number | null
+          pricing_mode: string
           room: string | null
           start_time: string | null
           studio_id: string
@@ -114,6 +117,7 @@ export type Database = {
         }
         Insert: {
           age_group?: string | null
+          billing_frequency?: string | null
           capacity?: number | null
           created_at?: string | null
           day?: string | null
@@ -121,8 +125,10 @@ export type Database = {
           enrolled?: number | null
           id?: string
           in_recital?: boolean | null
+          included_label?: string | null
           name: string
           price_cents?: number | null
+          pricing_mode?: string
           room?: string | null
           start_time?: string | null
           studio_id: string
@@ -133,6 +139,7 @@ export type Database = {
         }
         Update: {
           age_group?: string | null
+          billing_frequency?: string | null
           capacity?: number | null
           created_at?: string | null
           day?: string | null
@@ -140,8 +147,10 @@ export type Database = {
           enrolled?: number | null
           id?: string
           in_recital?: boolean | null
+          included_label?: string | null
           name?: string
           price_cents?: number | null
+          pricing_mode?: string
           room?: string | null
           start_time?: string | null
           studio_id?: string
@@ -703,7 +712,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      caregiver_id_for_user: { Args: never; Returns: string }
+      is_studio_caregiver: { Args: { studio_id: string }; Returns: boolean }
+      is_studio_member: { Args: { p_studio_id: string }; Returns: boolean }
+      is_studio_owner: { Args: { p_studio_id: string }; Returns: boolean }
       user_id: { Args: never; Returns: string }
+      user_studio_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       [_ in never]: never

@@ -24,6 +24,10 @@ const VERTICAL_BLURB: Record<Vertical, string> = {
   gym: "Strength & conditioning classes, adult members, trainers, membership billing.",
   martial_arts: "Belt levels, youth & adult students linked to parents, grading & sparring classes.",
   music_school: "1:1 lessons, instruments, students linked to parents, recital media consent.",
+  swimming: "Learn to swim, squad training, stroke correction, carnivals & competition prep.",
+  pilates: "Reformer & mat classes, clinical programs, prenatal sessions & client management.",
+  gymnastics: "Recreational to competitive, tumbling, acrobatics, displays & squad management.",
+  cheer: "All stars, school cheer, tumbling & stunting programs, competition management.",
 };
 
 export default function Sandbox() {

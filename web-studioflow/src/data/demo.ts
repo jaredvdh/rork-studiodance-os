@@ -46,6 +46,10 @@ const VERTICAL_STUDIO_CONFIGS: Record<Vertical, { name: string; tagline: string;
   gym: { name: "Iron Haven Fitness", tagline: "Your transformation starts here", city: "Portland, OR", initials: "IH", brandColor: "220 12% 40%" },
   martial_arts: { name: "Zen Mountain Dojo", tagline: "Discipline · Respect · Mastery", city: "Portland, OR", initials: "ZM", brandColor: "245 48% 48%" },
   music_school: { name: "Cascade Music Academy", tagline: "Where talent finds its voice", city: "Portland, OR", initials: "CM", brandColor: "350 74% 60%" },
+  swimming: { name: "Blue Torpedo Swim School", tagline: "Every stroke builds confidence", city: "Portland, OR", initials: "BT", brandColor: "200 60% 48%" },
+  pilates: { name: "Core Align Pilates", tagline: "Strength from the inside out", city: "Portland, OR", initials: "CA", brandColor: "270 30% 45%" },
+  gymnastics: { name: "Apex Gymnastics Club", tagline: "Reach higher, fly further", city: "Portland, OR", initials: "AP", brandColor: "30 70% 50%" },
+  cheer: { name: "Storm All Stars Cheer", tagline: "Together we rise", city: "Portland, OR", initials: "SA", brandColor: "330 65% 55%" },
 };
 
 export function getDemoStudio(vertical: Vertical): Studio {
@@ -115,6 +119,26 @@ const VERTICAL_TEACHER_POOLS: Record<Vertical, Array<{ name: string; styles: str
     { name: "Yuki Tanaka", styles: ["Violin", "Piano"], skills: [{ name: "Violin", category: "Music" }, { name: "Piano", category: "Music" }], email: "yuki@cascade.music", hourlyRateCents: 6000, payType: "employee" },
     { name: "Omar Brooks", styles: ["Voice", "Guitar"], skills: [{ name: "Voice", category: "Music" }, { name: "Guitar", category: "Music" }], email: "omar@cascade.music", hourlyRateCents: 5000, payType: "1099" },
   ],
+  swimming: [
+    { name: "Coach Hannah Cole", styles: ["Learn to Swim", "Water Safety"], skills: [{ name: "Learn to Swim", category: "Swimming" }, { name: "Water Safety", category: "Swimming" }], email: "hannah@bluetorpedo.swim", hourlyRateCents: 4500, payType: "employee" },
+    { name: "Coach Liam Park", styles: ["Squad", "Competition Prep"], skills: [{ name: "Squad", category: "Swimming" }, { name: "Competition Prep", category: "Swimming" }], email: "liam@bluetorpedo.swim", hourlyRateCents: 5500, payType: "employee" },
+    { name: "Coach Zoe Rivers", styles: ["Masters", "Stroke Correction"], skills: [{ name: "Masters", category: "Swimming" }, { name: "Stroke Correction", category: "Swimming" }], email: "zoe@bluetorpedo.swim", hourlyRateCents: 5000, payType: "1099" },
+  ],
+  pilates: [
+    { name: "Claudia Vega", styles: ["Reformer", "Clinical"], skills: [{ name: "Reformer", category: "Pilates" }, { name: "Clinical", category: "Pilates" }], email: "claudia@corealign.pilates", hourlyRateCents: 6000, payType: "employee" },
+    { name: "Eva Lindqvist", styles: ["Mat", "Prenatal"], skills: [{ name: "Mat", category: "Pilates" }, { name: "Prenatal", category: "Pilates" }], email: "eva@corealign.pilates", hourlyRateCents: 5500, payType: "1099" },
+    { name: "Nina Rossi", styles: ["Barre", "Advanced"], skills: [{ name: "Barre", category: "Pilates" }, { name: "Advanced", category: "Pilates" }], email: "nina@corealign.pilates", hourlyRateCents: 5000, payType: "employee" },
+  ],
+  gymnastics: [
+    { name: "Coach Jenna Miles", styles: ["Competitive", "WAG"], skills: [{ name: "Competitive", category: "Gymnastics" }, { name: "WAG", category: "Gymnastics" }], email: "jenna@apex.gymnastics", hourlyRateCents: 5800, payType: "employee" },
+    { name: "Coach Ryan Cross", styles: ["Recreational", "Tumbling"], skills: [{ name: "Recreational", category: "Gymnastics" }, { name: "Tumbling", category: "Gymnastics" }], email: "ryan@apex.gymnastics", hourlyRateCents: 5000, payType: "employee" },
+    { name: "Coach Mei Lin", styles: ["Acrobatics", "Pre-school"], skills: [{ name: "Acrobatics", category: "Gymnastics" }, { name: "Pre-school", category: "Gymnastics" }], email: "mei@apex.gymnastics", hourlyRateCents: 4500, payType: "1099" },
+  ],
+  cheer: [
+    { name: "Coach Tasha Jones", styles: ["All Stars", "Stunting"], skills: [{ name: "All Stars", category: "Cheer" }, { name: "Stunting", category: "Cheer" }], email: "tasha@storm.cheer", hourlyRateCents: 6000, payType: "employee" },
+    { name: "Coach Darnell Fox", styles: ["School Cheer", "Tumbling"], skills: [{ name: "School Cheer", category: "Cheer" }, { name: "Tumbling", category: "Cheer" }], email: "darnell@storm.cheer", hourlyRateCents: 5500, payType: "employee" },
+    { name: "Coach Jen Ruiz", styles: ["Rec Cheer", "Performance"], skills: [{ name: "Rec Cheer", category: "Cheer" }, { name: "Performance", category: "Cheer" }], email: "jen@storm.cheer", hourlyRateCents: 4800, payType: "1099" },
+  ],
 };
 
 const VERTICAL_CLASS_TEMPLATES: Record<Vertical, Array<{ name: string; style: string; ageGroup: AgeGroup; day: WeekDay; startTime: string; durationMins: number; room: string; capacity: number; priceCents: number; inRecital: boolean }>> = {
@@ -172,6 +196,42 @@ const VERTICAL_CLASS_TEMPLATES: Record<Vertical, Array<{ name: string; style: st
     { name: "Advanced Piano", style: "Piano", ageGroup: "Senior", day: "Fri", startTime: "16:00", durationMins: 60, room: "Room 1", capacity: 1, priceCents: 18000, inRecital: true },
     { name: "Saturday Music Makers", style: "Voice", ageGroup: "Tiny Tots", day: "Sat", startTime: "10:00", durationMins: 30, room: "Room 3", capacity: 10, priceCents: 8000, inRecital: false },
   ],
+  swimming: [
+    { name: "Learn to Swim — Level 1", style: "Learn to Swim", ageGroup: "Tiny Tots", day: "Mon", startTime: "16:00", durationMins: 30, room: "Pool A", capacity: 8, priceCents: 8500, inRecital: false },
+    { name: "Junior Squad", style: "Squad", ageGroup: "Junior", day: "Mon", startTime: "17:00", durationMins: 60, room: "Pool A", capacity: 16, priceCents: 12000, inRecital: false },
+    { name: "Masters Swimming", style: "Masters", ageGroup: "Adult", day: "Tue", startTime: "06:00", durationMins: 60, room: "Pool B", capacity: 20, priceCents: 10000, inRecital: false },
+    { name: "Stroke Correction Clinic", style: "Stroke Correction", ageGroup: "Intermediate", day: "Wed", startTime: "17:30", durationMins: 45, room: "Pool A", capacity: 12, priceCents: 9500, inRecital: false },
+    { name: "Competition Prep", style: "Competition Prep", ageGroup: "Senior", day: "Thu", startTime: "18:00", durationMins: 90, room: "Pool B", capacity: 14, priceCents: 14000, inRecital: false },
+    { name: "Water Safety Basics", style: "Water Safety", ageGroup: "All Levels", day: "Sat", startTime: "09:00", durationMins: 45, room: "Pool A", capacity: 10, priceCents: 7500, inRecital: false },
+  ],
+  pilates: [
+    { name: "Reformer Flow", style: "Reformer", ageGroup: "Adult", day: "Mon", startTime: "08:00", durationMins: 50, room: "Reformer Studio", capacity: 10, priceCents: 2800, inRecital: false },
+    { name: "Mat Pilates — All Levels", style: "Mat", ageGroup: "All Levels", day: "Mon", startTime: "09:30", durationMins: 55, room: "Studio 1", capacity: 18, priceCents: 2000, inRecital: false },
+    { name: "Clinical Pilates", style: "Clinical", ageGroup: "Adult", day: "Tue", startTime: "10:00", durationMins: 50, room: "Reformer Studio", capacity: 8, priceCents: 3500, inRecital: false },
+    { name: "Barre Sculpt", style: "Barre", ageGroup: "Adult", day: "Wed", startTime: "07:00", durationMins: 45, room: "Studio 1", capacity: 20, priceCents: 2200, inRecital: false },
+    { name: "Prenatal Pilates", style: "Prenatal", ageGroup: "Adult", day: "Thu", startTime: "11:00", durationMins: 50, room: "Studio 1", capacity: 12, priceCents: 2500, inRecital: false },
+    { name: "Advanced Reformer", style: "Advanced", ageGroup: "Adult", day: "Fri", startTime: "07:30", durationMins: 55, room: "Reformer Studio", capacity: 10, priceCents: 3200, inRecital: false },
+    { name: "Weekend Mat Flow", style: "Mat", ageGroup: "All Levels", day: "Sat", startTime: "10:00", durationMins: 60, room: "Studio 1", capacity: 20, priceCents: 2000, inRecital: false },
+  ],
+  gymnastics: [
+    { name: "Pre-school Gym Fun", style: "Pre-school", ageGroup: "Tiny Tots", day: "Mon", startTime: "16:00", durationMins: 45, room: "Gym Hall", capacity: 12, priceCents: 8000, inRecital: false },
+    { name: "Recreational Gymnastics", style: "Recreational", ageGroup: "Junior", day: "Mon", startTime: "17:00", durationMins: 60, room: "Gym Hall", capacity: 18, priceCents: 10000, inRecital: false },
+    { name: "Tumbling Basics", style: "Tumbling", ageGroup: "Intermediate", day: "Tue", startTime: "17:30", durationMins: 60, room: "Gym Hall", capacity: 14, priceCents: 10500, inRecital: false },
+    { name: "Competitive WAG", style: "WAG", ageGroup: "Senior", day: "Tue", startTime: "18:30", durationMins: 120, room: "Gym Hall", capacity: 10, priceCents: 18000, inRecital: true },
+    { name: "Acrobatics & Partnering", style: "Acrobatics", ageGroup: "Intermediate", day: "Wed", startTime: "18:00", durationMins: 75, room: "Gym Hall", capacity: 12, priceCents: 12000, inRecital: true },
+    { name: "Trampoline Skills", style: "Trampoline", ageGroup: "All Levels", day: "Thu", startTime: "17:00", durationMins: 60, room: "Gym Hall", capacity: 10, priceCents: 9500, inRecital: false },
+    { name: "MAG Strength", style: "MAG", ageGroup: "Senior", day: "Fri", startTime: "18:00", durationMins: 90, room: "Gym Hall", capacity: 10, priceCents: 16000, inRecital: true },
+    { name: "Saturday Open Gym", style: "Recreational", ageGroup: "All Levels", day: "Sat", startTime: "10:00", durationMins: 90, room: "Gym Hall", capacity: 22, priceCents: 7000, inRecital: false },
+  ],
+  cheer: [
+    { name: "Mini Cheer Stars", style: "Rec Cheer", ageGroup: "Tiny Tots", day: "Mon", startTime: "16:00", durationMins: 45, room: "Cheer Floor", capacity: 14, priceCents: 8500, inRecital: false },
+    { name: "Junior All Stars", style: "All Stars", ageGroup: "Junior", day: "Mon", startTime: "17:00", durationMins: 60, room: "Cheer Floor", capacity: 18, priceCents: 11000, inRecital: true },
+    { name: "Tumbling Fundamentals", style: "Tumbling", ageGroup: "Intermediate", day: "Tue", startTime: "17:30", durationMins: 60, room: "Cheer Floor", capacity: 14, priceCents: 9500, inRecital: false },
+    { name: "Stunting & Pyramids", style: "Stunting", ageGroup: "Intermediate", day: "Wed", startTime: "18:00", durationMins: 75, room: "Cheer Floor", capacity: 16, priceCents: 12000, inRecital: true },
+    { name: "School Cheer Prep", style: "School Cheer", ageGroup: "Senior", day: "Thu", startTime: "18:00", durationMins: 90, room: "Cheer Floor", capacity: 20, priceCents: 13000, inRecital: true },
+    { name: "Performance & Dance", style: "Performance", ageGroup: "Junior", day: "Fri", startTime: "17:00", durationMins: 60, room: "Cheer Floor", capacity: 16, priceCents: 10000, inRecital: true },
+    { name: "Senior Elite", style: "Senior", ageGroup: "Senior", day: "Sat", startTime: "09:00", durationMins: 120, room: "Cheer Floor", capacity: 16, priceCents: 16000, inRecital: true },
+  ],
 };
 
 const VERTICAL_ANNOUNCEMENT_TEMPLATES: Record<Vertical, Array<{ title: string; body: string; scope: AnnouncementScope; audience: string; reach: number; daysAgoVal: number }>> = {
@@ -204,6 +264,26 @@ const VERTICAL_ANNOUNCEMENT_TEMPLATES: Record<Vertical, Array<{ title: string; b
     { title: "Spring Recital programme finalised", body: "The recital running order is now available in the parent portal. Please confirm your child's participation by Friday.", scope: "Recital", audience: "Recital participants", reach: 45, daysAgoVal: 1 },
     { title: "Instrument maintenance workshop", body: "Free workshop this Saturday: learn basic instrument care and tuning. All students welcome.", scope: "Studio-wide", audience: "All families", reach: 52, daysAgoVal: 3 },
     { title: "Practice room schedule update", body: "Practice rooms are now available for booking via the parent portal. Book up to 2 hours per week per student.", scope: "Studio-wide", audience: "All families", reach: 52, daysAgoVal: 5 },
+  ],
+  swimming: [
+    { title: "Swim Carnival — June 28", body: "Registration for the summer club carnival is now open. All squad swimmers are encouraged to participate.", scope: "Studio-wide", audience: "All swimmers", reach: 48, daysAgoVal: 1 },
+    { title: "Pool maintenance — reduced hours", body: "Pool B will be closed for maintenance this Thursday. All sessions moved to Pool A.", scope: "Emergency", audience: "All swimmers", reach: 48, daysAgoVal: 2 },
+    { title: "New Learn to Swim intake", body: "We're opening 12 new spots in our Learn to Swim program. Register now through the portal.", scope: "Studio-wide", audience: "All families", reach: 48, daysAgoVal: 4 },
+  ],
+  pilates: [
+    { title: "Summer reformer series", body: "Sign up for the 6-week summer reformer series. Early bird pricing until June 20th.", scope: "Studio-wide", audience: "All clients", reach: 62, daysAgoVal: 1 },
+    { title: "Prenatal program expansion", body: "Due to demand, we've added a second weekly prenatal session on Tuesdays at 2pm.", scope: "Studio-wide", audience: "All clients", reach: 62, daysAgoVal: 3 },
+    { title: "Holiday schedule", body: "The studio will be closed July 4-6. Make-up sessions can be booked via the portal.", scope: "Studio-wide", audience: "All clients", reach: 62, daysAgoVal: 5 },
+  ],
+  gymnastics: [
+    { title: "Annual Display — save the date", body: "Our annual gymnastics display is scheduled for August 15th. Costume orders due by July 1st.", scope: "Studio-wide", audience: "All gymnasts", reach: 55, daysAgoVal: 1 },
+    { title: "Competitive team tryouts", body: "Tryouts for the 2026-27 competitive squad will be held June 20-21. All recreational gymnasts welcome.", scope: "Studio-wide", audience: "All gymnasts", reach: 55, daysAgoVal: 3 },
+    { title: "Safety equipment reminder", body: "All gymnasts must have grips, wristbands, and appropriate attire for each session. Check the handbook for details.", scope: "Studio-wide", audience: "All gymnasts", reach: 55, daysAgoVal: 6 },
+  ],
+  cheer: [
+    { title: "Competition season starts", body: "Our first competition is July 12th at the Portland Convention Center. Full practice schedule now in the portal.", scope: "Studio-wide", audience: "All athletes", reach: 58, daysAgoVal: 1 },
+    { title: "Uniform fitting", body: "Mandatory uniform fitting this Saturday 9am-12pm. All competition squad athletes must attend.", scope: "Class", audience: "Competition squads", reach: 34, daysAgoVal: 2 },
+    { title: "Parent meeting", body: "All-star parent information night this Wednesday at 7pm. We'll cover competition logistics and volunteer signups.", scope: "Studio-wide", audience: "All families", reach: 58, daysAgoVal: 4 },
   ],
 };
 

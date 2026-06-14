@@ -113,7 +113,11 @@ export type Vertical =
   | "crossfit"
   | "gym"
   | "martial_arts"
-  | "music_school";
+  | "music_school"
+  | "swimming"
+  | "pilates"
+  | "gymnastics"
+  | "cheer";
 
 /** Class / program type — fully user-driven. The studio vertical provides
  * suggested defaults via terminology.styleSuggestions, but owners can create

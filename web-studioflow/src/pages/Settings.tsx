@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 import { useStudio } from "@/data/store";
+import InviteLinksSection from "@/components/InviteLinksSection";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteTestStudio } from "@/lib/testStudio";
 import { FlaskConical } from "lucide-react";
@@ -504,6 +505,9 @@ export default function Settings() {
         onManualNotesChange={setManualPaymentNotes}
         onManualLinkChange={setManualPaymentLink}
       />
+
+      {/* Invite Links */}
+      <InviteLinksSection term={getTerminology(studio.vertical)} studioId={studio.id} />
 
       {/* Stripe Connect (shown when Stripe is active payment method) */}
       {paymentMethod === "stripe" && <StripeConnectSection />}
