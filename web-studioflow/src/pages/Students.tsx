@@ -25,6 +25,8 @@ import {
   X,
 } from "lucide-react";
 
+import InviteDialog from "@/components/InviteDialog";
+
 import { useEnrichedClasses, useStudents, useStudioData, useTerminology, CostumesContext } from "@/data/store";
 import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, StudentMeasurement, WaiverStatus } from "@/data/types";
 import { caregiverFullName } from "@/data/types";
@@ -50,6 +52,7 @@ type Filter = "all" | "waiver" | "overdue";
 export default function Students() {
   const { students, enrolStudentInClass, withdrawStudentFromClass } = useStudents();
   const classes = useEnrichedClasses();
+  const [inviteOpen, setInviteOpen] = useState(false);
   const term = useTerminology();
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -82,6 +85,12 @@ export default function Students() {
           <p className="text-sm text-muted-foreground">{students.length} enrolled {term.participantPlural.toLowerCase()} across {students.reduce((a, s) => a + s.classIds.length, 0)} class spots</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border-2 border-gold/30 bg-gold/5 px-4 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/10 hover:border-gold/50"
+          >
+            <Megaphone className="h-4 w-4" /> Invite {term.guardianPlural}
+          </button>
           <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary">
             <Upload className="h-4 w-4" /> Import CSV
           </button>
@@ -279,6 +288,13 @@ export default function Students() {
           </div>
         </div>
       )}
+
+      {/* Invite dialog */}
+      <InviteDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        term={term}
+      />
     </div>
   );
 }

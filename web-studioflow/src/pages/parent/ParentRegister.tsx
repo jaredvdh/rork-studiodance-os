@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
   Baby,
+  Building2,
   Check,
   Heart,
   Home,
@@ -23,6 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudio } from "@/data/store";
 import { cn } from "@/lib/utils";
+import { getFunctionUrl } from "@/lib/supabaseFunctions";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -62,13 +64,61 @@ const totalSteps = 3;
 
 /* ── Component ─────────────────────────────────────────────────────── */
 
+interface InviteInfo {
+  studioName: string;
+  studioId: string;
+  prefillEmail?: string;
+}
+
 export default function ParentRegister() {
-  const { studio } = useStudio();
+  const { studio, updateStudio } = useStudio();
   const { user, signUpWithEmail, isSigningIn } = useAuth();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite");
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(!!inviteToken);
+
+  // Resolve invite token on mount
+  useEffect(() => {
+    if (!inviteToken) {
+      setInviteLoading(false);
+      return;
+    }
+    let cancelled = false;
+    async function resolveInvite() {
+      try {
+        const fnUrl = getFunctionUrl("get-invite");
+        if (!fnUrl) { if (!cancelled) setInviteLoading(false); return; }
+        const res = await fetch(`${fnUrl}?token=${encodeURIComponent(inviteToken!)}`);
+        if (!res.ok) { if (!cancelled) setInviteLoading(false); return; }
+        const data = await res.json();
+        if (cancelled) return;
+        setInviteInfo({
+          studioName: data.studio.name,
+          studioId: data.studio.id,
+          prefillEmail: data.invite.email || undefined,
+        });
+        if (data.invite.email) {
+          setForm((prev) => ({ ...prev, email: data.invite.email }));
+        }
+        updateStudio({
+          name: data.studio.name,
+          vertical: data.studio.vertical,
+          city: data.studio.city,
+        });
+      } catch { /* invite check is non-blocking */
+      } finally { if (!cancelled) setInviteLoading(false); }
+    }
+    resolveInvite();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteToken]);
+
+  const effectiveStudioId = inviteInfo?.studioId || studio.id;
 
   const [form, setForm] = useState<RegistrationForm>({
     caregiverName: "",
@@ -146,7 +196,7 @@ export default function ParentRegister() {
         const [firstName, ...lastParts] = form.caregiverName.trim().split(" ");
         await supabase.from("caregivers").insert({
           id: caregiverId,
-          studio_id: studio.id,
+          studio_id: effectiveStudioId,
           name: form.caregiverName.trim(),
           first_name: firstName,
           last_name: lastParts.join(" ") || firstName,
@@ -169,7 +219,7 @@ export default function ParentRegister() {
           childIds.push(childId);
           await supabase.from("students").insert({
             id: childId,
-            studio_id: studio.id,
+            studio_id: effectiveStudioId,
             name: child.name.trim(),
             dob: new Date(new Date().getFullYear() - Number(child.age || "0"), 0, 1).toISOString(),
             caregiver_id: caregiverId,
@@ -216,7 +266,7 @@ export default function ParentRegister() {
               )}
             </div>
             <h1 className="mt-6 font-display text-2xl font-semibold">
-              {isLoggedIn ? `Welcome to ${studio.name}!` : "Check your email"}
+              {isLoggedIn ? `Welcome to ${inviteInfo?.studioName || studio.name}!` : "Check your email"}
             </h1>
             <p className="mt-2 text-muted-foreground">
               {isLoggedIn

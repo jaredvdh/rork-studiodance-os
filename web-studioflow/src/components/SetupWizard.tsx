@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Building2,
   Check,
+  ClipboardCopy,
   GraduationCap,
+  Loader2,
+  Mail,
   Megaphone,
   Users,
   Zap,
@@ -15,6 +18,8 @@ import { useStudio, useOnboarding } from "@/data/store";
 import type { Vertical } from "@/data/types";
 import { ALL_VERTICALS, VERTICAL_LABELS, getTerminology } from "@/data/terminology";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { getFunctionUrl } from "@/lib/supabaseFunctions";
 
 type StepKey = "welcome" | "profile" | "staff" | "classes" | "invite" | "done";
 
@@ -193,21 +198,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           )}
 
           {step === "invite" && (
-            <div className="text-center py-8">
-              <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-gold/15 text-gold">
-                <Megaphone className="h-8 w-8" />
-              </div>
-              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">Invite {term.guardianPlural.toLowerCase()}</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Share your registration link with {term.guardianPlural.toLowerCase()}. They can create accounts, enroll in {term.classPlural.toLowerCase()}, sign waivers, and manage payments — all from the {term.guardian.toLowerCase()} portal.
-              </p>
-              <button
-                onClick={() => toast.success("Registration link: /parent/register")}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-rose px-5 py-2.5 text-sm font-semibold text-rose-foreground"
-              >
-                Copy registration link
-              </button>
-            </div>
+            <InviteStep term={term} />
           )}
 
           {step === "done" && (
@@ -256,6 +247,143 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Invite Step (reusable) ──────────────────────────────────────── */
+
+function InviteStep({ term }: { term: ReturnType<typeof getTerminology> }) {
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerateLink = useCallback(async () => {
+    setIsGenerating(true);
+    try {
+      const fnUrl = getFunctionUrl("create-invite");
+      if (!fnUrl) {
+        // Build link client-side without backend
+        const origin = window.location.origin;
+        const link = `${origin}/parent/register`;
+        setGeneratedLink(link);
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+        toast.success("Registration link copied!", {
+          description: "Share this with parents to register.",
+        });
+        setTimeout(() => setCopied(false), 2500);
+        return;
+      }
+
+      const res = await fetch(fnUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: inviteEmail.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error ?? "Failed to create invite");
+      }
+
+      const data = await res.json();
+      const link = data.register_url;
+      setGeneratedLink(link);
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast.success("Invite link copied!", {
+        description: inviteEmail
+          ? `Link for ${inviteEmail} is ready to share.`
+          : "Share this link with parents to register.",
+      });
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      toast.error("Couldn't create invite", {
+        description: err instanceof Error ? err.message : "Please try again.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [inviteEmail]);
+
+  return (
+    <div className="max-w-md mx-auto py-4 space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-gold/15 text-gold">
+          <Megaphone className="h-8 w-8" />
+        </div>
+        <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">
+          Invite {term.guardianPlural.toLowerCase()}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Share your registration link. {term.guardianPlural} can create accounts, enroll in {term.classPlural.toLowerCase()}, sign waivers, and manage payments — all from the {term.guardian.toLowerCase()} portal.
+        </p>
+      </div>
+
+      {/* Optional: pre-fill email */}
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+          <Mail className="h-4 w-4 text-gold" />
+          Email (optional)
+        </label>
+        <input
+          type="email"
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+          placeholder="parent@email.com"
+          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-rose focus:ring-2 focus:ring-rose/20"
+        />
+        <p className="text-xs text-muted-foreground">
+          If provided, the registration form will be pre-filled with this email.
+        </p>
+      </div>
+
+      {/* Generate & copy */}
+      <button
+        onClick={handleGenerateLink}
+        disabled={isGenerating}
+        className={cn(
+          "w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-soft transition-all",
+          isGenerating
+            ? "bg-rose/50 text-white cursor-not-allowed"
+            : generatedLink
+              ? "bg-success text-white hover:opacity-90"
+              : "bg-rose text-rose-foreground hover:opacity-90",
+        )}
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Generating link…
+          </>
+        ) : generatedLink ? (
+          <>
+            <ClipboardCopy className="h-4 w-4" />
+            {copied ? "Copied!" : "Copy link again"}
+          </>
+        ) : (
+          <>
+            <ClipboardCopy className="h-4 w-4" />
+            Generate & copy registration link
+          </>
+        )}
+      </button>
+
+      {generatedLink && (
+        <div className="rounded-xl border border-success/20 bg-success/5 p-4">
+          <p className="text-xs font-medium text-success mb-1">Registration link (copied to clipboard)</p>
+          <p className="text-sm text-foreground font-mono break-all select-all">{generatedLink}</p>
+        </div>
+      )}
+
+      {/* Skip hint */}
+      <p className="text-center text-xs text-muted-foreground">
+        You can always invite more {term.guardianPlural.toLowerCase()} later from the {term.participantPlural} page.
+      </p>
     </div>
   );
 }

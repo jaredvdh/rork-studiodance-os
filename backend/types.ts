@@ -98,7 +98,6 @@ export type Database = {
           capacity: number | null
           created_at: string | null
           day: string | null
-          description: string | null
           duration_mins: number | null
           enrolled: number | null
           id: string
@@ -118,7 +117,6 @@ export type Database = {
           capacity?: number | null
           created_at?: string | null
           day?: string | null
-          description?: string | null
           duration_mins?: number | null
           enrolled?: number | null
           id?: string
@@ -138,7 +136,6 @@ export type Database = {
           capacity?: number | null
           created_at?: string | null
           day?: string | null
-          description?: string | null
           duration_mins?: number | null
           enrolled?: number | null
           id?: string
@@ -288,63 +285,80 @@ export type Database = {
           },
         ]
       }
+      invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          status: string
+          studio_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          status?: string
+          studio_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          status?: string
+          studio_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount_cents: number | null
-          caregiver_id: string | null
           created_at: string | null
-          currency: string | null
           description: string | null
           due_date: string | null
-          enrolment_id: string | null
           id: string
-          paid_at: string | null
-          parent_email: string | null
           parent_name: string | null
           status: string | null
-          stripe_customer_id: string | null
-          stripe_invoice_id: string | null
-          stripe_payment_intent_id: string | null
           student_name: string
           studio_id: string
           updated_at: string | null
         }
         Insert: {
           amount_cents?: number | null
-          caregiver_id?: string | null
           created_at?: string | null
-          currency?: string | null
           description?: string | null
           due_date?: string | null
-          enrolment_id?: string | null
           id?: string
-          paid_at?: string | null
-          parent_email?: string | null
           parent_name?: string | null
           status?: string | null
-          stripe_customer_id?: string | null
-          stripe_invoice_id?: string | null
-          stripe_payment_intent_id?: string | null
           student_name: string
           studio_id: string
           updated_at?: string | null
         }
         Update: {
           amount_cents?: number | null
-          caregiver_id?: string | null
           created_at?: string | null
-          currency?: string | null
           description?: string | null
           due_date?: string | null
-          enrolment_id?: string | null
           id?: string
-          paid_at?: string | null
-          parent_email?: string | null
           parent_name?: string | null
           status?: string | null
-          stripe_customer_id?: string | null
-          stripe_invoice_id?: string | null
-          stripe_payment_intent_id?: string | null
           student_name?: string
           studio_id?: string
           updated_at?: string | null
@@ -359,130 +373,52 @@ export type Database = {
           },
         ]
       }
-      caregivers: {
+      parents: {
         Row: {
-          accepted_at: string | null
           address: string | null
-          authorized_pickup: boolean | null
-          can_manage_enrolments: boolean | null
-          can_pay_invoices: boolean | null
-          can_sign_waivers: boolean | null
-          can_view_billing: boolean | null
-          can_view_medical_notes: boolean | null
-          can_view_schedule: boolean | null
           child_ids: string[] | null
           city: string | null
-          communication_only: boolean | null
-          court_order_on_file: boolean | null
           created_at: string | null
-          custody_restriction: boolean | null
           email: string
-          emergency_contact: boolean | null
-          first_name: string | null
-          household_label: string | null
           id: string
-          invited_at: string | null
-          is_authorized_pickup: boolean | null
-          is_billing_contact: boolean | null
-          is_primary_contact: boolean | null
-          last_name: string | null
           name: string
           phone: string | null
-          receives_announcements: boolean | null
-          receives_emergency_messages: boolean | null
-          relationship_to_student: string | null
-          role: string
           state: string | null
-          status: string
-          stripe_customer_id: string | null
-          structured_address: Json | null
           studio_id: string
           updated_at: string | null
           zip: string | null
         }
         Insert: {
-          accepted_at?: string | null
           address?: string | null
-          authorized_pickup?: boolean | null
-          can_manage_enrolments?: boolean | null
-          can_pay_invoices?: boolean | null
-          can_sign_waivers?: boolean | null
-          can_view_billing?: boolean | null
-          can_view_medical_notes?: boolean | null
-          can_view_schedule?: boolean | null
           child_ids?: string[] | null
           city?: string | null
-          communication_only?: boolean | null
-          court_order_on_file?: boolean | null
           created_at?: string | null
-          custody_restriction?: boolean | null
           email: string
-          emergency_contact?: boolean | null
-          first_name?: string | null
-          household_label?: string | null
           id?: string
-          invited_at?: string | null
-          is_authorized_pickup?: boolean | null
-          is_billing_contact?: boolean | null
-          is_primary_contact?: boolean | null
-          last_name?: string | null
           name: string
           phone?: string | null
-          receives_announcements?: boolean | null
-          receives_emergency_messages?: boolean | null
-          relationship_to_student?: string | null
-          role?: string
           state?: string | null
-          status?: string
-          stripe_customer_id?: string | null
-          structured_address?: Json | null
           studio_id: string
           updated_at?: string | null
           zip?: string | null
         }
         Update: {
-          accepted_at?: string | null
           address?: string | null
-          authorized_pickup?: boolean | null
-          can_manage_enrolments?: boolean | null
-          can_pay_invoices?: boolean | null
-          can_sign_waivers?: boolean | null
-          can_view_billing?: boolean | null
-          can_view_medical_notes?: boolean | null
-          can_view_schedule?: boolean | null
           child_ids?: string[] | null
           city?: string | null
-          communication_only?: boolean | null
-          court_order_on_file?: boolean | null
           created_at?: string | null
-          custody_restriction?: boolean | null
           email?: string
-          emergency_contact?: boolean | null
-          first_name?: string | null
-          household_label?: string | null
           id?: string
-          invited_at?: string | null
-          is_authorized_pickup?: boolean | null
-          is_billing_contact?: boolean | null
-          is_primary_contact?: boolean | null
-          last_name?: string | null
           name?: string
           phone?: string | null
-          receives_announcements?: boolean | null
-          receives_emergency_messages?: boolean | null
-          relationship_to_student?: string | null
-          role?: string
           state?: string | null
-          status?: string
-          stripe_customer_id?: string | null
-          structured_address?: Json | null
           studio_id?: string
           updated_at?: string | null
           zip?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "caregivers_studio_id_fkey"
+            foreignKeyName: "parents_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
@@ -497,8 +433,6 @@ export type Database = {
           email: string | null
           id: string
           name: string | null
-          onboarding_completed: boolean | null
-          onboarding_completed_at: string | null
           role: string | null
           studio_id: string | null
           updated_at: string | null
@@ -509,8 +443,6 @@ export type Database = {
           email?: string | null
           id: string
           name?: string | null
-          onboarding_completed?: boolean | null
-          onboarding_completed_at?: string | null
           role?: string | null
           studio_id?: string | null
           updated_at?: string | null
@@ -521,8 +453,6 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
-          onboarding_completed?: boolean | null
-          onboarding_completed_at?: string | null
           role?: string | null
           studio_id?: string | null
           updated_at?: string | null
@@ -581,9 +511,9 @@ export type Database = {
           id: string
           medical_notes: string | null
           name: string
-          caregiver_email: string | null
-          caregiver_id: string | null
-          caregiver_name: string | null
+          parent_email: string | null
+          parent_id: string | null
+          parent_name: string | null
           payment: string | null
           studio_id: string
           updated_at: string | null
@@ -627,10 +557,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "students_caregiver_id_fkey"
-            columns: ["caregiver_id"]
+            foreignKeyName: "students_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "caregivers"
+            referencedRelation: "parents"
             referencedColumns: ["id"]
           },
           {
@@ -676,7 +606,6 @@ export type Database = {
       }
       studios: {
         Row: {
-          banner_url: string | null
           brand_color: string | null
           city: string | null
           created_at: string | null
@@ -690,7 +619,6 @@ export type Database = {
           vertical: string | null
         }
         Insert: {
-          banner_url?: string | null
           brand_color?: string | null
           city?: string | null
           created_at?: string | null
@@ -704,7 +632,6 @@ export type Database = {
           vertical?: string | null
         }
         Update: {
-          banner_url?: string | null
           brand_color?: string | null
           city?: string | null
           created_at?: string | null
@@ -764,182 +691,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "teachers_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      }
-      attendance_sessions: {
-        Row: {
-          class_id: string
-          created_at: string
-          end_time: string | null
-          id: string
-          marked_by: string | null
-          notes: string | null
-          session_date: string
-          start_time: string | null
-          studio_id: string
-          updated_at: string
-        }
-        Insert: {
-          class_id: string
-          created_at?: string
-          end_time?: string | null
-          id?: string
-          marked_by?: string | null
-          notes?: string | null
-          session_date: string
-          start_time?: string | null
-          studio_id: string
-          updated_at?: string
-        }
-        Update: {
-          class_id?: string
-          created_at?: string
-          end_time?: string | null
-          id?: string
-          marked_by?: string | null
-          notes?: string | null
-          session_date?: string
-          start_time?: string | null
-          studio_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_sessions_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_sessions_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      attendance_records: {
-        Row: {
-          check_in_time: string | null
-          check_out_time: string | null
-          created_at: string
-          id: string
-          marked_by: string | null
-          notes: string | null
-          session_id: string
-          status: string
-          student_id: string
-          studio_id: string
-          updated_at: string
-        }
-        Insert: {
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string
-          id?: string
-          marked_by?: string | null
-          notes?: string | null
-          session_id: string
-          status?: string
-          student_id: string
-          studio_id: string
-          updated_at?: string
-        }
-        Update: {
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string
-          id?: string
-          marked_by?: string | null
-          notes?: string | null
-          session_id?: string
-          status?: string
-          student_id?: string
-          studio_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "attendance_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_records_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_records_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      recital_performances: {
-        Row: {
-          class_ids: string[]
-          costume_note: string | null
-          created_at: string
-          id: string
-          name: string
-          notes: string | null
-          "order": number
-          recital_event_id: string | null
-          start_time: string | null
-          studio_id: string
-          updated_at: string
-        }
-        Insert: {
-          class_ids?: string[]
-          costume_note?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          notes?: string | null
-          "order"?: number
-          recital_event_id?: string | null
-          start_time?: string | null
-          studio_id: string
-          updated_at?: string
-        }
-        Update: {
-          class_ids?: string[]
-          costume_note?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          notes?: string | null
-          "order"?: number
-          recital_event_id?: string | null
-          start_time?: string | null
-          studio_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recital_performances_recital_event_id_fkey"
-            columns: ["recital_event_id"]
-            isOneToOne: false
-            referencedRelation: "recital_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recital_performances_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
