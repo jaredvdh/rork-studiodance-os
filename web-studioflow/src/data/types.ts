@@ -316,6 +316,10 @@ export interface Student {
   caregiverId: string;
   caregiverName: string;
   caregiverEmail: string;
+  /** Guardian/primary contact phone number. */
+  caregiverPhone?: string;
+  /** Guardian/primary contact address. */
+  caregiverAddress?: Address | string;
   classIds: string[];
   attendanceRate: number; // 0..1
   waiver: WaiverStatus;
