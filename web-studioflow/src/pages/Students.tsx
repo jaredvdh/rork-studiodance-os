@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import InviteDialog from "@/components/InviteDialog";
+import AddMemberModal from "@/components/AddMemberModal";
 
 import { useEnrichedClasses, useStudents, useStudioData, useTerminology, CostumesContext } from "@/data/store";
 import type { Caregiver, CaregiverStatus, ParentAccount, PaymentStatus, Student, StudentMeasurement, WaiverStatus } from "@/data/types";
@@ -53,6 +54,7 @@ export default function Students() {
   const { students, enrolStudentInClass, withdrawStudentFromClass } = useStudents();
   const classes = useEnrichedClasses();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const term = useTerminology();
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -94,7 +96,10 @@ export default function Students() {
           <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary">
             <Upload className="h-4 w-4" /> Import CSV
           </button>
-          <button className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90">
+          <button
+            onClick={() => setAddMemberOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-rose px-4 py-2.5 text-sm font-semibold text-rose-foreground shadow-soft transition hover:opacity-90"
+          >
             <UserPlus className="h-4 w-4" /> Add {term.participant.toLowerCase()}
           </button>
         </div>
@@ -288,6 +293,12 @@ export default function Students() {
           </div>
         </div>
       )}
+
+      {/* Add member modal */}
+      <AddMemberModal
+        open={addMemberOpen}
+        onClose={() => setAddMemberOpen(false)}
+      />
 
       {/* Invite dialog */}
       <InviteDialog
