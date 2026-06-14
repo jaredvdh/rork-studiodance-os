@@ -60,7 +60,8 @@ export default function Students() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Student | null>(null);
   const [enrolOpen, setEnrolOpen] = useState<string | null>(null);
-  const [drawerTab, setDrawerTab] = useState<"profile" | "measurements">("profile"); // studentId being enrolled
+  const [drawerTab, setDrawerTab] = useState<"profile" | "measurements">("profile");
+  const [csvToast, setCsvToast] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     return students.filter((s) => {
@@ -93,7 +94,10 @@ export default function Students() {
           >
             <Megaphone className="h-4 w-4" /> Invite {term.guardianPlural}
           </button>
-          <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary">
+          <button
+            onClick={() => { setCsvToast("CSV import coming soon — add members manually for now."); setTimeout(() => setCsvToast(null), 3000); }}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary"
+          >
             <Upload className="h-4 w-4" /> Import CSV
           </button>
           <button
@@ -291,6 +295,13 @@ export default function Students() {
             <MeasurementsTabPanel studentId={selected.id} />
             )}
           </div>
+        </div>
+      )}
+
+      {/* CSV toast */}
+      {csvToast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-float-up rounded-full border border-border bg-card px-5 py-3 text-sm font-medium shadow-lift">
+          {csvToast}
         </div>
       )}
 
